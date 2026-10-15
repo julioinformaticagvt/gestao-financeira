@@ -1,0 +1,92 @@
+/* Sistema no celular (SPECS, seção 25). Este arquivo é o ÚLTIMO a carregar.
+   Tudo que muda a aparência vale só em telas estreitas (≤ 620 px); no computador nada daqui aparece. */
+
+/* Elementos que só existem no celular ficam escondidos por padrão (computador e tablet). */
+.bottom-nav, .plus-btn, .mobile-only, .mobile-data-note { display: none; }
+
+@media (max-width: 620px) {
+  html, body { overflow-x: hidden; }
+  body { padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
+  .mobile-only { display: block; }
+  .mobile-data-note { display: block; }
+
+  /* ----- topo compacto: nome do negócio e botão "+" ----- */
+  .topbar { flex-wrap: nowrap; height: 56px; gap: 10px; padding-top: env(safe-area-inset-top, 0px); padding-left: max(var(--gutter), env(safe-area-inset-left, 0px)); padding-right: max(var(--gutter), env(safe-area-inset-right, 0px)); }
+  .brand { order: 1; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .help-btn { order: 2; }
+  .plus-btn { order: 3; }
+  .topbar nav, .topbar > .receive, .topbar > .primary { display: none; }
+  .plus-btn { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--accent); color: #111; font-size: 28px; line-height: 1; cursor: pointer; }
+  .help-btn { width: 44px; height: 44px; }
+  .page-head { padding-top: 18px; }
+
+  /* ----- barra de baixo ----- */
+  .bottom-nav { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; height: calc(60px + env(safe-area-inset-bottom, 0px)); padding-bottom: env(safe-area-inset-bottom, 0px); background: var(--topbar); border-top: 1px solid var(--line); }
+  .bottom-nav button { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 6px 2px; background: none; border: 0; color: var(--text-2); font-size: 11px; cursor: pointer; }
+  .bottom-nav button.active { color: var(--accent); }
+  .page-foot { margin-top: 28px; }
+  .update-bar { bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
+
+  /* ----- sub-abas: faixa que rola de lado ----- */
+  .subtabs { overflow-x: auto; white-space: nowrap; gap: 20px; scrollbar-width: none; margin: 14px 0 20px; }
+  .subtabs::-webkit-scrollbar { display: none; }
+  .subtabs button { flex: 0 0 auto; min-height: 44px; }
+  .report-tabs { flex-wrap: nowrap; overflow-x: auto; }
+  .report-tabs button { flex: 0 0 auto; }
+
+  /* ----- botões e campos fáceis de tocar ----- */
+  button, .button, select, input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), textarea { min-height: 44px; }
+  input, select, textarea { font-size: 16px; }
+  button.secondary, button.primary, button.receive, button.danger { padding-left: 14px; padding-right: 14px; }
+  .actions { gap: 10px; flex-wrap: wrap; }
+  .modal-card .actions button { flex: 1 1 auto; }
+  .demo-banner { position: static; padding-top: max(10px, env(safe-area-inset-top, 0px)); font-size: 14px; }
+  .inline-check { min-height: 44px; display: inline-flex; align-items: center; gap: 8px; }
+  input[type="checkbox"], input[type="radio"] { width: 22px; height: 22px; }
+
+  /* ----- tabelas viram cartões ----- */
+  .table-wrap { overflow: visible; }
+  .cards-table, .cards-table tbody, .cards-table tr, .cards-table td { display: block; width: 100%; }
+  .cards-table thead { display: none; }
+  .cards-table tr { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; margin: 0 0 12px; padding: 10px 12px; }
+  .cards-table td { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 6px 0; border: 0; text-align: right; overflow-wrap: anywhere; }
+  .cards-table td::before { content: attr(data-label); flex: 0 0 38%; text-align: left; color: var(--text-2); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  .cards-table td[data-label=""]::before { content: none; }
+  .cards-table td:first-child { font-size: 16px; font-weight: 600; text-align: left; justify-content: flex-start; padding-bottom: 8px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+  .cards-table td:first-child::before { display: none; }
+  .cards-table td:last-child:has(button) { flex-wrap: wrap; justify-content: flex-start; padding-top: 10px; }
+  .cards-table td:last-child:has(button)::before { display: none; }
+  .cards-table td button { min-width: 44px; }
+
+  /* ----- relatórios: tabela com rolagem na própria caixa e 1ª coluna fixa ----- */
+  .pay-compare { overflow-x: auto; max-width: 100%; }
+  .pay-compare table { font-size: 13px; }
+  .report-table { display: block; overflow-x: auto; max-width: 100%; }
+  .report-table td:first-child, .report-table th:first-child { position: sticky; left: 0; background: var(--panel); }
+  .doc-wrap { overflow: auto; -webkit-overflow-scrolling: touch; touch-action: pan-x pan-y pinch-zoom; }
+
+  /* ----- janelas ocupam a tela, rolam por dentro e deixam os botões à vista ----- */
+  .modal { padding: 0; place-items: stretch; grid-template-columns: minmax(0, 1fr); }
+  .modal-card, .modal-card form, .fgroup, .field, .item-block, .form-grid { min-width: 0; max-width: 100%; }
+  .modal-card input, .modal-card select, .modal-card textarea { width: 100%; max-width: 100%; box-sizing: border-box; }
+  .modal-card input[type="checkbox"], .modal-card input[type="radio"] { width: 22px; }
+  .modal-card { width: 100%; height: 100vh; height: 100dvh; max-height: none; border-radius: 0; border: 0; padding: 56px 16px calc(16px + env(safe-area-inset-bottom, 0px)); overflow-y: auto; }
+  .modal-card .close { position: fixed; right: 8px; top: 8px; width: 44px; height: 44px; z-index: 2; background: var(--panel); border-radius: 50%; }
+  .modal-card h2 { position: fixed; left: 16px; right: 64px; top: 0; margin: 0; padding: 14px 0; z-index: 2; background: var(--panel); font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .modal-card form > .actions, .modal-card .actions.field { position: sticky; bottom: 0; z-index: 1; background: var(--panel); padding: 10px 0 4px; margin-top: 12px; border-top: 1px solid var(--line); }
+  .sheet-list { display: grid; gap: 10px; margin-top: 8px; }
+  .sheet-item { width: 100%; text-align: left; min-height: 52px; }
+
+  /* ----- Visão geral, gráficos e medidores ----- */
+  .dash-grid { display: flex; flex-direction: column; }
+  .avisos-panel { order: -1; margin-bottom: 18px; }
+  .kpi-strip { grid-template-columns: repeat(2, 1fr); }
+  .meters { grid-template-columns: 1fr; }
+  .finance-chart { overflow-x: auto; }
+  .mobile-data-note { margin-bottom: 14px; }
+  .mobile-data-note .panel-head { flex-wrap: wrap; }
+
+  /* ----- textos longos quebram linha em vez de estourar ----- */
+  .card, .panel, .block, td, th, p, li, h2, h3, .kpi-label, .tray-title, .doc-row { overflow-wrap: anywhere; }
+  .tray-head { flex-wrap: wrap; }
+}

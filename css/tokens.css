@@ -1,0 +1,34 @@
+/* Cores e medidas do sistema. Para mudar uma cor em todo o sistema, mude aqui. */
+:root {
+  color-scheme: dark;            /* calendários, rolagem e campos nativos também ficam escuros */
+
+  --bg: #111514;                 /* fundo da página */
+  --panel: #181d1b;              /* painéis e janelas */
+  --panel-2: #1f2522;            /* campos, cartões dentro de painéis, passar o mouse */
+  --line: #232a27;               /* linhas finas */
+  --text: #e8ece9;               /* texto */
+  --text-2: #98a39e;             /* texto secundário */
+
+  --accent: #e3a74a;             /* âmbar: nome, botão principal, aba ativa, ações de linha */
+  --accent-hover: #ebb65f;
+  --danger: #f08a6c;             /* vencido / alerta */
+  --ok: #7fcf9f;                 /* pago / positivo */
+  --blue: #6fb1e8;               /* azul: informação e campos preenchidos automaticamente */
+  --blue-bg: rgba(111, 177, 232, .13);
+  --receive: #2f9e61;            /* verde forte: botão de dinheiro entrando */
+  --receive-hover: #38b36f;
+  --topbar: #151a18;             /* faixa do topo, um tom acima do fundo */
+  --c-client: #b690e8;           /* lilás: cliente e pessoas (fornecedor) */
+  --c-product: #6fb1e8;          /* azul: produto, serviço e estoque */
+  --c-pay: #7fcf9f;              /* verde: pagamento, dinheiro e datas */
+  --c-other: #8a948f;            /* cinza: observações e o resto */
+  --bar: #5e6a65;                /* barras neutras dos gráficos */
+  --overlay: rgba(0, 0, 0, .6);  /* fundo escuro atrás das janelas */
+
+  --radius: 12px;
+  --gutter: 49px;                /* margem lateral da página */
+  --font: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+}
+
+@media (max-width: 900px) { :root { --gutter: 24px; } }
+@media (max-width: 620px) { :root { --gutter: 16px; } }

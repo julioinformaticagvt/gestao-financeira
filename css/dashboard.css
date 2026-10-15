@@ -1,0 +1,94 @@
+/* Tela "Visão geral": linha do período, faixa de números grandes e blocos sem caixa. */
+
+.period-bar { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 34px; }
+.period-text { margin: 0; }
+.period-controls { display: flex; gap: 8px; }
+
+/* Faixa de 4 números: sem cartões, só linhas finas */
+.kpi-strip { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.kpi { display: flex; flex-direction: column; gap: 12px; padding: 26px 24px; border-left: 1px solid var(--line); min-width: 0; }
+.kpi:first-child { border-left: 0; padding-left: 0; }
+.kpi-label { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-2); }
+.kpi-value { font-size: 38px; font-weight: 500; letter-spacing: -.6px; line-height: 1.1; white-space: nowrap; }
+
+/* Números menores logo abaixo da faixa */
+.kpi-more { display: flex; flex-wrap: wrap; gap: 8px 32px; margin: 18px 0 0; color: var(--text-2); }
+.kpi-more b { color: var(--text); font-weight: 500; margin-left: 8px; }
+
+/* Blocos da Visão geral: sem caixa, só espaço */
+.block { margin-top: 56px; }
+.block .panel-head { margin-bottom: 4px; }
+
+@media (max-width: 900px) {
+  .kpi-strip { grid-template-columns: repeat(2, 1fr); }
+  .kpi:nth-child(odd) { border-left: 0; padding-left: 0; }
+  .kpi:nth-child(n + 3) { border-top: 1px solid var(--line); }
+  .kpi-value { font-size: 30px; }
+  .block { margin-top: 40px; }
+}
+@media (max-width: 620px) {
+  .kpi { padding: 18px 14px; }
+  .kpi-value { font-size: 24px; }
+}
+
+/* Orçamentos parados, próximos vencimentos e avisos (Visão geral) */
+.dash-grid { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 56px; align-items: start; }
+.avisos-panel { margin-top: 56px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; }
+.avisos-panel h2 { margin-bottom: 8px; }
+.aviso { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); }
+.avisos-panel h2 + .aviso { border-top: 0; }
+td.num { text-align: right; }
+@media (max-width: 900px) { .dash-grid { grid-template-columns: 1fr; gap: 0; } .avisos-panel { margin-top: 40px; } }
+.dash-main th, .dash-main td { white-space: normal; }
+.dash-main td:last-child, .dash-main td.num { white-space: nowrap; }
+
+/* Faixa de números com uma cor por tipo: verde recebido, azul a receber, vermelho vencido, âmbar lucro */
+.kpi { position: relative; }
+.kpi::before { content: ""; position: absolute; top: -1px; left: 0; right: 0; height: 3px; background: var(--kc, var(--line)); }
+.kpi:nth-child(1) { --kc: var(--ok); }
+.kpi:nth-child(2) { --kc: var(--blue); }
+.kpi:nth-child(3) { --kc: var(--danger); }
+.kpi:nth-child(4) { --kc: var(--accent); }
+.kpi:nth-child(1) .kpi-value { color: var(--ok); }
+.kpi:nth-child(2) .kpi-value { color: var(--blue); }
+.kpi:nth-child(4) .kpi-value:not(.negative) { color: var(--accent); }
+
+/* Tela do cliente */
+.client-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 26px; }
+.client-head p { margin: 0; }
+.client-actions { display: flex; gap: 10px; }
+.kpi-strip.kpi-three { grid-template-columns: repeat(3, 1fr); }
+.kpi-three .kpi:nth-child(1) { --kc: var(--blue); }
+.kpi-three .kpi:nth-child(1) .kpi-value { color: var(--text); }
+.kpi-three .kpi:nth-child(2) { --kc: var(--danger); }
+.kpi-three .kpi:nth-child(3) { --kc: var(--accent); }
+.kpi-three .kpi:nth-child(3) .kpi-value { color: var(--text); }
+.client-more { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 34px; }
+.client-more .secondary { border-color: var(--line); }
+@media (max-width: 900px) { .kpi-strip.kpi-three { grid-template-columns: 1fr; } .kpi-three .kpi { border-left: 0; padding-left: 0; } }
+
+/* Limite do MEI: dois medidores (Receita = principal, verde; Vendas = azul) */
+.meters { display: grid; grid-template-columns: 1.25fr 1fr; gap: 18px; margin-top: 14px; }
+.meter { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px 22px; display: grid; gap: 8px; align-content: start; }
+.meter-main { border-color: #1d7a46; box-shadow: 0 0 0 1px rgba(29, 122, 70, .35) inset; }
+.meter-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.meter-head h3 { margin: 0; font-size: 15px; }
+.meter-badge { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: #e8f4ec; color: #1d7a46; white-space: nowrap; }
+.meter-badge.warn { background: #faf0e1; color: #a85a00; }
+.meter-badge.danger, .meter-badge.over { background: #fcefeb; color: #b4412b; }
+.meter-value { margin: 0; font-size: 26px; font-weight: 600; }
+.meter-value small { font-size: 13px; font-weight: 400; color: var(--text-2); }
+.meter-track { height: 14px; background: var(--panel-2); border-radius: 8px; overflow: hidden; }
+.meter-fill { height: 100%; border-radius: 8px; }
+.meter-pct, .meter-line, .meter-note, .meter-over { margin: 0; font-size: 13px; }
+.meter-over { color: #f08a6c; font-weight: 600; }
+.meter-sub { margin: 4px 0 0; }
+@media (max-width: 900px) { .meters { grid-template-columns: 1fr; } }
+
+/* ---------- Linhas separadoras entre os blocos (só aparência) ---------- */
+.block { padding-top: 28px; border-top: 1px solid var(--line); }
+.dash-main > .block:first-child, #app > .block:first-child { border-top: 0; padding-top: 0; }
+.block h2, .avisos-panel h2 { font-size: 19px; margin-bottom: 8px; }   /* título maior; a linha só vem depois do bloco */
+.block > h2 + .muted, .block > .panel-head { margin-bottom: 18px; }
+.mei-block + .trays { margin-top: 40px; padding-top: 28px; border-top: 1px solid var(--line); }
+@media (max-width: 900px) { .block { padding-top: 22px; } }
