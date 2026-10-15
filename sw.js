@@ -46,9 +46,13 @@ self.addEventListener('fetch', event => {
   if (req.method !== 'GET' || url.origin !== self.location.origin) return;   // outros endereços e outros métodos: nada a ver com o cache
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
-    const hit = await cache.match(req, {ignoreSearch: true}) || (req.mode === 'navigate' ? await cache.match('index.html') : undefined);
+    const hit = await cache.match(req, {ignoreSearch: true});
     const refresh = fetch(req).then(res => { if (res && res.ok && res.type === 'basic') cache.put(req, res.clone()); return res; }).catch(() => undefined);
     if (hit) { event.waitUntil(refresh); return hit; }   // abre da cópia e atualiza em segundo plano
-    return (await refresh) || new Response('Sem internet e este arquivo ainda não foi guardado.', {status: 503, headers: {'Content-Type': 'text/plain; charset=utf-8'}});
+    const net = await refresh;
+    if (net) return net;
+    // sem internet e sem a cópia: para abrir uma página, usa o index.html guardado (o sistema é uma página só)
+    if (req.mode === 'navigate') { const home = await cache.match('index.html'); if (home) return home; }
+    return new Response('Sem internet e este arquivo ainda não foi guardado.', {status: 503, headers: {'Content-Type': 'text/plain; charset=utf-8'}});
   })());
 });

@@ -7,7 +7,10 @@
 
   let registration = null, deferredInstall = null, refreshing = false, wantsReload = false;
   const secure = () => location.protocol === 'https:' || ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
-  const supported = () => 'serviceWorker' in navigator && secure() && location.protocol !== 'file:' && !window.__TEST_IDS;
+  // Em localhost (desenvolvimento) o service worker só liga com ?pwa=1: assim ele não guarda arquivos velhos enquanto o sistema é editado
+  // e testado. Sem ?pwa=1, qualquer registro antigo no localhost é desfeito.
+  const dev = () => ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+  const supported = () => 'serviceWorker' in navigator && secure() && location.protocol !== 'file:' && !window.__TEST_IDS && (!dev() || /[?&]pwa=1/.test(location.search));
 
   function showUpdateBar() {
     if (document.getElementById('update-bar')) return;
@@ -19,6 +22,10 @@
   }
 
   function register() {
+    if (dev() && !/[?&]pwa=1/.test(location.search) && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(list => list.forEach(r => r.unregister())).catch(() => {});
+      if (window.caches) caches.keys().then(keys => keys.filter(k => k.startsWith('gestao-financeira-')).forEach(k => caches.delete(k))).catch(() => {});
+    }
     if (!supported()) return;
     navigator.serviceWorker.register('sw.js').then(reg => {
       registration = reg;
