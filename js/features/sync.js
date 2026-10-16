@@ -30,13 +30,13 @@
   let auth = {
     configured: () => !!clientId() && clientId() !== App.syncConfig.PLACEHOLDER,
     hasToken: () => App.syncDrive.hasToken(),
-    request: () => App.syncDrive.request(clientId()),
+    request: hint => App.syncDrive.request(clientId(), hint),
     clear: () => App.syncDrive.clear(),
     revoke: () => App.syncDrive.revoke()
   };
 
   // ---------- estado deste aparelho ----------
-  const defaultState = () => ({on: false, deviceId: '', lastRev: null, lastHash: '', lastAt: '', appliedPending: false, conflict: null, clientId: '', otherDevice: false, localEditedAt: ''});
+  const defaultState = () => ({on: false, deviceId: '', lastRev: null, lastHash: '', lastAt: '', appliedPending: false, conflict: null, clientId: '', otherDevice: false, localEditedAt: '', accountHint: ''});
   const loadState = () => { try { return {...defaultState(), ...JSON.parse(localStorage.getItem(STATE_KEY) || '{}')}; } catch { return defaultState(); } };
   let st = loadState();
   const setState = patch => { st = {...st, ...patch}; try { localStorage.setItem(STATE_KEY, JSON.stringify(st)); } catch { /* sem espaço: o estado fica só na memória */ } };
@@ -280,16 +280,24 @@
     if (block()) { refresh(); return; }
     run.note = ''; run.error = '';
     let ok = false;
-    try { ok = await auth.request(); } catch (error) { run.note = (error && error.message) || 'Não consegui abrir o login do Google.'; }
+    try { ok = await auth.request(st.accountHint); } catch (error) { run.note = (error && error.message) || 'Não consegui abrir o login do Google.'; }
     if (!ok) { run.note = run.note || 'O login com o Google não foi concluído. Tente de novo.'; refresh(); return; }
     setState({on: true, deviceId: st.deviceId || App.store.newId('dev')});
+    await rememberAccount();
     refresh();
     await syncNow({interactive: true});
   }
 
+  // Guarda, SÓ neste aparelho, o e-mail da conta Google usada: nos próximos logins ele vai como dica e o Google pula a escolha de conta.
+  // Se não der para descobrir, segue sem dica (como antes). O e-mail nunca vai para os dados, o backup nem o Drive.
+  async function rememberAccount() {
+    if (st.accountHint) return;
+    try { const a = api(); const email = a.userEmail ? await a.userEmail() : ''; if (email) setState({accountHint: email}); } catch { /* sem dica: o Google pergunta a conta */ }
+  }
+
   function resetState() {
     auth.revoke();
-    setState({on: false, lastRev: null, lastHash: '', lastAt: '', appliedPending: false, conflict: null, otherDevice: false});
+    setState({on: false, lastRev: null, lastHash: '', lastAt: '', appliedPending: false, conflict: null, otherDevice: false, accountHint: ''});
     Object.assign(run, {busy: false, again: false, offline: false, error: '', newer: false, dirty: false, note: '', conflictRemote: null});
     clearTimeout(timer);
     refresh();
@@ -299,7 +307,7 @@
   async function openConflict() {
     if (!st.conflict) return;
     if (!run.conflictRemote) {
-      if (!auth.hasToken()) { let ok = false; try { ok = await auth.request(); } catch { /* segue */ } if (!ok) { run.note = 'Entre com o Google para ver o que há no Drive.'; refresh(); return; } }
+      if (!auth.hasToken()) { let ok = false; try { ok = await auth.request(st.accountHint); } catch { /* segue */ } if (!ok) { run.note = 'Entre com o Google para ver o que há no Drive.'; refresh(); return; } }
       try {
         const meta = await api().find();
         if (!meta) { setState({conflict: null}); refresh(); return syncNow(); }
@@ -376,7 +384,7 @@
   async function ensureToken() {
     if (auth.hasToken()) return true;
     let ok = false;
-    try { ok = await auth.request(); } catch { /* segue */ }
+    try { ok = await auth.request(st.accountHint); } catch { /* segue */ }
     if (!ok) { run.note = 'Entre com o Google para continuar.'; refresh(); }
     return ok;
   }

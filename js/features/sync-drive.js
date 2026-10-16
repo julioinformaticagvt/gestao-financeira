@@ -46,13 +46,15 @@
   }
 
   // Pede o token. Só deve ser chamada a partir de um clique da pessoa (o navegador pode bloquear a janela do Google se não for).
-  async function request(id) {
+  // hint = e-mail da conta usada antes: o Google pula a escolha de conta.
+  async function request(id, hint) {
     clientId = id || clientId;
     await loadScript();
     return new Promise(resolve => {
       const client = google.accounts.oauth2.initTokenClient({
         client_id: clientId,
         scope: SCOPE,
+        ...(hint ? {hint} : {}),
         callback: response => {
           if (response && response.access_token) { remember(response.access_token, Number(response.expires_in) || 3600); resolve(true); }
           else resolve(false);
@@ -117,7 +119,9 @@
       return (await call(`${UPLOAD}?uploadType=multipart&fields=id`, {method: 'POST', headers, body})).json();
     },
     async listCopies() { return (await list(`name contains '${COPY_PREFIX}' and trashed=false`)).map(file => ({id: file.id, name: file.name, createdTime: file.createdTime})); },
-    async remove(id) { await call(`${DRIVE}/${id}`, {method: 'DELETE'}); }
+    async remove(id) { await call(`${DRIVE}/${id}`, {method: 'DELETE'}); },
+    // E-mail da conta Google conectada (só para guardar como dica neste aparelho).
+    async userEmail() { return (((await (await call('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)')).json()).user) || {}).emailAddress || ''; }
   };
 
   restore();   // ao abrir (ou recarregar), reaproveita o token da aba se ainda valer

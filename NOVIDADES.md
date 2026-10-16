@@ -1,5 +1,9 @@
 # Novidades
 
+## Versão 0.13.2 · Reconectar sem escolher a conta · 16/10/2026
+
+- Ao reconectar ao Google, o sistema lembra qual conta você usa (só neste aparelho) e o Google não pergunta a conta de novo.
+
 ## Versão 0.13.1 · Passe do Google na aba · 16/10/2026
 
 - No celular, puxar a tela para atualizar não pede mais para reconectar ao Google: o login continua valendo (cerca de 1 hora) enquanto o aplicativo estiver aberto.

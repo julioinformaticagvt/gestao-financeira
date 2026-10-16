@@ -1,6 +1,9 @@
 // "O que há de novo": lista de versões em linguagem simples, da mais nova para a mais antiga.
 // A cada versão aprovada, acrescente uma entrada AQUI (e em version.js, na tabela do CLAUDE.md e na etiqueta do Git).
 window.CHANGELOG = [
+  {version: '0.13.2', name: 'Reconectar sem escolher a conta', date: '16/10/2026', items: [
+    'Ao reconectar ao Google, o sistema lembra qual conta você usa (só neste aparelho) e o Google não pergunta a conta de novo.'
+  ]},
   {version: '0.13.1', name: 'Passe do Google na aba', date: '16/10/2026', items: [
     'No celular, puxar a tela para atualizar não pede mais para reconectar ao Google: o login continua valendo (cerca de 1 hora) enquanto o aplicativo estiver aberto.'
   ]},
