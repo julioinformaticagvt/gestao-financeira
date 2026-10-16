@@ -312,5 +312,5 @@
     initAuto();
   }
 
-  App.backup = {start, exportBackup, lastAnyBackupDay, chooseFolder: activate};
+  App.backup = {start, envelope, exportBackup, lastAnyBackupDay, chooseFolder: activate};
 })();

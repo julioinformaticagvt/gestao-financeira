@@ -1,6 +1,12 @@
 // "O que há de novo": lista de versões em linguagem simples, da mais nova para a mais antiga.
 // A cada versão aprovada, acrescente uma entrada AQUI (e em version.js, na tabela do CLAUDE.md e na etiqueta do Git).
 window.CHANGELOG = [
+  {version: '0.13.0', name: 'Sincronização', date: '16/10/2026', items: [
+    'Novo: sincronizar o computador e o celular pelo seu Google Drive (opcional, vem desligado). Configurações > Sincronizar com o Google Drive, com passo a passo.',
+    'Os dados vão para uma pasta privada do aplicativo no SEU Drive. O autor do sistema não recebe nada.',
+    'Se os dois aparelhos mudarem, o sistema pergunta qual usar e nunca apaga nada: guarda cópias de segurança.',
+    'O rodapé mostra o estado: Sincronizado, Pendente, Reconectar ou Conflito.'
+  ]},
   {version: '0.12.0', name: 'Publicação', date: '14/10/2026', items: [
     'O sistema pode ser instalado como aplicativo e funciona sem internet depois da primeira abertura.',
     'Termos de uso, Privacidade e Licença dentro do sistema (Configurações > Sobre).',

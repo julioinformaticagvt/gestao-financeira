@@ -1,5 +1,12 @@
 # Novidades
 
+## Versão 0.13.0 · Sincronização · 16/10/2026
+
+- Novo: sincronizar o computador e o celular pelo seu Google Drive (opcional, vem desligado). Configurações > Sincronizar com o Google Drive, com passo a passo.
+- Os dados vão para uma pasta privada do aplicativo no SEU Drive. O autor do sistema não recebe nada.
+- Se os dois aparelhos mudarem, o sistema pergunta qual usar e nunca apaga nada: guarda cópias de segurança.
+- O rodapé mostra o estado: Sincronizado, Pendente, Reconectar ou Conflito.
+
 ## Versão 0.12.0 · Publicação · 14/10/2026
 
 - O sistema pode ser instalado como aplicativo e funciona sem internet depois da primeira abertura.

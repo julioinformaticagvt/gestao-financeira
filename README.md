@@ -8,7 +8,7 @@ Sistema **gratuito** de gestão financeira para pequenos negócios (MEI e outros
 
 ## Seus dados ficam no seu navegador
 - O sistema **não tem servidor**: o autor não recebe nem vê nenhum dado seu.
-- Os dados ficam só no navegador do aparelho em que você usa. **O computador e o celular têm dados separados** e o sistema **não sincroniza sozinho**.
+- Os dados ficam só no navegador do aparelho em que você usa. **O computador e o celular têm dados separados**, a não ser que você ligue a **sincronização opcional com o seu Google Drive** (Configurações > Sincronizar com o Google Drive); sem isso, o sistema não sincroniza sozinho.
 - Limpar os dados do navegador apaga tudo. Por isso, **faça backup** (Configurações → Exportar backup, ou o backup automático em uma pasta, no Chrome e no Edge).
 - Para levar os dados de um aparelho para outro: Exportar backup → Importar backup.
 

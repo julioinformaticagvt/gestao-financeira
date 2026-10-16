@@ -1,4 +1,4 @@
-// Guia "Como usar" (SPECS, seção 23.4): 6 tarefas com passos curtos e um botão "Ir para a tela".
+// Guia "Como usar" (SPECS, seção 23.4): 7 tarefas com passos curtos e um botão "Ir para a tela".
 // O texto fica aqui, em uma lista simples, fácil de editar. Linguagem sem jargão.
 (() => {
   const App = (window.App = window.App || {});
@@ -41,12 +41,18 @@
       '"Exportar backup" baixa um arquivo: guarde no Google Drive ou num pen drive.',
       'No Chrome ou Edge, ative o backup automático em uma pasta (um arquivo por dia).',
       'Para restaurar, use "Importar backup..." e escolha o arquivo. O sistema guarda uma cópia antes.'
+    ]},
+    {title: 'Usar no celular e no computador', view: 'settings', go: 'Ir para Configurações', steps: [
+      'Abra o sistema pelo endereço publicado, no computador e no celular (não pelo arquivo).',
+      'Em Configurações, no quadro "Sincronizar com o Google Drive", clique em "Conectar com o Google" e permita o acesso.',
+      'No primeiro aparelho, os dados vão para o seu Drive. Quando o quadro ficar verde e disser "Sincronizado", está pronto.',
+      'No outro aparelho, repita o passo 2: ele baixa os dados do Drive. Se os dois já tiverem dados, o sistema pergunta qual usar e não apaga nada.'
     ]}
   ];
 
   function open() {
     const list = TASKS.map((task, i) => `<section class="help-task"><h3>${i + 1}. ${esc(task.title)}</h3><ol>${task.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol><button type="button" class="secondary" data-action="help-go" data-view="${task.view}">${esc(task.go)}</button></section>`).join('');
-    openModal(`<h2>Como usar</h2><p class="muted">Seis tarefas do dia a dia, passo a passo.</p><div class="help-list">${list}</div><p class="help-note"><b>Este sistema não substitui seu contador nem emite nota fiscal.</b> Confira com ele as regras de imposto, multa e juros.</p><div class="actions"><button type="button" class="primary" data-action="close-modal">Fechar</button></div>`);
+    openModal(`<h2>Como usar</h2><p class="muted">Sete tarefas do dia a dia, passo a passo.</p><div class="help-list">${list}</div><p class="help-note"><b>Este sistema não substitui seu contador nem emite nota fiscal.</b> Confira com ele as regras de imposto, multa e juros.</p><div class="actions"><button type="button" class="primary" data-action="close-modal">Fechar</button></div>`);
     document.querySelector('#modal .modal-card').classList.add('wide');
   }
 

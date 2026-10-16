@@ -11,7 +11,7 @@
   // Tabelas de documentos (PDF) e de relatórios não viram cartões: continuam tabela (com rolagem na própria caixa).
   function labelTables(root) {
     root.querySelectorAll('table').forEach(table => {
-      if (table.closest('.doc, .report-table, .pay-compare') || table.classList.contains('report-table')) return;
+      if (table.closest('.doc, .report-table, .pay-compare, .sync-compare') || table.classList.contains('report-table')) return;
       const heads = [...table.querySelectorAll('thead th')].map(th => th.textContent.trim());
       if (!heads.length) return;
       table.classList.add('cards-table');

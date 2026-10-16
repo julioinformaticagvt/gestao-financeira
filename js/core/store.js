@@ -129,6 +129,7 @@
   let stale = false, warnedSize = false;
   const SIZE_WARNING = 4000000;
   const hooks = {};   // main.js liga aqui as janelas de aviso: onStale(), onSaveError(erro), onSizeWarning(bytes)
+  const afterSave = [];   // funções chamadas depois de cada gravação bem-sucedida (a sincronização usa para saber que houve mudança)
   const save = () => {
     if (blocked) return false;   // dados de versão mais nova: não grava nada
     if (stale) { if (hooks.onStale) hooks.onStale(); return false; }
@@ -142,8 +143,11 @@
       try { const key = data.migration && data.migration.backupKey; copy = key ? (localStorage.getItem(key) || '').length : 0; } catch { /* sem acesso */ }
       if (json.length + copy > SIZE_WARNING) { warnedSize = true; if (hooks.onSizeWarning) hooks.onSizeWarning(json.length + copy); }
     }
+    afterSave.forEach(fn => { try { fn(); } catch { /* um ouvinte com problema nunca atrapalha o salvamento */ } });
     return true;
   };
+  // Congela as gravações desta janela (usado logo antes de recarregar com dados novos, para nada gravar por cima).
+  const freeze = () => { stale = true; };
   window.addEventListener('storage', event => { if (event.key === KEY && !stale) { stale = true; if (hooks.onStale) hooks.onStale(); } });
 
   // ---------- valores de partida ----------
@@ -270,5 +274,5 @@
   }
 
   if (!blocked) migrate();
-  App.store = {KEY, REAL_KEY, DEMO_KEY, DEMO_FLAG, isDemo, blocked, SCHEMA, data, save, hooks, newId, nextCode, peekCode, nextReceiptNumber, findByName, isExistingSystem, get loadProblem() { return loadProblem; }};
+  App.store = {KEY, REAL_KEY, DEMO_KEY, DEMO_FLAG, isDemo, blocked, SCHEMA, data, save, hooks, afterSave, freeze, newId, nextCode, peekCode, nextReceiptNumber, findByName, isExistingSystem, get loadProblem() { return loadProblem; }};
 })();

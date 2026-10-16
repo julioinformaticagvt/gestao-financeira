@@ -1,0 +1,107 @@
+// Conversa com o Google (SPECS, seção 27.3): login (token) e as chamadas ao Drive. Só "fala" com o Google quando a pessoa liga a
+// sincronização; o script de login do Google (accounts.google.com/gsi/client) só é carregado nesse momento.
+// O token de acesso fica SÓ NA MEMÓRIA desta página: nunca é gravado (nem em localStorage, nem nos dados, nem em backup).
+// Analogia: o token é uma pulseira de visitante que vale cerca de 1 hora; ao fechar a página, ela se perde e é preciso pedir outra.
+(() => {
+  const App = (window.App = window.App || {});
+
+  const SCOPE = 'https://www.googleapis.com/auth/drive.appdata';   // só a pasta privada do aplicativo, nada dos outros arquivos
+  const FILE_NAME = 'gestao-dados.json';
+  const COPY_PREFIX = 'gestao-dados-copia-';
+  const DRIVE = 'https://www.googleapis.com/drive/v3/files';
+  const UPLOAD = 'https://www.googleapis.com/upload/drive/v3/files';
+
+  let token = '', expiresAt = 0, clientId = '';
+
+  const hasToken = () => !!token && Date.now() < expiresAt;
+  const clear = () => { token = ''; expiresAt = 0; };
+
+  function loadScript() {
+    return new Promise((resolve, reject) => {
+      if (window.google && google.accounts && google.accounts.oauth2) return resolve();
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('Não consegui carregar o login do Google (sem internet?).'));
+      document.head.appendChild(script);
+    });
+  }
+
+  // Pede o token. Só deve ser chamada a partir de um clique da pessoa (o navegador pode bloquear a janela do Google se não for).
+  async function request(id) {
+    clientId = id || clientId;
+    await loadScript();
+    return new Promise(resolve => {
+      const client = google.accounts.oauth2.initTokenClient({
+        client_id: clientId,
+        scope: SCOPE,
+        callback: response => {
+          if (response && response.access_token) { token = response.access_token; expiresAt = Date.now() + ((Number(response.expires_in) || 3600) - 60) * 1000; resolve(true); }
+          else resolve(false);
+        },
+        error_callback: () => resolve(false)   // a pessoa fechou a janela, ou o navegador bloqueou
+      });
+      client.requestAccessToken({prompt: ''});
+    });
+  }
+
+  function revoke() {
+    const old = token;
+    clear();
+    try { if (old && window.google && google.accounts && google.accounts.oauth2) google.accounts.oauth2.revoke(old, () => {}); } catch { /* segue */ }
+  }
+
+  // ---------- Drive ----------
+  async function call(url, options = {}) {
+    if (!hasToken()) throw Object.assign(new Error('login vencido'), {code: 'auth'});
+    const response = await fetch(url, {...options, headers: {Authorization: `Bearer ${token}`, ...(options.headers || {})}});
+    if (response.status === 401) { clear(); throw Object.assign(new Error('login vencido'), {code: 'auth'}); }
+    if (!response.ok) throw Object.assign(new Error(`O Google respondeu com erro ${response.status}.`), {code: 'http', status: response.status});
+    return response;
+  }
+
+  const toMeta = file => file && {
+    id: file.id, name: file.name, modifiedTime: file.modifiedTime,
+    rev: Number((file.appProperties || {}).rev) || 0, hash: (file.appProperties || {}).hash || '',
+    deviceId: (file.appProperties || {}).deviceId || '', deviceName: (file.appProperties || {}).dn || '', sv: Number((file.appProperties || {}).sv) || 0
+  };
+
+  function multipart(meta, content) {
+    const boundary = `gd${Math.random().toString(36).slice(2)}`;
+    return {
+      headers: {'Content-Type': `multipart/related; boundary=${boundary}`},
+      body: `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(content)}\r\n--${boundary}--`
+    };
+  }
+
+  const list = async query => {
+    const url = `${DRIVE}?spaces=appDataFolder&pageSize=100&fields=${encodeURIComponent('files(id,name,modifiedTime,createdTime,appProperties)')}&q=${encodeURIComponent(query)}`;
+    return ((await (await call(url)).json()).files) || [];
+  };
+
+  const api = {
+    // O arquivo principal (ou null). Se houver mais de um (raro), vale o de revisão mais alta.
+    async find() {
+      const files = (await list(`name='${FILE_NAME}' and trashed=false`)).map(toMeta);
+      return files.sort((a, b) => b.rev - a.rev)[0] || null;
+    },
+    async download(id) { return (await call(`${DRIVE}/${id}?alt=media`)).json(); },
+    async create(content, props) {
+      const {headers, body} = multipart({name: FILE_NAME, parents: ['appDataFolder'], appProperties: props}, content);
+      return (await call(`${UPLOAD}?uploadType=multipart&fields=id`, {method: 'POST', headers, body})).json();
+    },
+    async update(id, content, props) {
+      const {headers, body} = multipart({appProperties: props}, content);
+      return (await call(`${UPLOAD}/${id}?uploadType=multipart&fields=id`, {method: 'PATCH', headers, body})).json();
+    },
+    async createCopy(name, content) {
+      const {headers, body} = multipart({name, parents: ['appDataFolder']}, content);
+      return (await call(`${UPLOAD}?uploadType=multipart&fields=id`, {method: 'POST', headers, body})).json();
+    },
+    async listCopies() { return (await list(`name contains '${COPY_PREFIX}' and trashed=false`)).map(file => ({id: file.id, name: file.name, createdTime: file.createdTime})); },
+    async remove(id) { await call(`${DRIVE}/${id}`, {method: 'DELETE'}); }
+  };
+
+  App.syncDrive = {FILE_NAME, COPY_PREFIX, hasToken, request, clear, revoke, api};
+})();

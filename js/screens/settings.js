@@ -73,7 +73,7 @@
 
   // ---------- tela ----------
   function render() {
-    byId('app').innerHTML = rulesPanel() + businessPanel() + meiPanel() + machinePanel() + App.serviceOrders.settingsPanel() + App.revenue.settingsPanel() + App.pwa.settingsPanel() + App.firstRun.settingsPanels();
+    byId('app').innerHTML = App.sync.panelHtml() + rulesPanel() + businessPanel() + meiPanel() + machinePanel() + App.serviceOrders.settingsPanel() + App.revenue.settingsPanel() + App.pwa.settingsPanel() + App.firstRun.settingsPanels();
     App.serviceOrders.bindSettings();
     App.revenue.bindSettings();
 

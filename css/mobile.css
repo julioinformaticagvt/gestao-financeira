@@ -59,8 +59,8 @@
   .cards-table td button { min-width: 44px; }
 
   /* ----- relatórios: tabela com rolagem na própria caixa e 1ª coluna fixa ----- */
-  .pay-compare { overflow-x: auto; max-width: 100%; }
-  .pay-compare table { font-size: 13px; }
+  .pay-compare, .sync-compare { overflow-x: auto; max-width: 100%; }
+  .pay-compare table, .sync-compare table { font-size: 13px; }
   .report-table { display: block; overflow-x: auto; max-width: 100%; }
   .report-table td:first-child, .report-table th:first-child { position: sticky; left: 0; background: var(--panel); }
   .doc-wrap { overflow: auto; -webkit-overflow-scrolling: touch; touch-action: pan-x pan-y pinch-zoom; }
@@ -89,4 +89,11 @@
   /* ----- textos longos quebram linha em vez de estourar ----- */
   .card, .panel, .block, td, th, p, li, h2, h3, .kpi-label, .tray-title, .doc-row { overflow-wrap: anywhere; }
   .tray-head { flex-wrap: wrap; }
+}
+
+/* Sincronização (SPECS 27.6): o indicador aparece discreto no topo do celular. */
+@media (max-width: 620px) {
+  .sync-top { display: inline-block; margin-left: auto; order: 1; font-size: 11px; max-width: 42vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sync-top[hidden] { display: none; }
+  .sync-ind[hidden] { display: none; }
 }

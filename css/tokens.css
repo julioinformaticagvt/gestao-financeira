@@ -24,6 +24,12 @@
   --c-other: #8a948f;            /* cinza: observações e o resto */
   --bar: #5e6a65;                /* barras neutras dos gráficos */
   --overlay: rgba(0, 0, 0, .6);  /* fundo escuro atrás das janelas */
+  --sync-ok: #1d7a46;            /* verde da sincronização (borda do cartão "Sincronizado") */
+  --sync-ok-bg: rgba(29, 122, 70, .16);
+  --sync-warn: #e3a74a;          /* âmbar da sincronização: pendente, reconectar */
+  --sync-warn-bg: rgba(227, 167, 74, .12);
+  --sync-bad: #f08a6c;           /* vermelho da sincronização: conflito, erro */
+  --sync-bad-bg: rgba(240, 138, 108, .12);
 
   --radius: 12px;
   --gutter: 49px;                /* margem lateral da página */

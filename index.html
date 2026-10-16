@@ -21,6 +21,7 @@
   <header class="topbar">
     <span class="brand"><img id="brand-logo" class="brand-logo" alt="" hidden><span id="brand-name">Meu negócio</span></span>
     <nav id="nav" aria-label="Menu principal"><button class="active" data-view="dashboard">Visão geral</button><button data-view="sales">Vendas</button><button data-view="quotes">Orçamentos</button><button data-view="clients">Clientes</button><button data-view="products">Produtos</button><button data-view="financial">Financeiro</button><button class="nav-secondary" data-view="settings">Configurações</button></nav>
+    <span id="sync-top" class="sync-ind sync-top" data-action="sync-open" hidden></span>
     <button class="help-btn" data-action="open-help" title="Como usar" aria-label="Como usar">?</button>
     <button class="receive" data-action="new-payment">Registrar pagamento</button>
     <button class="primary" data-action="new-sale">Nova venda</button>
@@ -29,7 +30,7 @@
     <div class="page-head"><h1 id="page-title">Visão geral</h1></div>
     <div id="subtabs" class="subtabs" hidden></div>
     <div id="app"></div>
-    <footer class="page-foot"><span class="status-dot"></span>Dados salvos neste computador<span id="app-version" class="app-version"></span></footer>
+    <footer class="page-foot"><span class="status-dot"></span>Dados salvos neste aparelho<span id="sync-indicator" class="sync-ind" data-action="sync-open" hidden></span><span id="app-version" class="app-version"></span></footer>
   </main>
   <div id="modal" class="modal hidden"><div class="modal-card"><button class="close" data-action="close-modal">×</button><div id="modal-content"></div></div></div>
 
@@ -67,6 +68,9 @@
   <script src="js/features/alerts.js"></script>
   <script src="js/features/export.js"></script>
   <script src="js/features/backup.js"></script>
+  <script src="js/features/sync-config.js"></script>
+  <script src="js/features/sync-drive.js"></script>
+  <script src="js/features/sync.js"></script>
   <script src="js/screens/dashboard.js"></script>
   <script src="js/screens/clients.js"></script>
   <script src="js/screens/client-detail.js"></script>

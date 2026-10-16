@@ -23,6 +23,7 @@
   App.serviceOrders.applyLabels();   // aba "Orçamentos" ou "Orçamentos e OS", conforme a chave
   App.ui.go('dashboard');   // primeira tela
   App.backup.start();       // backup automático (depois da primeira tela, porque pode mostrar avisos nela)
+  App.sync.start();         // sincronização com o Google Drive (desligada até a pessoa conectar)
   if (App.store.loadProblem) App.ui.openModal('<h2>Os dados salvos estavam ilegíveis</h2><p class="negative">Não consegui ler os dados guardados neste navegador (o arquivo parece danificado). <b>Uma cópia dele foi guardada</b> e o sistema abriu vazio.</p><p>Importe um backup em Configurações > Backup e exportação para recuperar.</p><div class="actions"><button type="button" class="secondary" data-action="close-modal">Entendi</button></div>');
   const opened = App.firstRun.run();   // assistente (sistema novo), "O que há de novo" e faixa da demonstração
   if (!opened) App.alerts.showUrgent();   // janela única com os avisos urgentes (se houver mais de um e não tiver sido dispensada hoje)
