@@ -5,8 +5,8 @@
   const App = (window.App = window.App || {});
   const {esc} = App.format;
 
-  const ISSUES_URL = '';
-  const HOLDER = '[NOME COMPLETO DO TITULAR]';   // trocar pelo nome de quem detém os direitos (também em legal/LICENSE e na cópia publicada)
+  const ISSUES_URL = 'https://github.com/julioinformaticagvt/gestao-financeira/issues';
+  const HOLDER = 'Jul1o Informática';   // trocar pelo nome de quem detém os direitos (também em legal/LICENSE e na cópia publicada)
 
   const TERMS = `Termos de uso
 
