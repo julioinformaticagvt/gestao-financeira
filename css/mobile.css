@@ -99,3 +99,6 @@
   .sync-top[hidden] { display: none; }
   .sync-ind[hidden] { display: none; }
 }
+
+/* Celular: a barra de cima é mais baixa, então a logo é menor que no computador. */
+@media (max-width: 620px) { .brand-logo { height: min(calc(var(--logo-h, 59px) * .68), 46px); max-width: min(calc(var(--logo-w, 162px) * .68), 130px); } }

@@ -51,14 +51,7 @@
   ['app', 'modal-content'].forEach(id => { const el = byId(id); if (el) new MutationObserver(schedule).observe(el, {childList: true, subtree: true}); });
 
   // ---------- barra de baixo e botão "+" ----------
-  const ICONS = {
-    dashboard: '<path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
-    sales: '<path d="M4 5h2l2 10h10l2-7H8"/><circle cx="10" cy="19" r="1.4"/><circle cx="17" cy="19" r="1.4"/>',
-    clients: '<circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/>',
-    financial: '<path d="M4 19V9M10 19V5M16 19v-7M21 19H3"/>',
-    more: '<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>'
-  };
-  const svg = key => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[key]}</svg>`;
+  const svg = key => App.icons.svg(key, 22);   // os ícones ficam em js/core/icons.js (os mesmos dos títulos das telas)
   // O texto vem do menu do computador (ex.: "Orçamentos e OS" quando a ordem de serviço está ligada).
   const navLabel = (view, fallback) => { const b = document.querySelector(`#nav [data-view="${view}"]`); return b ? b.textContent.trim() : fallback; };
   const MORE_VIEWS = ['quotes', 'products', 'settings'];

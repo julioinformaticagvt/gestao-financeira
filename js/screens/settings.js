@@ -23,7 +23,7 @@
 
   function businessPanel() {
     const b = data.settings.business;
-    return `<section class="panel g-other"><h2>Dados do negócio</h2><p class="muted">Aparecem no recibo. Enquanto um campo estiver vazio, o recibo mostra o nome do campo entre colchetes.</p><form id="business-form" class="form-grid"><div class="field"><label>Nome do negócio</label><input name="name" value="${esc(b.name)}" placeholder="Nome do seu negócio"></div><div class="field"><label>CNPJ ou CPF</label><input name="cnpj" value="${esc(b.cnpj)}" placeholder="CNPJ (00.000.000/0000-00) ou CPF"></div><div class="field"><label>Telefone / WhatsApp</label><input name="phone" value="${esc(b.phone)}"></div><div class="field"><label>Instagram</label><input name="instagram" value="${esc(b.instagram)}" placeholder="@seuperfil"></div><div class="field full"><label>Logo</label><div class="logo-rows">${logoRow('logo', 'Logo principal', 'Vale para o topo do sistema e para o PDF do recibo.')}${logoRow('logoTop', 'Outra logo só para o topo (opcional)', 'Se vazio, usa a logo principal.')}${logoRow('logoPdf', 'Outra logo só para o PDF e o recibo (opcional)', 'Se vazio, usa a logo principal.')}</div></div><div class="field full"><label>Garantia padrão (aparece no recibo; dá para mudar em cada recibo)</label><textarea name="warranty" placeholder="Ex.: 90 dias para serviços e 12 meses de garantia do fabricante para peças">${esc(b.warranty)}</textarea></div><div class="field full"><label>Mensagem padrão do recibo (use {cliente}, {negócio}, {valor}, {forma}, {data}). O agradecimento final (compra quitada, tudo quitado, quanto falta) é acrescentado sozinho</label><textarea name="receiptMessage" rows="6">${esc(b.receiptMessage)}</textarea></div><div class="actions field full"><button class="primary">Salvar dados do negócio</button></div></form></section>`;
+    return `<section class="panel g-other"><h2>Dados do negócio</h2><p class="muted">Aparecem no recibo. Enquanto um campo estiver vazio, o recibo mostra o nome do campo entre colchetes.</p><form id="business-form" class="form-grid"><div class="field"><label>Nome do negócio</label><input name="name" value="${esc(b.name)}" placeholder="Nome do seu negócio"></div><div class="field"><label>CNPJ ou CPF</label><input name="cnpj" value="${esc(b.cnpj)}" placeholder="CNPJ (00.000.000/0000-00) ou CPF"></div><div class="field"><label>Telefone / WhatsApp</label><input name="phone" value="${esc(b.phone)}"></div><div class="field"><label>Instagram</label><input name="instagram" value="${esc(b.instagram)}" placeholder="@seuperfil"></div><div class="field full"><label>Logo</label><div class="logo-rows">${logoRow('logo', 'Logo principal', 'Vale para o topo do sistema e para o PDF do recibo.')}${logoRow('logoTop', 'Outra logo só para o topo (opcional)', 'Se vazio, usa a logo principal.')}${logoRow('logoPdf', 'Outra logo só para o PDF e o recibo (opcional)', 'Se vazio, usa a logo principal.')}</div></div><div class="field full"><label>Tamanho da logo no topo</label><div class="size-row"><input type="range" id="logo-size" min="${App.branding.MIN_TOP}" max="${App.branding.MAX_TOP}" step="1" value="${App.branding.topHeight()}" aria-label="Tamanho da logo no topo"><output id="logo-size-out" for="logo-size">${App.branding.topHeight()} px</output><button type="button" class="secondary" id="logo-size-reset">Voltar ao tamanho padrão</button></div><p class="muted">Se a sua logo ficou grande ou pequena demais, ajuste aqui (de ${App.branding.MIN_TOP} a ${App.branding.MAX_TOP} px). Vale só para o topo do sistema; o tamanho no recibo não muda.</p></div>${App.appearance.sliderHtml('bar')}<div class="field full"><label class="inline-check"><input type="checkbox" name="showName" ${b.showName === false ? '' : 'checked'}> Mostrar o nome do negócio ao lado da logo, no topo do sistema (desmarque para mostrar só a logo; sem logo, o nome aparece sempre)</label></div><div class="field full"><label>Garantia padrão (aparece no recibo; dá para mudar em cada recibo)</label><textarea name="warranty" placeholder="Ex.: 90 dias para serviços e 12 meses de garantia do fabricante para peças">${esc(b.warranty)}</textarea></div><div class="field full"><label>Mensagem padrão do recibo (use {cliente}, {negócio}, {valor}, {forma}, {data}). O agradecimento final (compra quitada, tudo quitado, quanto falta) é acrescentado sozinho</label><textarea name="receiptMessage" rows="6">${esc(b.receiptMessage)}</textarea></div><div class="actions field full"><button class="primary">Salvar dados do negócio</button></div></form></section>`;
   }
 
   // Painel do MEI: chave "Sou MEI", limite, avisos e DAS. Desligado, somem os medidores, o lembrete do DAS e os avisos.
@@ -73,7 +73,7 @@
 
   // ---------- tela ----------
   function render() {
-    byId('app').innerHTML = App.sync.panelHtml() + rulesPanel() + businessPanel() + meiPanel() + machinePanel() + App.serviceOrders.settingsPanel() + App.revenue.settingsPanel() + App.pwa.settingsPanel() + App.firstRun.settingsPanels();
+    byId('app').innerHTML = App.sync.panelHtml() + App.motion.panelHtml() + rulesPanel() + businessPanel() + meiPanel() + machinePanel() + App.serviceOrders.settingsPanel() + App.revenue.settingsPanel() + App.pwa.settingsPanel() + App.firstRun.settingsPanels();
     App.serviceOrders.bindSettings();
     App.revenue.bindSettings();
 
@@ -89,9 +89,17 @@
       alert('Configurações salvas.');
     };
 
+    // Tamanho da logo do topo: muda na hora enquanto arrasta e grava ao soltar.
+    const sizeInput = byId('logo-size');
+    sizeInput.oninput = () => { byId('logo-size-out').textContent = `${sizeInput.value} px`; App.branding.setTopHeight(Number(sizeInput.value), false); };
+    sizeInput.onchange = () => App.branding.setTopHeight(Number(sizeInput.value), true);
+    byId('logo-size-reset').onclick = () => { App.branding.setTopHeight(null, true); sizeInput.value = App.branding.DEFAULT_TOP; byId('logo-size-out').textContent = `${App.branding.DEFAULT_TOP} px`; };
+
     byId('business-form').onsubmit = event => {
       event.preventDefault();
-      Object.assign(data.settings.business, Object.fromEntries(new FormData(event.target)));
+      const formData = new FormData(event.target);
+      Object.assign(data.settings.business, Object.fromEntries(formData));
+      if (formData.get('showName')) delete data.settings.business.showName; else data.settings.business.showName = false;   // marcado = padrão (não grava nada)
       save();
       App.branding.apply();
       alert('Dados do negócio salvos.');

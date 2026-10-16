@@ -1,6 +1,15 @@
 // "O que há de novo": lista de versões em linguagem simples, da mais nova para a mais antiga.
 // A cada versão aprovada, acrescente uma entrada AQUI (e em version.js, na tabela do CLAUDE.md e na etiqueta do Git).
 window.CHANGELOG = [
+  {version: '0.14.0', name: 'Fluidez', date: '16/10/2026', items: [
+    'Animações em 5 níveis (0 desligado a 4 muita animação), escolhidos por você em Configurações, no alto. O nível vale só para o aparelho.',
+    'Títulos das telas maiores, em negrito e com ícone (o mesmo estilo da barra de baixo do celular). A logo do topo ficou maior.',
+    'O menu de cima ganhou ícones e texto em negrito. A logo do topo ficou ainda maior.',
+    'Novo: dá para mostrar só a logo, sem o nome escrito, e escolher o tamanho da logo do topo (Configurações > Dados do negócio).',
+    'Barra de cima fixa ao rolar a tela. Dá para escolher o tamanho do texto e dos ícones da barra e o tamanho geral da tela (para quem enxerga mal).',
+    'O estado da sincronização aparece na barra de cima também no computador.',
+    'Reconectar ao Google: tocar em "Reconectar" reconecta na hora, e o sistema tenta reconectar sozinho ao abrir.'
+  ]},
   {version: '0.13.3', name: 'Gráficos coloridos e faixa discreta', date: '16/10/2026', items: [
     'Visão geral: "Recebimentos por forma" agora tem uma cor para cada forma de pagamento (as mesmas dos Relatórios), e "Contas a receber por mês" ficou azul.',
     'Relatórios: "Recebido no mês" ficou verde.',

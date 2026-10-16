@@ -47,10 +47,14 @@
 
   // Pede o token. Só deve ser chamada a partir de um clique da pessoa (o navegador pode bloquear a janela do Google se não for).
   // hint = e-mail da conta usada antes: o Google pula a escolha de conta.
-  async function request(id, hint) {
+  // options.silent: tenta sem janela (prompt 'none'); se o navegador bloquear ou o Google precisar de você, devolve false rápido.
+  async function request(id, hint, options = {}) {
     clientId = id || clientId;
     await loadScript();
-    return new Promise(resolve => {
+    return new Promise(resolve0 => {
+      let finished = false;
+      const resolve = value => { if (!finished) { finished = true; resolve0(value); } };
+      if (options.silent) setTimeout(() => resolve(false), 8000);   // sem resposta em 8 s: desiste (sem ficar pendurado)
       const client = google.accounts.oauth2.initTokenClient({
         client_id: clientId,
         scope: SCOPE,
@@ -61,7 +65,7 @@
         },
         error_callback: () => resolve(false)   // a pessoa fechou a janela, ou o navegador bloqueou
       });
-      client.requestAccessToken({prompt: ''});
+      client.requestAccessToken({prompt: options.silent ? 'none' : ''});
     });
   }
 

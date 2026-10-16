@@ -41,6 +41,7 @@
   function installBanner() {
     const old = document.getElementById('demo-banner');
     if (old) old.remove();
+    document.documentElement.style.removeProperty('--sticky-top');
     if (!isDemo()) return;
     const fresh = !realInUse();
     const bar = document.createElement('div');
@@ -48,6 +49,10 @@
     bar.className = 'demo-banner';
     bar.innerHTML = `<span><b>Modo demonstração:</b> nada aqui é real. O backup fica desligado e seus dados verdadeiros não são tocados.</span><span class="demo-actions"><button type="button" class="secondary" data-action="demo-exit">Sair e voltar aos meus dados</button>${fresh ? '<button type="button" class="primary" data-action="demo-exit">Apagar exemplos e começar de verdade</button>' : ''}</span>`;
     document.body.insertBefore(bar, document.body.firstChild);
+    // A barra de cima fica fixa ao rolar; na demonstração ela fica logo abaixo da faixa (que também fica fixa).
+    const root = document.documentElement.style, setTop = () => root.setProperty('--sticky-top', `${bar.offsetHeight}px`);
+    setTop();
+    if (window.ResizeObserver) new ResizeObserver(setTop).observe(bar);
   }
 
   function confirmEnter() {

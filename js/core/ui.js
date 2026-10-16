@@ -57,10 +57,13 @@
     const group = groupOf(view);
     document.querySelectorAll('#nav button').forEach(button => button.classList.toggle('active', button.dataset.view === (group || NAV_OF[view] || view)));
     current = view;
-    byId('page-title').textContent = titles[view];
+    const icon = App.icons ? App.icons.svg(App.icons.forView(view), 28) : '';   // o desenho não tem texto: o texto do título continua o mesmo
+    byId('page-title').innerHTML = `${icon ? `<span class="title-icon">${icon}</span>` : ''}<span class="title-text">${String(titles[view]).replace(/&/g, '&amp;').replace(/</g, '&lt;')}</span>`;
     renderSubtabs(group, view);
     screens[view]();
     (showHooks[view] || []).forEach(fn => fn());
+    const appEl = byId('app');   // reinicia a animação de entrada da tela (css/motion.css)
+    appEl.classList.remove('screen-enter'); void appEl.offsetWidth; appEl.classList.add('screen-enter');
     document.dispatchEvent(new CustomEvent('screenchange', {detail: {view}}));   // a barra de baixo do celular marca o item ativo
   }
 

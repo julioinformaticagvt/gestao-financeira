@@ -1,5 +1,15 @@
 # Novidades
 
+## Versão 0.14.0 · Fluidez · 16/10/2026
+
+- Animações em 5 níveis (0 desligado a 4 muita animação), escolhidos por você em Configurações, no alto. O nível vale só para o aparelho.
+- Títulos das telas maiores, em negrito e com ícone (o mesmo estilo da barra de baixo do celular). A logo do topo ficou maior.
+- O menu de cima ganhou ícones e texto em negrito. A logo do topo ficou ainda maior.
+- Novo: dá para mostrar só a logo, sem o nome escrito, e escolher o tamanho da logo do topo (Configurações > Dados do negócio).
+- Barra de cima fixa ao rolar a tela. Dá para escolher o tamanho do texto e dos ícones da barra e o tamanho geral da tela (para quem enxerga mal).
+- O estado da sincronização aparece na barra de cima também no computador.
+- Reconectar ao Google: tocar em "Reconectar" reconecta na hora, e o sistema tenta reconectar sozinho ao abrir.
+
 ## Versão 0.13.3 · Gráficos coloridos e faixa discreta · 16/10/2026
 
 - Visão geral: "Recebimentos por forma" agora tem uma cor para cada forma de pagamento (as mesmas dos Relatórios), e "Contas a receber por mês" ficou azul.

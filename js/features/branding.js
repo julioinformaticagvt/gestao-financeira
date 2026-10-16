@@ -33,15 +33,34 @@
     });
   }
 
+  // Tamanho da logo do topo (altura em px). Padrão 59; a pessoa pode ajustar de 24 a 90 (SPECS 31.8). A barra de cima acompanha.
+  const DEFAULT_TOP = 59, MIN_TOP = 24, MAX_TOP = 90;
+  const topHeight = () => { const h = Number(data.settings.business.logoTopHeight); return Number.isFinite(h) && h >= MIN_TOP && h <= MAX_TOP ? Math.round(h) : DEFAULT_TOP; };
+  function setTopHeight(value, persist) {
+    const b = data.settings.business, h = value === null ? DEFAULT_TOP : Math.max(MIN_TOP, Math.min(MAX_TOP, Math.round(Number(value)) || DEFAULT_TOP));
+    if (h === DEFAULT_TOP) delete b.logoTopHeight; else b.logoTopHeight = h;   // o padrão não grava nada
+    apply();
+    if (persist) App.store.save();
+  }
+
   // Atualiza o topo do sistema (nome e logo).
   function apply() {
+    const rootStyle = document.documentElement.style, h = topHeight();
+    const barScale = App.appearance ? App.appearance.barScale() : 1, barH = Math.max(Math.round(62 * barScale), h + 17);   // a barra cabe a logo e o texto
+    if (h === DEFAULT_TOP) { rootStyle.removeProperty('--logo-h'); rootStyle.removeProperty('--logo-w'); }
+    else { rootStyle.setProperty('--logo-h', `${h}px`); rootStyle.setProperty('--logo-w', `${Math.min(320, Math.round(h * 2.75))}px`); }
+    if (barH === 76) rootStyle.removeProperty('--topbar-h'); else rootStyle.setProperty('--topbar-h', `${barH}px`);
     const name = document.getElementById('brand-name'), img = document.getElementById('brand-logo');
     const label = (data.settings.business.name || '').trim() || 'Meu negócio';   // sistema novo (sem nome ainda): texto neutro
     if (name) name.textContent = label;
     document.title = `${label} | Gestão financeira`;
     const logo = logoFor('top');
     if (img) { img.hidden = !logo; if (logo) img.src = logo.src; else img.removeAttribute('src'); }
+    // Opção "mostrar o nome ao lado da logo" (padrão: sim). Sem logo, o nome aparece sempre.
+    const showName = !(logo && data.settings.business.showName === false);
+    if (name) name.hidden = !showName;
+    if (img) img.alt = showName ? '' : label;
   }
 
-  App.branding = {logoFor, fromFile, apply};
+  App.branding = {logoFor, fromFile, apply, topHeight, setTopHeight, DEFAULT_TOP, MIN_TOP, MAX_TOP};
 })();

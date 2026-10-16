@@ -30,7 +30,7 @@
   let auth = {
     configured: () => !!clientId() && clientId() !== App.syncConfig.PLACEHOLDER,
     hasToken: () => App.syncDrive.hasToken(),
-    request: hint => App.syncDrive.request(clientId(), hint),
+    request: (hint, options) => App.syncDrive.request(clientId(), hint, options),
     clear: () => App.syncDrive.clear(),
     revoke: () => App.syncDrive.revoke()
   };
@@ -42,7 +42,7 @@
   const setState = patch => { st = {...st, ...patch}; try { localStorage.setItem(STATE_KEY, JSON.stringify(st)); } catch { /* sem espaço: o estado fica só na memória */ } };
 
   // Coisas que só existem enquanto a página está aberta.
-  const run = {reloading: false, busy: false, again: false, offline: false, error: '', newer: false, dirty: false, note: '', conflictRemote: null};
+  const run = {reloading: false, reconnecting: false, busy: false, again: false, offline: false, error: '', newer: false, dirty: false, note: '', conflictRemote: null};
   let timer = null;
 
   // ---------- dados: o que vale para comparar e enviar ----------
@@ -134,6 +134,7 @@
   // ---------- estado visível (cor, texto) ----------
   function view() {
     if (run.reloading) return {key: 'syncing', color: 'amber', label: 'Atualizando os dados...', short: 'Atualizando...'};
+    if (run.reconnecting) return {key: 'syncing', color: 'amber', label: 'Reconectando...', short: 'Reconectando...'};
     const reason = block();
     if (reason === 'demo') return {key: 'demo', color: 'gray', label: 'Bloqueada na demonstração', short: ''};
     if (!st.on) return {key: 'off', color: 'gray', label: 'Não sincronizado', short: '', reason};
@@ -157,6 +158,7 @@
       if (!el) return;
       el.hidden = !show;
       el.dataset.state = v.color;
+      el.dataset.busy = v.key === 'syncing' ? '1' : '';   // o ponto pulsa enquanto sincroniza (css/motion.css)
       el.textContent = show ? `● ${v.short}` : '';
       el.title = show ? 'Sincronização com o Google Drive (clique para abrir)' : '';
     });
@@ -499,7 +501,44 @@
   registerAction('sync-delete-confirm', deleteDrive);
   registerAction('sync-copy-url', () => { try { navigator.clipboard.writeText(address()); } catch { /* sem permissão: a pessoa copia à mão */ } });
   registerAction('sync-save-client-id', () => { setState({clientId: byId('sync-client-id').value.trim()}); refresh(); });
-  registerAction('sync-open', () => { App.ui.go('settings'); if (st.conflict) openConflict(); });
+  // Tocar no indicador: se está "Reconectar", reconecta na hora (sem ir para Configurações); nos outros estados, abre Configurações.
+  registerAction('sync-open', () => {
+    if (view().key === 'reconnect') { connect(); return; }
+    App.ui.go('settings'); if (st.conflict) openConflict();
+  });
+
+  // ---------- reconectar sozinho (SPECS 31.1 e 31.6) ----------
+  // Ao abrir (e ao voltar para o sistema) com o login vencido, tenta reconectar SEM janela. O navegador pode bloquear isso por não ter havido
+  // toque; então, uma única vez por tentativa, o primeiro toque ou tecla em qualquer lugar reconecta. Falhou: fica "Reconectar" e não insiste.
+  let gestureArmed = false;
+  async function autoReconnect() {
+    if (!canRun() || st.conflict || run.reloading || run.reconnecting || auth.hasToken()) return;
+    run.reconnecting = true; refresh();
+    let ok = false;
+    try { ok = await auth.request(st.accountHint, {silent: true}); } catch { ok = false; }
+    run.reconnecting = false;
+    if (ok) { await syncNow(); return; }
+    refresh();
+    armGesture();
+  }
+  function armGesture() {
+    if (gestureArmed) return;
+    gestureArmed = true;
+    const once = () => {
+      document.removeEventListener('pointerdown', once, true); document.removeEventListener('keydown', once, true);
+      gestureArmed = false;
+      reconnectByGesture();
+    };
+    document.addEventListener('pointerdown', once, true); document.addEventListener('keydown', once, true);
+  }
+  async function reconnectByGesture() {
+    if (!canRun() || st.conflict || run.reloading || run.reconnecting || auth.hasToken()) return;
+    run.reconnecting = true; refresh();
+    let ok = false;
+    try { ok = await auth.request(st.accountHint); } catch { ok = false; }
+    run.reconnecting = false;
+    if (ok) await syncNow(); else refresh();
+  }
 
   // ---------- partida ----------
   function start() {
@@ -512,15 +551,15 @@
         refresh();
         schedule();
       });
-      document.addEventListener('visibilitychange', () => { if (!document.hidden && canRun() && auth.hasToken()) syncNow(); });
+      document.addEventListener('visibilitychange', () => { if (document.hidden || !canRun()) return; if (auth.hasToken()) syncNow(); else autoReconnect(); });
       window.addEventListener('online', () => { run.offline = false; if (canRun() && auth.hasToken()) syncNow(); });
       setInterval(() => { if (canRun() && auth.hasToken() && (run.offline || run.dirty)) syncNow(); }, TICK_MS);
     }
     refresh();
-    if (canRun() && auth.hasToken()) syncNow();
+    if (canRun() && auth.hasToken()) syncNow(); else autoReconnect();
   }
 
-  App.sync = {start, panelHtml, syncNow, view, hooks, hashData, isEmpty, openConflict, connect,
+  App.sync = {start, autoReconnect, panelHtml, syncNow, view, hooks, hashData, isEmpty, openConflict, connect,
     state: () => ({...st}), setState, setDriveApi: value => { driveApi = value; }, setAuth: value => { auth = {...auth, ...value}; },
     setCopiesStore: value => { copies = value; }, saveCopy, copies: () => copies.all(), refresh, runState: run, DEVICE_ONLY_SETTINGS};
 })();

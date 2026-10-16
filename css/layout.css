@@ -1,6 +1,6 @@
 /* Estrutura da página: barra do topo com as abas, título, sub-abas e rodapé. */
 
-.topbar { background: var(--topbar); display: flex; align-items: center; gap: 36px; height: 62px; padding: 0 var(--gutter); border-bottom: 1px solid var(--line); }
+.topbar { position: sticky; top: var(--sticky-top, 0px); z-index: 30; background: var(--topbar); display: flex; align-items: center; gap: 36px; height: var(--topbar-h, 76px); padding: 0 var(--gutter); border-bottom: 1px solid var(--line); }
 .brand { color: var(--accent); font-weight: 600; font-size: 17px; white-space: nowrap; }
 
 .topbar nav { display: flex; flex: 1; align-items: stretch; gap: 26px; height: 100%; min-width: 0; overflow-x: auto; scrollbar-width: none; }
@@ -37,3 +37,28 @@
   h1 { font-size: 25px; }
 }
 .app-version { margin-left: 18px; padding-left: 18px; border-left: 1px solid var(--line); }
+
+/* Título da tela: ícone num quadradinho + texto (o ícone é desenho, sem texto). */
+#page-title { display: flex; align-items: center; gap: 14px; }
+.title-icon { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 1.45em; height: 1.45em; border-radius: 12px; background: var(--panel-2); border: 1px solid var(--line); color: var(--text); }
+.title-icon svg { width: 58%; height: 58%; }
+
+/* Menu de cima: texto em negrito e um ícone antes de cada item (mesmos desenhos de js/core/icons.js; feitos em CSS para continuar valendo quando o texto do botão muda, como em "Orçamentos e OS"). */
+.topbar nav button { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
+#nav button::before { content: ''; flex: none; width: 18px; height: 18px; margin-top: -2px; background: currentColor; -webkit-mask: var(--ico) center / contain no-repeat; mask: var(--ico) center / contain no-repeat; }
+#nav [data-view="dashboard"] { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z'/%3E%3C/svg%3E"); }
+#nav [data-view="sales"] { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 5h2l2 10h10l2-7H8'/%3E%3Ccircle cx='10' cy='19' r='1.4'/%3E%3Ccircle cx='17' cy='19' r='1.4'/%3E%3C/svg%3E"); }
+#nav [data-view="quotes"] { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 3h7l5 5v13H7z'/%3E%3Cpath d='M14 3v5h5M10 13h6M10 17h6'/%3E%3C/svg%3E"); }
+#nav [data-view="clients"] { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='8' r='3.5'/%3E%3Cpath d='M5 20a7 7 0 0 1 14 0'/%3E%3C/svg%3E"); }
+#nav [data-view="products"] { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 7l9-4 9 4v10l-9 4-9-4z'/%3E%3Cpath d='M3 7l9 4 9-4M12 11v10'/%3E%3C/svg%3E"); }
+#nav [data-view="financial"] { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 19V9M10 19V5M16 19v-7M21 19H3'/%3E%3C/svg%3E"); }
+#nav [data-view="settings"] { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10.3 4.3c.4-1.8 2.9-1.8 3.4 0a1.7 1.7 0 0 0 2.5 1.1c1.5-.9 3.3.8 2.4 2.4a1.7 1.7 0 0 0 1 2.5c1.8.4 1.8 2.9 0 3.4a1.7 1.7 0 0 0-1 2.5c.9 1.5-.8 3.3-2.4 2.4a1.7 1.7 0 0 0-2.5 1c-.4 1.8-2.9 1.8-3.4 0a1.7 1.7 0 0 0-2.5-1c-1.5.9-3.3-.8-2.4-2.4a1.7 1.7 0 0 0-1-2.5c-1.8-.4-1.8-2.9 0-3.4a1.7 1.7 0 0 0 1-2.5c-.9-1.5.8-3.3 2.4-2.4 1 .6 2.3.1 2.5-1.1z'/%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E"); }
+
+/* Tamanho do texto e dos ícones da barra de cima (Configurações > Dados do negócio): --bar-scale, só em tela larga. Os ícones do menu usam em, então crescem junto. */
+@media (min-width: 621px) {
+  .topbar { font-size: calc(14px * var(--bar-scale, 1)); }
+  .topbar .brand { font-size: calc(17px * var(--bar-scale, 1)); }
+  .topbar .help-btn { width: calc(34px * var(--bar-scale, 1)); height: calc(34px * var(--bar-scale, 1)); }
+  .topbar .sync-top { font-size: calc(12px * var(--bar-scale, 1)); }
+  #nav button::before { width: 1.29em; height: 1.29em; }
+}
