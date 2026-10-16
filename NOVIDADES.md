@@ -1,5 +1,11 @@
 # Novidades
 
+## Versão 0.13.3 · Gráficos coloridos e faixa discreta · 16/10/2026
+
+- Visão geral: "Recebimentos por forma" agora tem uma cor para cada forma de pagamento (as mesmas dos Relatórios), e "Contas a receber por mês" ficou azul.
+- Relatórios: "Recebido no mês" ficou verde.
+- No celular, o aviso "Os dados ficam só neste aparelho" ganhou o botão "Entendi" (some de vez) e não aparece com a sincronização ligada nem num sistema vazio.
+
 ## Versão 0.13.2 · Reconectar sem escolher a conta · 16/10/2026
 
 - Ao reconectar ao Google, o sistema lembra qual conta você usa (só neste aparelho) e o Google não pergunta a conta de novo.

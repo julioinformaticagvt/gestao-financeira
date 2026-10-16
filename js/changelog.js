@@ -1,6 +1,11 @@
 // "O que há de novo": lista de versões em linguagem simples, da mais nova para a mais antiga.
 // A cada versão aprovada, acrescente uma entrada AQUI (e em version.js, na tabela do CLAUDE.md e na etiqueta do Git).
 window.CHANGELOG = [
+  {version: '0.13.3', name: 'Gráficos coloridos e faixa discreta', date: '16/10/2026', items: [
+    'Visão geral: "Recebimentos por forma" agora tem uma cor para cada forma de pagamento (as mesmas dos Relatórios), e "Contas a receber por mês" ficou azul.',
+    'Relatórios: "Recebido no mês" ficou verde.',
+    'No celular, o aviso "Os dados ficam só neste aparelho" ganhou o botão "Entendi" (some de vez) e não aparece com a sincronização ligada nem num sistema vazio.'
+  ]},
   {version: '0.13.2', name: 'Reconectar sem escolher a conta', date: '16/10/2026', items: [
     'Ao reconectar ao Google, o sistema lembra qual conta você usa (só neste aparelho) e o Google não pergunta a conta de novo.'
   ]},

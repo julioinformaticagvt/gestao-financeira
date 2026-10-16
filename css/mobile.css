@@ -84,7 +84,9 @@
   .meters { grid-template-columns: 1fr; }
   .finance-chart { overflow-x: auto; }
   .mobile-data-note { margin-bottom: 14px; }
-  .mobile-data-note .panel-head { flex-wrap: wrap; }
+  .mobile-data-note .panel-head { flex-wrap: wrap; gap: 8px; }
+  .mobile-data-note { padding: 10px 14px; font-size: 13px; }
+  .mobile-data-note .note-actions { display: flex; gap: 8px; }
 
   /* ----- textos longos quebram linha em vez de estourar ----- */
   .card, .panel, .block, td, th, p, li, h2, h3, .kpi-label, .tray-title, .doc-row { overflow-wrap: anywhere; }

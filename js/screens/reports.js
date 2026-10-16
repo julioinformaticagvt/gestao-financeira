@@ -25,7 +25,7 @@
       body = `<div class="panel-head"><h2>${esc(R().revenueTitle())}</h2><input id="rep-month" type="month" value="${month}"></div>${R().revenueTableHtml(rev)}<p class="muted">${esc(R().RULE)}</p><div class="actions"><button type="button" class="secondary" id="rep-print">Imprimir / PDF</button><button type="button" class="secondary" id="rep-csv">Exportar CSV</button></div><details><summary>Pagamentos que compõem o mês (${rev.details.length})</summary>${R().detailsHtml(rev)}</details>`;
     } else if (tab === 'year') {
       const year = state.year || today().slice(0, 4), sy = R().yearSummary(year);
-      const chart = barChart(sy.months.map(m => ({label: monthLabel(m.month).split(' ')[0].slice(0, 3), first: m.total})), 'Recebido no mês');
+      const chart = barChart(sy.months.map(m => ({label: monthLabel(m.month).split(' ')[0].slice(0, 3), first: m.total})), 'Recebido no mês', null, {color: 'var(--ok)'});
       const mei = data.settings.isMei ? `<div class="meters">${App.components.meter({title: 'Receita do ano', value: sy.mei.received, limit: sy.mei.limit, color: '#1d7a46', warnPct: Number(data.settings.meiWarnPct) || 70, alertPct: Number(data.settings.meiAlertPct) || 90, main: true, note: 'Compara com o limite do MEI. Confira com seu contador.', overText: 'Você passou do limite. Procure seu contador.', lines: []})}</div>` : '';
       body = `<div class="panel-head"><h2>Resumo do ano</h2><input id="rep-year" type="number" min="2000" max="2100" value="${year}" style="width:100px"></div>${chart}${mei}${R().yearHtml(sy)}<div class="actions"><button type="button" class="secondary" id="rep-print">Imprimir / PDF</button><button type="button" class="secondary" id="rep-csv">Exportar CSV</button></div>`;
     } else if (tab === 'day') {
@@ -72,17 +72,7 @@
 
     // Recebimentos por forma: barras horizontais, uma cor por forma (a cor sempre vem com o nome e o valor).
     // Aqui é uso interno, então Pix PJ e Pix PF aparecem separados.
-    const methodColor = method => {
-      const m = String(method).toLowerCase();
-      if (/pix\s*pf/.test(m)) return '#b5e6c9';
-      if (/pix/.test(m)) return '#7fcf9f';
-      if (/dinheiro/.test(m)) return '#e3a74a';
-      if (/cr[eé]dito|cart/.test(m)) return '#6fb1e8';
-      if (/d[eé]bito/.test(m)) return '#9cc9ef';
-      if (/transfer/.test(m)) return '#b690e8';
-      if (/carn|entrada/.test(m)) return '#4fc1c9';
-      return '#8a948f';
-    };
+    const {methodColor} = App.components;   // as cores das formas de pagamento ficam em components/bar-chart.js (as mesmas da Visão geral)
     const methodTotals = Object.entries(payments.reduce((all, p) => { all[p.method] = (all[p.method] || 0) + Number(p.amount); return all; }, {})).sort((a, b) => b[1] - a[1]);
     const methodMax = methodTotals.length ? methodTotals[0][1] : 0;
     const byMethod = methodTotals.map(([method, value]) => `<div class="mbar"><span class="mname"><i style="background:${methodColor(method)}"></i>${esc(method)}</span><div class="mtrack"><div class="mfill" style="width:${methodMax ? Math.max(2, value / methodMax * 100) : 0}%;background:${methodColor(method)}"></div></div><b>${money(value)}</b></div>`).join('') || '<div class="empty">Nenhum recebimento no mês.</div>';

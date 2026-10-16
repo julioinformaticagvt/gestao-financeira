@@ -11,6 +11,7 @@
   const STEPS = 4;
   const SPACE_LIMIT = 5000000;            // cerca de 5 MB (o que o navegador costuma permitir)
   const BROWSER_SEEN = 'julio-informatica-browser-notice';
+  const DATA_NOTE_SEEN = 'julio-informatica-data-note';   // "Entendi" na faixa "os dados ficam só neste aparelho" (só deste aparelho; fora dos dados)
 
   // ---------- versões ----------
   const parts = v => String(v || '0').split('.').map(n => Number(n) || 0);
@@ -175,10 +176,20 @@
     return 'Este sistema funciona melhor no Chrome ou Edge. Neste navegador o backup automático não está disponível: use o backup manual.';
   }
 
+  function dataNoteVisible() {
+    try { if (localStorage.getItem(DATA_NOTE_SEEN) === '1') return false; } catch { /* sem acesso: mostra */ }
+    if (App.sync && App.sync.state().on) return false;   // sincronizando com o Google Drive
+    const d = App.store.data;
+    return !!((d.clients || []).length || (d.products || []).length || (d.sales || []).length);   // sistema vazio: o assistente já explica
+  }
+  registerAction('data-note-ok', () => { try { localStorage.setItem(DATA_NOTE_SEEN, '1'); } catch { /* segue */ } go('dashboard'); });
+
   function noticesHtml(options = {}) {
     if (window.__NO_FIRST_RUN && !options.force) return '';
     // Faixa só do celular (o CSS a esconde no computador): os dados ficam no aparelho.
-    const out = ['<section class="panel mobile-data-note"><div class="panel-head"><span><b>Os dados ficam só neste aparelho.</b> O computador e o celular têm dados separados.</span><button type="button" class="secondary" data-action="open-help">Entenda</button></div></section>'];
+    // Faixa só do celular. Some de vez com "Entendi"; não aparece com a sincronização ligada (os dados também estão no Drive) nem num sistema ainda vazio (SPECS 30.2).
+    const out = [];
+    if (dataNoteVisible()) out.push('<section class="panel mobile-data-note"><div class="panel-head"><span><b>Os dados ficam só neste aparelho.</b> O computador e o celular têm dados separados.</span><span class="note-actions"><button type="button" class="secondary" data-action="open-help">Entenda</button><button type="button" class="secondary" data-action="data-note-ok">Entendi</button></span></div></section>');
     const sp = spaceInfo();
     if (sp.pct >= 80) out.push(`<section class="panel backup-band backup-alert"><div class="panel-head"><span class="negative">O espaço do navegador está acabando: ${mb(sp.used)} de cerca de ${mb(SPACE_LIMIT)}. Faça um backup e use imagens menores nos logos.</span></div></section>`);
     const text = browserNotice(options.env);
