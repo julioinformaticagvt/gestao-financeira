@@ -4,5 +4,5 @@
 // "Sincronização ainda não configurada" e nem carrega o script do Google.
 (() => {
   const App = (window.App = window.App || {});
-  App.syncConfig = {GOOGLE_CLIENT_ID: 'COLE_AQUI_O_ID_DO_CLIENTE', PLACEHOLDER: 'COLE_AQUI_O_ID_DO_CLIENTE'};
+  App.syncConfig = {GOOGLE_CLIENT_ID: '132769679260-vbn2l3attcht636sk6k2vaj8cq7pg01j.apps.googleusercontent.com', PLACEHOLDER: 'COLE_AQUI_O_ID_DO_CLIENTE'};
 })();
