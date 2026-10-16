@@ -449,7 +449,7 @@
     } else if (v.key === 'syncing') {
       text = 'Sincronizando com o seu Google Drive...';
     } else if (v.key === 'reconnect') {
-      text = `O login com o Google venceu (ou o sistema acabou de abrir). Entre de novo para continuar sincronizando.${v.changed ? ' Há mudanças ainda não enviadas: nada foi perdido.' : ''}`;
+      text = `O login com o Google venceu (ele dura cerca de 1 hora e some ao fechar o aplicativo). Entre de novo para continuar sincronizando.${v.changed ? ' Há mudanças ainda não enviadas: nada foi perdido.' : ''}`;
       buttons = btn('sync-connect', 'Reconectar', 'primary') + btn('sync-copies', 'Cópias de segurança') + btn('sync-disconnect', 'Desconectar');
     } else if (v.key === 'pending') {
       text = v.why === 'offline' ? 'Sem internet no momento. Nada foi perdido: o sistema tenta de novo sozinho quando a internet voltar.' : v.why === 'first' ? 'Falta a primeira sincronização.' : 'Há mudanças ainda não enviadas ao Google Drive.';

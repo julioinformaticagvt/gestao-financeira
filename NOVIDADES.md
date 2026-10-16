@@ -1,5 +1,9 @@
 # Novidades
 
+## Versão 0.13.1 · Passe do Google na aba · 16/10/2026
+
+- No celular, puxar a tela para atualizar não pede mais para reconectar ao Google: o login continua valendo (cerca de 1 hora) enquanto o aplicativo estiver aberto.
+
 ## Versão 0.13.0 · Sincronização · 16/10/2026
 
 - Novo: sincronizar o computador e o celular pelo seu Google Drive (opcional, vem desligado). Configurações > Sincronizar com o Google Drive, com passo a passo.

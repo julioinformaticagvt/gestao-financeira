@@ -1,7 +1,9 @@
 // Conversa com o Google (SPECS, seção 27.3): login (token) e as chamadas ao Drive. Só "fala" com o Google quando a pessoa liga a
 // sincronização; o script de login do Google (accounts.google.com/gsi/client) só é carregado nesse momento.
-// O token de acesso fica SÓ NA MEMÓRIA desta página: nunca é gravado (nem em localStorage, nem nos dados, nem em backup).
-// Analogia: o token é uma pulseira de visitante que vale cerca de 1 hora; ao fechar a página, ela se perde e é preciso pedir outra.
+// O token de acesso fica na memória da página e, para sobreviver a "puxar para atualizar" no celular, também no sessionStorage (a
+// gaveta da ABA: some sozinha quando a aba ou o aplicativo é fechado, e vale no máximo ~1 hora). NUNCA vai para o localStorage, para os
+// dados, para o backup nem para o Drive.
+// Analogia: o token é uma pulseira de visitante que vale cerca de 1 hora; recarregar a página não a tira, mas fechar tudo sim.
 (() => {
   const App = (window.App = window.App || {});
 
@@ -11,10 +13,25 @@
   const DRIVE = 'https://www.googleapis.com/drive/v3/files';
   const UPLOAD = 'https://www.googleapis.com/upload/drive/v3/files';
 
+  const TOKEN_KEY = 'julio-informatica-sync-token';   // só no sessionStorage (a aba), nunca no localStorage
   let token = '', expiresAt = 0, clientId = '';
 
   const hasToken = () => !!token && Date.now() < expiresAt;
-  const clear = () => { token = ''; expiresAt = 0; };
+  const clear = () => { token = ''; expiresAt = 0; try { sessionStorage.removeItem(TOKEN_KEY); } catch { /* sem acesso: segue só na memória */ } };
+  // Guarda o token (valendo `seconds` segundos, menos uma folga de 1 minuto) na memória e na aba.
+  const remember = (value, seconds) => {
+    token = value; expiresAt = Date.now() + (seconds - 60) * 1000;
+    try { sessionStorage.setItem(TOKEN_KEY, JSON.stringify({t: token, exp: expiresAt})); } catch { /* sem acesso: segue só na memória */ }
+  };
+  // Depois de recarregar a página: recupera o token da aba, se ainda valer; se venceu, apaga.
+  const restore = () => {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(TOKEN_KEY) || 'null');
+      if (saved && saved.t && saved.exp > Date.now()) { token = saved.t; expiresAt = saved.exp; }
+      else if (saved) sessionStorage.removeItem(TOKEN_KEY);
+    } catch { /* sem acesso: segue sem token */ }
+  };
+  const dropMemory = () => { token = ''; expiresAt = 0; };   // só para os testes (simula o recarregar da página)
 
   function loadScript() {
     return new Promise((resolve, reject) => {
@@ -37,7 +54,7 @@
         client_id: clientId,
         scope: SCOPE,
         callback: response => {
-          if (response && response.access_token) { token = response.access_token; expiresAt = Date.now() + ((Number(response.expires_in) || 3600) - 60) * 1000; resolve(true); }
+          if (response && response.access_token) { remember(response.access_token, Number(response.expires_in) || 3600); resolve(true); }
           else resolve(false);
         },
         error_callback: () => resolve(false)   // a pessoa fechou a janela, ou o navegador bloqueou
@@ -103,5 +120,6 @@
     async remove(id) { await call(`${DRIVE}/${id}`, {method: 'DELETE'}); }
   };
 
-  App.syncDrive = {FILE_NAME, COPY_PREFIX, hasToken, request, clear, revoke, api};
+  restore();   // ao abrir (ou recarregar), reaproveita o token da aba se ainda valer
+  App.syncDrive = {FILE_NAME, COPY_PREFIX, hasToken, request, clear, revoke, api, remember, restore, dropMemory};
 })();
