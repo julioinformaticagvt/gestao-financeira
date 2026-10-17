@@ -179,6 +179,7 @@
   function dataNoteVisible() {
     try { if (localStorage.getItem(DATA_NOTE_SEEN) === '1') return false; } catch { /* sem acesso: mostra */ }
     if (App.sync && App.sync.state().on) return false;   // sincronizando com o Google Drive
+    if (App.sync && App.sync.bandVisible()) return false;   // a faixa "ainda não sincronizado" já avisa (SPECS 33.4)
     const d = App.store.data;
     return !!((d.clients || []).length || (d.products || []).length || (d.sales || []).length);   // sistema vazio: o assistente já explica
   }

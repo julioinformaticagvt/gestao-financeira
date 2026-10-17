@@ -221,7 +221,19 @@
     const messageBox = message ? `<div class="field"><label>Mensagem para o WhatsApp (editável)</label><textarea id="doc-message" class="message-box">${esc(message())}</textarea></div>` : '';
     App.ui.openModal(`<h2>${title}</h2><div class="doc-wrap" id="doc-preview">${build(false)}</div><div class="doc-controls">${extra}<label class="doc-eco-toggle"><input type="checkbox" id="doc-eco"> Versão econômica (sem fundo escuro, para imprimir em papel)</label>${messageBox}<div class="actions"><button type="button" class="primary" id="doc-pdf">Baixar PDF</button>${message ? '<button type="button" class="secondary" id="doc-copy">Copiar mensagem</button>' : ''}${wa}</div><p class="muted mobile-only">No celular: se o botão não abrir a impressão, use o menu do navegador (os três pontinhos ou Compartilhar) e escolha Imprimir ou Salvar como PDF.</p><p id="doc-status" class="positive"></p></div>`);
     document.querySelector('#modal .modal-card').classList.add('wide');
-    const redraw = () => { App.ui.byId('doc-preview').innerHTML = build(App.ui.byId('doc-eco').checked); };
+    // Cabe tudo na largura da tela (SPECS 33.3): se o documento passar da largura disponível (celular), ele é reduzido inteiro para caber em
+    // uma tela só. Só na tela: no PDF e na impressão o tamanho não muda (css/documents.css).
+    const fit = () => {
+      const doc = document.querySelector('#modal .doc'), wrap = App.ui.byId('doc-preview');
+      if (!doc || !wrap) return;
+      doc.style.zoom = '';
+      const available = wrap.clientWidth, needed = Math.max(doc.scrollWidth, ...[...doc.querySelectorAll('table')].map(table => table.scrollWidth));
+      if (available > 0 && needed > available + 1) doc.style.zoom = String(Math.max(0.35, available / needed).toFixed(3));
+    };
+    const redraw = () => { App.ui.byId('doc-preview').innerHTML = build(App.ui.byId('doc-eco').checked); fit(); watchImages(); };
+    const watchImages = () => App.ui.byId('doc-preview').querySelectorAll('img').forEach(image => { if (!image.complete) image.addEventListener('load', fit, {once: true}); });
+    fit(); watchImages();
+    if (window.ResizeObserver) new ResizeObserver(fit).observe(App.ui.byId('doc-preview'));   // girar a tela refaz a medida
     App.ui.byId('doc-eco').onchange = redraw;
     App.ui.byId('doc-pdf').onclick = () => { printDocument(fileName); App.ui.byId('doc-status').textContent = 'Na janela que abriu, escolha "Salvar como PDF".'; };
     if (message) App.ui.byId('doc-copy').onclick = () => {

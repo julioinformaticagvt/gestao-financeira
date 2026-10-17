@@ -1,6 +1,12 @@
 // "O que há de novo": lista de versões em linguagem simples, da mais nova para a mais antiga.
 // A cada versão aprovada, acrescente uma entrada AQUI (e em version.js, na tabela do CLAUDE.md e na etiqueta do Git).
 window.CHANGELOG = [
+  {version: '0.15.0', name: 'Valores em reais e conforto no celular', date: '16/10/2026', items: [
+    'Os campos de valor mostram R$ 1.234,56 enquanto você digita (como aplicativo de banco: digite só os números).',
+    'As sugestões de nomes (cliente, produto, fornecedor, categoria) abrem logo abaixo da caixa, também no celular.',
+    'No celular, o recibo e o extrato aparecem inteiros na tela, sem cortar e sem rolar para o lado.',
+    'Aviso no alto quando o aparelho ainda não está sincronizado com o Google (com o botão Sincronizar agora).'
+  ]},
   {version: '0.14.1', name: 'Correções gerais', date: '16/10/2026', items: [
     'Celular: as caixas das taxas da maquininha (Configurações) não passam mais da borda do cartão, e a Visão geral não fica mais mais larga que a tela.',
     'Celular pequeno: o filtro de mês das Contas a pagar e os botões da exportação (CSV) cabem na tela.',

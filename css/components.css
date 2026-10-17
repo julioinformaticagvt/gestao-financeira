@@ -341,3 +341,19 @@ details > summary { cursor: pointer; margin: 12px 0 6px; color: var(--text-2); }
 .sync-ind[data-state="gray"] { color: var(--text-2); }
 .sync-top { margin: 0; padding: 0; border-left: 0; white-space: nowrap; }   /* barra de cima (PC e celular) */
 .sync-compare table { min-width: 0; }
+
+/* Campo de dinheiro com R$ (js/components/money-input.js): o espelho de texto fica no lugar do campo numérico original (escondido). */
+.money-mirror { text-align: left; }
+
+/* Lista de sugestões logo abaixo da caixa (js/components/suggest.js). */
+.suggest-host { position: relative; }
+.suggest-box { position: absolute; left: 0; right: 0; top: 100%; z-index: 25; margin-top: 4px; max-height: 280px; overflow-y: auto; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; }
+.suggest-item { display: block; width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line); padding: 10px 14px; color: var(--text); font: inherit; cursor: pointer; }
+.suggest-item:last-child { border-bottom: 0; }
+.suggest-item:hover, .suggest-item.active { background: var(--panel); color: var(--accent); }
+
+/* Faixa "ainda não sincronizado com o Google" (js/features/sync.js, SPECS 33.4): logo abaixo da barra de cima, em todas as telas. */
+.sync-band { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 10px var(--gutter); background: var(--sync-warn-bg); border-bottom: 1px solid var(--sync-warn); color: var(--text); font-size: 13px; }
+.sync-band[hidden] { display: none; }
+.sync-band .sync-band-text { flex: 1 1 260px; min-width: 0; }
+.sync-band .sync-band-actions { display: flex; gap: 8px; flex-wrap: wrap; }

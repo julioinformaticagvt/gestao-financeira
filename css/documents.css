@@ -93,3 +93,13 @@
 
 /* O tamanho geral da tela (zoom) nunca vale na impressão: o PDF sai no tamanho certo. */
 @media print { html { zoom: 1 !important; } }
+
+/* Celular (SPECS 33.3): letras e espaços um pouco menores para o recibo e o extrato caberem; o que ainda passar da largura é reduzido por js/features/documents.js. */
+@media screen and (max-width: 640px) {
+  .doc-table th { font-size: 11px; }
+  .doc-table td { font-size: 13px; padding: 12px 0; overflow-wrap: anywhere; }
+  .doc-table .num { white-space: nowrap; }
+  .doc-total strong { font-size: 18px; }
+}
+/* O ajuste de largura da tela nunca vale na impressão: o PDF sai no tamanho de sempre. */
+@media print { .doc { zoom: 1 !important; } }

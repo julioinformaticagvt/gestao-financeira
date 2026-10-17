@@ -164,6 +164,23 @@
     });
     const panel = byId('sync-panel');
     if (panel) panel.outerHTML = panelHtml();
+    renderBand();
+  }
+
+  // Faixa "ainda não sincronizado com o Google" (SPECS 33.4): aparece em aparelho sem a sincronização ligada, quando ela está disponível
+  // (endereço publicado, ID do Google configurado, fora da demonstração). "Agora não" esconde por 7 dias, só neste aparelho.
+  const BAND_KEY = 'julio-informatica-sync-band';
+  const bandHidden = () => { try { return Date.now() < Number(localStorage.getItem(BAND_KEY) || 0); } catch { return false; } };
+  const bandVisible = () => !st.on && !block() && !bandHidden();
+  function renderBand() {
+    const band = byId('sync-band');
+    if (!band) return;
+    const show = bandVisible();
+    band.hidden = !show;
+    if (show && !band.dataset.filled) {
+      band.dataset.filled = '1';
+      band.innerHTML = '<span class="sync-band-text"><b>Este aparelho ainda não está sincronizado com o Google.</b> Já usa o sistema em outro aparelho? Sincronize para ter os mesmos dados aqui.</span><span class="sync-band-actions"><button type="button" class="primary" data-action="sync-band-connect">Sincronizar agora</button><button type="button" class="secondary" data-action="sync-band-later">Agora não</button></span>';
+    }
   }
 
   // ---------- Drive: enviar, baixar, conflito ----------
@@ -489,6 +506,8 @@
   // ---------- ações (botões) ----------
   registerAction('sync-connect', connect);
   registerAction('sync-now', () => syncNow({interactive: true}));
+  registerAction('sync-band-connect', async () => { await connect(); App.ui.go('settings'); });   // abre o login do Google e depois o painel
+  registerAction('sync-band-later', () => { try { localStorage.setItem(BAND_KEY, String(Date.now() + 7 * 864e5)); } catch { /* sem acesso: some só até recarregar */ } renderBand(); });
   registerAction('sync-resolve', openConflict);
   registerAction('sync-use-local', useLocal);
   registerAction('sync-use-drive', useDrive);
@@ -559,7 +578,7 @@
     if (canRun() && auth.hasToken()) syncNow(); else autoReconnect();
   }
 
-  App.sync = {start, autoReconnect, panelHtml, syncNow, view, hooks, hashData, isEmpty, openConflict, connect,
+  App.sync = {start, autoReconnect, bandVisible, renderBand, panelHtml, syncNow, view, hooks, hashData, isEmpty, openConflict, connect,
     state: () => ({...st}), setState, setDriveApi: value => { driveApi = value; }, setAuth: value => { auth = {...auth, ...value}; },
     setCopiesStore: value => { copies = value; }, saveCopy, copies: () => copies.all(), refresh, runState: run, DEVICE_ONLY_SETTINGS};
 })();

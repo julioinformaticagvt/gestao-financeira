@@ -111,3 +111,10 @@
   .toolbar > * { min-width: 0; max-width: 100%; }
   .toolbar input[type="month"], .toolbar input[type="date"] { flex: 1 1 140px; }
 }
+
+/* Celular: sugestões e faixa de sincronização (pacote 33). */
+@media (max-width: 620px) {
+  .suggest-item { min-height: 44px; padding: 12px 14px; }
+  .sync-band { padding: 10px 16px; }
+  .sync-band .sync-band-actions button { min-height: 40px; }
+}
