@@ -19,7 +19,7 @@ td .secondary:hover, .month-details .secondary:hover, .quote-actions .secondary:
 .card { background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
 .card .label { color: var(--text-2); font-size: 12px; }
 .metric { font-size: 24px; font-weight: 600; margin: 5px 0; }
-.grid-2 { display: grid; grid-template-columns: 1.2fr .8fr; gap: 48px; }
+.grid-2 { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr); gap: 48px; }
 .list-title { font-weight: 600; margin-bottom: 2px; }
 
 /* ---------- Tabelas ---------- */
@@ -53,14 +53,14 @@ input::placeholder, textarea::placeholder { color: var(--text-2); opacity: .7; }
 .field textarea { min-height: 70px; resize: vertical; }
 .item-row { display: grid; grid-template-columns: 1fr 150px; gap: 8px; }
 .message-box { width: 100%; min-height: 280px; resize: vertical; }
-.actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+.actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 .toolbar { display: flex; gap: 10px; margin-bottom: 16px; }
 .toolbar input { flex: 1; }
 
 /* ---------- Janelas (modal) ---------- */
 .modal { position: fixed; inset: 0; background: var(--overlay); display: grid; place-items: center; padding: 20px; z-index: 50; }
 .modal.hidden { display: none; }
-.modal-card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 26px; width: min(640px, 100%); position: relative; max-height: 90vh; overflow: auto; }
+.modal-card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 26px; width: min(640px, 100%); position: relative; max-height: calc(90vh / var(--ui-zoom, 1)); overflow: auto; }
 .close { position: absolute; right: 15px; top: 10px; border: 0; background: none; font-size: 26px; color: var(--text-2); cursor: pointer; }
 
 /* ---------- Gráficos de barras ---------- */
@@ -89,7 +89,7 @@ summary.month-toggle::-webkit-details-marker { display: none; }
 /* ---------- Telas estreitas ---------- */
 @media (max-width: 900px) {
   .cards { grid-template-columns: repeat(2, 1fr); }
-  .grid-2 { grid-template-columns: 1fr; gap: 0; }
+  .grid-2 { grid-template-columns: minmax(0, 1fr); gap: 0; }
 }
 @media (max-width: 620px) {
   .form-grid { grid-template-columns: 1fr; }
@@ -296,7 +296,7 @@ button.tray-head:hover { background: var(--panel-2); }
 .start-check { width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line); display: inline-flex; align-items: center; justify-content: center; color: var(--ok); }
 .empty-explain { text-align: center; padding: 28px 16px; }
 .empty-explain p { margin: 0 0 8px; }
-.help-list { display: grid; gap: 16px; margin: 12px 0; max-height: 60vh; overflow: auto; }
+.help-list { display: grid; gap: 16px; margin: 12px 0; max-height: calc(60vh / var(--ui-zoom, 1)); overflow: auto; }
 .help-task h3 { margin: 0 0 6px; }
 .help-task ol, .help-task ul { margin: 0 0 10px; padding-left: 20px; }
 .help-note { margin-top: 12px; color: var(--text-2); }
@@ -313,7 +313,7 @@ details > summary { cursor: pointer; margin: 12px 0 6px; color: var(--text-2); }
 /* ---------- Aplicativo instalável e textos legais ---------- */
 .update-bar { position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 60; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 16px; background: var(--panel); border: 1px solid var(--accent); border-radius: var(--radius); box-shadow: 0 6px 24px rgba(0, 0, 0, .45); }
 .update-bar span { flex: 1 1 220px; }
-.legal-text { max-height: 60vh; overflow: auto; line-height: 1.55; color: var(--text); }
+.legal-text { max-height: calc(60vh / var(--ui-zoom, 1)); overflow: auto; line-height: 1.55; color: var(--text); }
 
 /* Sincronização com o Google Drive (SPECS 27.6): cartão de estado (cinza, verde, âmbar, vermelho), passo a passo e indicador. A cor nunca vem sozinha: sempre com texto e ícone. */
 .sync-card { padding: 14px 16px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); margin-bottom: 14px; }

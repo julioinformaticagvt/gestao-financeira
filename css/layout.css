@@ -60,5 +60,23 @@
   .topbar .brand { font-size: calc(17px * var(--bar-scale, 1)); }
   .topbar .help-btn { width: calc(34px * var(--bar-scale, 1)); height: calc(34px * var(--bar-scale, 1)); }
   .topbar .sync-top { font-size: calc(12px * var(--bar-scale, 1)); }
-  #nav button::before { width: 1.29em; height: 1.29em; }
+  #nav button::before { width: calc(18px * var(--bar-scale, 1)); height: calc(18px * var(--bar-scale, 1)); }
+}
+
+/* Barra de cima (PC): o menu tem 7 itens com ícone e negrito, então precisa de espaço. Sem espaço, ele se compacta (Configurações vira só a engrenagem, espaços menores); se mesmo assim não couber, o menu passa para uma segunda linha em vez de ficar escondido. Com espaço de sobra, nada muda. */
+@media (min-width: 621px) {
+  .topbar { container-type: inline-size; height: auto; min-height: var(--topbar-h, 76px); flex-wrap: wrap; column-gap: 36px; row-gap: 0; }
+  .topbar nav { flex: 1 1 max-content; height: auto; min-height: var(--topbar-h, 76px); gap: 22px; }
+  #nav button { gap: 6px; }
+}
+@container (max-width: 1500px) {
+  .topbar nav { gap: 10px; }
+  .topbar > .receive, .topbar > .primary { padding-left: 10px; padding-right: 10px; }
+  #nav [data-view="settings"] { font-size: 0; gap: 0; }   /* só a engrenagem (o nome fica como dica e para leitores de tela) */
+}
+/* Ainda sem espaço (zoom alto, janela estreita): como no tablet, a primeira linha tem o nome e os botões e o menu passa inteiro para a segunda linha. */
+@container (max-width: 1135px) {
+  .topbar > .brand { order: 1; margin: 12px auto 0 0; }
+  .topbar > .sync-top, .topbar > .help-btn, .topbar > .receive, .topbar > .primary { order: 2; margin-top: 12px; }
+  .topbar nav { order: 3; flex: 1 1 100%; min-height: 48px; }
 }

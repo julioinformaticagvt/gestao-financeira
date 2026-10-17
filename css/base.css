@@ -9,7 +9,7 @@
 [hidden] { display: none !important; }
 
 html { background: var(--bg); zoom: var(--ui-zoom, 1); }   /* tamanho geral da tela (Configurações > Aparência) */
-body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 var(--font); min-height: 100vh; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 var(--font); min-height: calc(100vh / var(--ui-zoom, 1)); }
 
 h1, h2, h3, p { margin-top: 0; }
 h1 { font-size: 33px; font-weight: 600; letter-spacing: -.4px; margin-bottom: 0; }   /* PC: 10% maior que antes (30 px), em negrito */

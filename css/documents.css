@@ -90,3 +90,6 @@
   body.printing-doc .doc-sec h4 { break-after: avoid; }
 }
 .doc-allpaid { color: #1d7a46; font-weight: 600; font-size: 16px; margin: 6px 0 26px !important; }
+
+/* O tamanho geral da tela (zoom) nunca vale na impressão: o PDF sai no tamanho certo. */
+@media print { html { zoom: 1 !important; } }

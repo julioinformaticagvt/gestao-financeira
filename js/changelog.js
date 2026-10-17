@@ -1,6 +1,12 @@
 // "O que há de novo": lista de versões em linguagem simples, da mais nova para a mais antiga.
 // A cada versão aprovada, acrescente uma entrada AQUI (e em version.js, na tabela do CLAUDE.md e na etiqueta do Git).
 window.CHANGELOG = [
+  {version: '0.14.1', name: 'Correções gerais', date: '16/10/2026', items: [
+    'Celular: as caixas das taxas da maquininha (Configurações) não passam mais da borda do cartão, e a Visão geral não fica mais mais larga que a tela.',
+    'Celular pequeno: o filtro de mês das Contas a pagar e os botões da exportação (CSV) cabem na tela.',
+    'Computador: o menu de cima agora cabe em telas de 1280 px (Configurações vira só a engrenagem) e, se faltar espaço, passa para uma segunda linha em vez de ficar escondido.',
+    'Tamanho geral da tela: as janelas não ficam mais maiores que a tela e o botão de fechar continua visível; o PDF sai no tamanho certo.'
+  ]},
   {version: '0.14.0', name: 'Fluidez', date: '16/10/2026', items: [
     'Animações em 5 níveis (0 desligado a 4 muita animação), escolhidos por você em Configurações, no alto. O nível vale só para o aparelho.',
     'Títulos das telas maiores, em negrito e com ícone (o mesmo estilo da barra de baixo do celular). A logo do topo ficou maior.',
