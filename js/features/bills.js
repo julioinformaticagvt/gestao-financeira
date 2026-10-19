@@ -20,7 +20,8 @@
     const thisMonth = today().slice(0, 7);
     let created = 0;
     for (const fixed of data.fixedExpenses.filter(f => f.active)) {
-      for (let month = fixed.startMonth; month <= thisMonth; month = shiftMonth(month, 1)) {
+      const from = fixed.resumeMonth && fixed.resumeMonth > fixed.startMonth ? fixed.resumeMonth : fixed.startMonth;   // reativada: só dali em diante
+      for (let month = from; month <= thisMonth; month = shiftMonth(month, 1)) {
         if (data.payables.some(p => p.fixedId === fixed.id && p.month === month)) continue;
         data.payables.push({id: nextId(), description: fixed.description, category: fixed.category, amount: fixed.amount, dueDate: dueDateFor(month, fixed.dueDay), status: 'pendente', origin: 'fixa', fixedId: fixed.id, month});
         created++;

@@ -52,12 +52,51 @@
   const numberOf = (purchases, saleId) => purchases.findIndex(p => p.saleId === saleId) + 1;
   const section = (title, body) => `<section class="doc-sec"><h4>${title}</h4>${body}</section>`;
 
+  // Se a logo de arquivo (assets/logo.png) não existir, o documento mostra o nome do negócio em texto (sem atributo de evento dentro do HTML).
+  document.addEventListener('error', event => {
+    const image = event.target;
+    if (image && image.tagName === 'IMG' && image.dataset.logoFallback) image.replaceWith(Object.assign(document.createElement('strong'), {className: 'doc-eco-name', textContent: image.alt}));
+  }, true);
+
+  // Cabeçalho do documento: CNPJ/CPF reconhecido pelos dígitos, telefone com ícone (WhatsApp ou telefone) e rede social.
+  // Campo vazio não aparece (sem colchetes).
+  const svg = (label, body) => `<svg class="doc-ico" viewBox="0 0 24 24" role="img" aria-label="${label}">${body}</svg>`;
+  let gradientCount = 0;   // cada desenho do Instagram ganha um id próprio para o degradê (ids repetidos na página podem sumir com a cor)
+  const ICONS = {
+    phone: svg('Telefone', '<path d="M6.6 10.8a15 15 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.6 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.3.2 2.5.6 3.6a1 1 0 0 1-.25 1z" fill="currentColor"/>'),
+    whatsapp: svg('WhatsApp', '<circle cx="12" cy="12" r="12" fill="#25D366"/><path transform="translate(3.6 3.6) scale(.7)" fill="#fff" fill-rule="evenodd" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.2 14.1c-.2.6-1.2 1.1-1.7 1.2-.4 0-1 .2-3.2-.7-2.7-1.1-4.4-3.8-4.5-4-.1-.1-1-1.3-1-2.5s.6-1.8.9-2.1c.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 1.9c.1.2.1.3 0 .5l-.3.4-.4.5c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.3 2.4 1.5.3.1.5.1.6-.1l.8-1c.2-.3.4-.2.6-.1l1.8.9c.3.1.4.2.5.3.1.2.1.8-.1 1.4z"/>'),
+    instagram: svg('Instagram', '<defs><linearGradient id="doc-ig-GID" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#FEDA75"/><stop offset=".25" stop-color="#FA7E1E"/><stop offset=".5" stop-color="#D62976"/><stop offset=".75" stop-color="#962FBF"/><stop offset="1" stop-color="#4F5BD5"/></linearGradient></defs><rect x="0" y="0" width="24" height="24" rx="6.5" fill="url(#doc-ig-GID)"/><rect x="5" y="5" width="14" height="14" rx="4.2" fill="none" stroke="#fff" stroke-width="1.8"/><circle cx="12" cy="12" r="3.3" fill="none" stroke="#fff" stroke-width="1.8"/><circle cx="16.4" cy="7.6" r="1.1" fill="#fff"/>'),
+    facebook: svg('Facebook', '<circle cx="12" cy="12" r="12" fill="#1877F2"/><path fill="#fff" d="M13.3 22v-8.2h2.4l.4-2.8h-2.8V9.2c0-.8.2-1.4 1.4-1.4h1.5V5.3c-.3 0-1.1-.1-2.2-.1-2.2 0-3.7 1.3-3.7 3.8V11H8v2.8h2.3V22z"/>'),
+    tiktok: svg('TikTok', '<rect width="24" height="24" rx="6.5" fill="#000"/><path transform="translate(-.6 .6) scale(.9)" fill="#25F4EE" d="M17.6 5.5c-.7-.6-1.1-1.5-1.2-2.5h-2.600v11.600c0 1.300-1 2.300-2.300 2.300s-2.300-1-2.300-2.300 1-2.300 2.300-2.300c.2 0 .5 0 .7.1V9.700c-.2 0-.5-.1-.7-.1-2.700 0-4.900 2.200-4.900 4.900s2.200 4.900 4.900 4.900 4.900-2.200 4.900-4.900V9.300c1 .7 2.100 1.100 3.300 1.100V7.800c-.8 0-1.600-.3-2.100-.8z"/><path transform="translate(.6 -.4) scale(.9)" fill="#FE2C55" d="M17.600 5.500c-.7-.6-1.100-1.500-1.200-2.500h-2.600v11.600c0 1.300-1 2.300-2.300 2.300s-2.300-1-2.300-2.300 1-2.300 2.300-2.300c.2 0 .5 0 .7.1V9.700c-.2 0-.5-.1-.7-.1-2.700 0-4.900 2.200-4.900 4.900s2.200 4.900 4.900 4.900 4.900-2.200 4.900-4.900V9.300c1 .7 2.100 1.100 3.300 1.100V7.800c-.8 0-1.600-.3-2.100-.8z"/><path transform="scale(.9) translate(.3 .1)" fill="#fff" d="M17.600 5.500c-.7-.6-1.100-1.500-1.200-2.500h-2.600v11.600c0 1.300-1 2.300-2.300 2.300s-2.300-1-2.300-2.300 1-2.300 2.300-2.300c.2 0 .5 0 .7.1V9.700c-.2 0-.5-.1-.7-.1-2.700 0-4.900 2.200-4.900 4.900s2.200 4.900 4.900 4.900 4.900-2.200 4.900-4.900V9.300c1 .7 2.100 1.100 3.300 1.100V7.800c-.8 0-1.600-.3-2.100-.8z"/>'),
+    youtube: svg('YouTube', '<rect x="0" y="4" width="24" height="16" rx="5" fill="#FF0000"/><path fill="#fff" d="M9.800 8.800v6.400l5.600-3.200z"/>'),
+    site: svg('Site', '<circle cx="12" cy="12" r="11" fill="#3B82F6"/><g fill="none" stroke="#fff" stroke-width="1.3"><ellipse cx="12" cy="12" rx="4.6" ry="11"/><path d="M1 12h22M3 6.500h18M3 17.500h18"/></g>')
+  };
+  const SOCIALS = {instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok', youtube: 'YouTube', site: 'Site', other: ''};
+  function idLabel(text) {
+    const value = String(text || '').trim();
+    if (!value) return '';
+    const digits = value.replace(/\D/g, '');
+    if (/[A-Za-z]/.test(value)) return esc(value);
+    if (digits.length === 14) return `CNPJ: ${esc(/^\d+$/.test(value) ? digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : value)}`;
+    if (digits.length === 11) return `CPF: ${esc(/^\d+$/.test(value) ? digits.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4') : value)}`;
+    return esc(value);
+  }
+  function contactLines(b) {
+    const first = idLabel(b.cnpj);
+    const phone = String(b.phone || '').trim(), handle = String(b.instagram || '').trim();
+    const social = SOCIALS[b.social] === undefined ? 'instagram' : b.social;   // rede escolhida (padrão Instagram)
+    const icon = social === 'instagram' ? ICONS.instagram.replace(/GID/g, String(++gradientCount)) : (ICONS[social] || '');
+    const second = [phone ? `<span class="doc-contact">${b.phoneWhatsapp ? ICONS.whatsapp : ICONS.phone}${esc(phone)}</span>` : '', handle ? `<span class="doc-contact">${icon}${esc(handle)}</span>` : ''].filter(Boolean).join(' ');
+    const lines = [first, second].filter(Boolean).join('<br>');
+    return lines ? `<div class="doc-small">${lines}</div>` : '';
+  }
+
   function header(kind, big, date, eco) {
-    const b = data.settings.business, blank = (v, n) => v ? esc(v) : `[${n}]`, name = (b.name || '').trim() || 'Meu negócio';
+    const b = data.settings.business, name = (b.name || '').trim() || 'Meu negócio';
     // logo: a escolhida em Configurações; a logo de arquivo (assets/logo.png) só vale para o sistema que já a usava (settings.useDefaultLogo);
     // sem logo, o documento mostra o nome do negócio em texto.
     const logo = App.branding.logoFor('pdf'), src = logo ? logo.src : (data.settings.useDefaultLogo ? 'assets/logo.png' : '');
-    return `<div class="doc-head"><div class="doc-brand">${eco || !src ? `<strong class="doc-eco-name">${esc(name)}</strong>` : `<img class="doc-logo" alt="${esc(name)}" src="${src}"${src === 'assets/logo.png' ? ` onerror="this.replaceWith(Object.assign(document.createElement('strong'),{className:'doc-eco-name',textContent:this.alt}))"` : ''}>`}<div class="doc-small">CNPJ ou CPF ${blank(b.cnpj, 'CNPJ ou CPF')}<br>${blank(b.phone, 'telefone')} · ${blank(b.instagram, 'Instagram')}</div></div><div class="doc-id"><small>${kind}</small><strong>${esc(big)}</strong><span>${dateLabel(date)}</span></div></div>`;
+    return `<div class="doc-head"><div class="doc-brand">${eco || !src ? `<strong class="doc-eco-name">${esc(name)}</strong>` : `<img class="doc-logo" alt="${esc(name)}" src="${esc(src)}"${src === 'assets/logo.png' ? ' data-logo-fallback="1"' : ''}>`}${contactLines(b)}</div><div class="doc-id"><small>${kind}</small><strong>${esc(big)}</strong><span>${dateLabel(date)}</span></div></div>`;
   }
   const frame = (head, main, details, eco) => `<div class="doc${eco ? ' eco' : ''}" id="doc-root">${head}<div class="doc-main">${main}</div><div class="doc-details">${details}</div></div>`;
 
@@ -103,7 +142,7 @@
     const main = `<p class="doc-label">RECIBO DE PAGAMENTO</p><p class="doc-lead-2">Comprovante de pagamento no valor de</p><p class="doc-value">${money(r.amount)}</p><p class="doc-who">Recebido de <b>${esc(r.client)}</b></p><p class="doc-muted">Pago em ${dateLabel(r.date)} · ${esc(customerMethod(r.method))}</p>${r.canceled ? '<p class="doc-bad doc-strong">RECIBO CANCELADO</p>' : ''}`;
     const lead = '<p class="doc-lead">Detalhes do pagamento e situação da sua conta</p>';
     const foot = `<p class="doc-foot">Este recibo comprova o recebimento do valor pago hoje. Obrigado pela confiança!</p>`;
-    const warranty = r.warranty || (installmentSale ? '' : '[prazo da garantia]');
+    const warranty = r.warranty || '';   // sem garantia cadastrada: a linha de garantia não aparece
 
     if (!installmentSale) {   // venda à vista: recibo simples
       const items = (lines[0].items || r.items || []).map(i => `<tr><td>${esc(i.name || 'Item')}</td><td class="num">${i.qty || 1}</td><td class="num">${money(i.amount)}</td></tr>`).join('');

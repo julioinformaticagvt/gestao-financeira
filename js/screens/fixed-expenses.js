@@ -34,7 +34,8 @@
     };
   }
 
-  const toggle = fixed => { fixed.active = !fixed.active; save(); go('fixed'); };
+  // Ao reativar, as contas recomeçam no mês atual (não cria contas atrasadas dos meses em que ficou desligada).
+  const toggle = fixed => { fixed.active = !fixed.active; if (fixed.active) fixed.resumeMonth = today().slice(0, 7); save(); go('fixed'); };
 
   App.ui.registerScreen('fixed', render);
   App.ui.registerAction('fixed-new', () => form(null));

@@ -10,10 +10,12 @@
   const MONTHS_BY_PERIOD = {'3': 3, '6': 6, '12': 12}; // os demais períodos valem 1 mês
   const shortMonth = key => monthLabel(key).split(' ')[0].slice(0, 3);
 
+  const monthsBetween = (from, to) => (Number(to.slice(0, 4)) - Number(from.slice(0, 4))) * 12 + Number(to.slice(5, 7)) - Number(from.slice(5, 7));
   // Lista de meses (AAAA-MM) que o período escolhido cobre.
   function periodMonths(period, customStart) {
     const thisMonth = today().slice(0, 7);
-    const count = MONTHS_BY_PERIOD[period] || 1;
+    // "Personalizado": do mês escolhido até o mês atual (o título diz "A partir de ...")
+    const count = customStart ? Math.max(1, 1 + monthsBetween(customStart, thisMonth)) : MONTHS_BY_PERIOD[period] || 1;
     const last = period === 'previous' ? shiftMonth(thisMonth, -1) : thisMonth;
     const start = customStart || shiftMonth(last, -(count - 1));
     return Array.from({length: count}, (_, i) => shiftMonth(start, i));
@@ -114,7 +116,7 @@
 
   function render(period = 'current', customStart) {
     const d = summarize(period, customStart);
-    const types = monthTypeTotals(today().slice(0, 7));
+    const types = periodMonths(period, customStart).map(monthTypeTotals).reduce((all, t) => ({product: all.product + t.product, service: all.service + t.service}), {product: 0, service: 0});   // período escolhido
     const cashBalance = d.received - d.out - d.fees;   // o que entrou, menos saídas e taxas da maquininha
     const noCostNote = d.noCost ? `${d.noCost} venda${d.noCost === 1 ? '' : 's'} sem custo informado não entrou${d.noCost === 1 ? '' : 'ram'}` : '';
 

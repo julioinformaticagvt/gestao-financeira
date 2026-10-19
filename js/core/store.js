@@ -219,6 +219,9 @@
     data.settings.pricing = {extra: {...DEFAULT_EXTRA, ...(wasOldDefault ? {} : savedExtra)}};
     const business = {...blankBusiness(), ...(data.settings.business || {})};
     if (business.receiptMessage === OLD_RECEIPT_MESSAGE) business.receiptMessage = DEFAULT_RECEIPT_MESSAGE;
+    // SEGURANÇA (SPECS 34): uma logo só pode ser uma imagem embutida (data:image/...;base64). Qualquer outra coisa que venha de um backup ou do
+    // Drive é descartada ao abrir, para nunca virar código dentro de uma tela.
+    ['logo', 'logoTop', 'logoPdf'].forEach(key => { const l = business[key]; if (l && !(typeof l.src === 'string' && /^data:image\/(?:png|jpe?g|gif|webp);base64,[A-Za-z0-9+\/=]+$/.test(l.src))) business[key] = null; });
     data.settings.business = business;
     data.receipts = data.receipts || [];
 
@@ -273,6 +276,34 @@
     save();
   }
 
+  // SEGURANÇA (SPECS 34): dados vindos de FORA (backup importado, arquivo do Drive) não podem trazer código escondido em campos que o sistema
+  // trata como "códigos" (ids, datas, estados). Esses campos só podem ter letras, números e . : - / espaço (estados e formas de pagamento
+  // só não podem ter < > " ' `). Textos livres (nomes, observações) são sempre protegidos na hora de mostrar. Devolve o caminho do primeiro
+  // campo suspeito ('' = tudo certo).
+  const STRICT_KEYS = new Set(['id', 'uid', 'clientId', 'productId', 'supplierId', 'saleId', 'quoteId', 'osId', 'purchaseId', 'payableId', 'fixedId', 'month', 'startMonth', 'date', 'dueDate', 'paidAt', 'createdAt', 'updatedAt', 'entryDate', 'deliveredAt', 'validUntil', 'firstDue', 'voidedAt', 'at', 'number', 'installment', 'key', 'view', 'kind', 'discountType', 'plan', 'modality', 'account', 'lastSeenVersion', 'backupKey']);
+  const LOOSE_KEYS = new Set(['status', 'method', 'type', 'label']);
+  const NUMERIC_KEYS = new Set(['stock', 'qty', 'quantity', 'dueDay', 'amount', 'unit', 'unitCost', 'receipt', 'cost', 'price', 'total', 'paid', 'balance', 'entry', 'minStock', 'installments', 'discount', 'fee', 'charges', 'prevStock', 'prevCost', 'fine', 'interest']);
+  const STRICT_TEXT = /^[\w.:\-\/ ]{0,60}$/, LOOSE_TEXT = /^[^<>"'`]*$/, NUMBER_TEXT = /^\s*-?[\d.,]*\s*$/;
+  function suspicious(root) {
+    const stack = [['dados', root]];
+    while (stack.length) {
+      const [path, node] = stack.pop();
+      if (Array.isArray(node)) { node.forEach((item, i) => stack.push([`${path}[${i}]`, item])); continue; }
+      if (!node || typeof node !== 'object') continue;
+      for (const [key, value] of Object.entries(node)) {
+        const here = `${path}.${key}`;
+        if (typeof value === 'string') {
+          if (STRICT_KEYS.has(key) && !STRICT_TEXT.test(value)) return here;
+          if (LOOSE_KEYS.has(key) && !LOOSE_TEXT.test(value)) return here;
+          if (NUMERIC_KEYS.has(key) && !NUMBER_TEXT.test(value)) return here;   // número escrito como texto: só dígitos, ponto e vírgula
+        } else if ((key === 'dueDates' || key === 'dasCreated' || key === 'extraDues') && Array.isArray(value)) {
+          if (value.some(item => typeof item !== 'string' || !STRICT_TEXT.test(item))) return here;
+        } else stack.push([here, value]);
+      }
+    }
+    return '';
+  }
+
   if (!blocked) migrate();
-  App.store = {KEY, REAL_KEY, DEMO_KEY, DEMO_FLAG, isDemo, blocked, SCHEMA, data, save, hooks, afterSave, freeze, newId, nextCode, peekCode, nextReceiptNumber, findByName, isExistingSystem, get loadProblem() { return loadProblem; }};
+  App.store = {KEY, REAL_KEY, DEMO_KEY, DEMO_FLAG, isDemo, blocked, SCHEMA, data, save, hooks, afterSave, freeze, suspicious, newId, nextCode, peekCode, nextReceiptNumber, findByName, isExistingSystem, get loadProblem() { return loadProblem; }};
 })();

@@ -50,6 +50,8 @@
       const incoming = parsed && parsed.app === 'julio-informatica' ? parsed.data : null;
       if (!incoming || !Array.isArray(incoming.clients) || !Array.isArray(incoming.products) || !Array.isArray(incoming.sales)) return alert('Este arquivo não é um backup válido deste sistema.');
       if (Number(incoming.schemaVersion) > App.store.SCHEMA || Number(parsed.formatVersion) > App.store.SCHEMA) return alert('Este backup foi criado por uma versão mais nova do sistema. Atualize o sistema para restaurá-lo. Nada foi alterado.');
+      const suspect = App.store.suspicious(incoming);   // SEGURANÇA: campos de código com caracteres de programação = arquivo adulterado
+      if (suspect) return alert('Este arquivo tem conteúdo suspeito (campo ' + suspect.replace(/[^\w.\[\]]/g, '?') + ') e não foi aberto. Nada foi alterado. Se você não criou este backup, não use este arquivo.');
       confirmImport(parsed, incoming);
     };
     reader.readAsText(file);

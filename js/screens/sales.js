@@ -14,8 +14,8 @@
       const canceled = sale.status === 'Cancelada';
       const status = (canceled ? '<span class="badge neutral">Cancelada</span>' : `<span class="badge ${sale.balance ? 'warn' : ''}">${sale.balance ? 'Em aberto' : 'Pago'}</span>`)
         + (sale.editedAt ? ` <span class="badge neutral" title="Editada em ${dateLabel(sale.editedAt)}">editada</span>` : '');
-      const actions = canceled ? '' : `<button class="secondary" data-action="edit-sale" data-sale="${sale.id}">Editar</button> <button class="secondary" data-action="cancel-sale" data-sale="${sale.id}">Cancelar</button>`;
-      return `<tr class="${canceled ? 'voided' : ''}"><td>${sale.id}${sale.osId ? `<br><small class="muted">Origem: ${esc(sale.osId)}</small>` : ""}</td><td>${esc(sale.client)}</td><td>${dateLabel(sale.date)}</td><td>${esc(sale.method || '-')}</td><td>${money(sale.total)}</td><td class="positive">${money(sale.paid)}</td><td class="negative">${money(sale.balance)}</td><td>${status}</td><td>${actions}</td></tr>`;
+      const actions = canceled ? '' : `<button class="secondary" data-action="edit-sale" data-sale="${esc(sale.id)}">Editar</button> <button class="secondary" data-action="cancel-sale" data-sale="${esc(sale.id)}">Cancelar</button>`;
+      return `<tr class="${canceled ? 'voided' : ''}"><td>${esc(sale.id)}${sale.osId ? `<br><small class="muted">Origem: ${esc(sale.osId)}</small>` : ""}</td><td>${esc(sale.client)}</td><td>${dateLabel(sale.date)}</td><td>${esc(sale.method || '-')}</td><td>${money(sale.total)}</td><td class="positive">${money(sale.paid)}</td><td class="negative">${money(sale.balance)}</td><td>${status}</td><td>${actions}</td></tr>`;
     }).join('');
     byId('app').innerHTML = `<section class="panel"><div class="panel-head"><h2>Vendas realizadas</h2><button class="primary" data-action="new-sale">+ Nova venda</button></div>${data.sales.length ? `<div class="table-wrap"><table><thead><tr><th>ID</th><th>Cliente</th><th>Data</th><th>Forma</th><th>Total</th><th>Pago</th><th>Saldo</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>` : App.firstRun.emptyState({title: 'Você ainda não registrou vendas.', hint: 'Cada venda guarda o cliente, o valor, a forma de pagamento e gera o recibo.', action: 'new-sale', label: '+ Nova venda'})}</section>`;
   }
@@ -25,7 +25,7 @@
   function saleForm(clientName, editing, prefill) {
     const clientOptions = data.clients.map(c => `<option value="${esc(c.name)}">`).join('');
     const productOptions = data.products.map(p => `<option value="${esc(p.name)}">`).join('');
-    openModal(`<h2>${editing ? `Editar venda ${editing.id}` : 'Registrar venda'}</h2><form id="sale-form" class="form-grid"><div class="field full"><label>Cliente *</label><input id="sale-client" name="client" list="client-options" placeholder="Buscar cliente..." required><datalist id="client-options">${clientOptions}</datalist><button type="button" class="secondary" data-action="new-client-quick">+ Adicionar novo cliente</button></div>${paymentBlock.markup.items('product-options')}<datalist id="product-options">${productOptions}</datalist><div class="field full"><button type="button" class="secondary" data-action="new-product-quick">+ Adicionar novo produto ou serviço</button></div><div class="field"><label>Data da venda *</label><input name="date" type="date" value="${today()}" max="${today()}" required></div>${paymentBlock.markup.discount()}${paymentBlock.markup.payment()}<p class="muted field full" data-show="carne">No carnê, a primeira parcela vence no dia ${data.settings.dueDay || 12} do mês seguinte à data da venda.</p>${editing ? '<p class="muted field full">Ao salvar, o estoque é acertado (o que esta venda tirou volta e o novo é descontado) e, se a venda já estava paga, o recibo antigo é cancelado e um novo é emitido.</p>' : ''}<p class="negative field full" id="sale-error" hidden></p><div class="actions field full"><button type="button" class="secondary" data-action="close-modal">Cancelar</button><button class="primary">${editing ? 'Salvar alterações' : 'Registrar venda'}</button></div></form>`);
+    openModal(`<h2>${editing ? `Editar venda ${esc(editing.id)}` : 'Registrar venda'}</h2><form id="sale-form" class="form-grid"><div class="field full"><label>Cliente *</label><input id="sale-client" name="client" list="client-options" placeholder="Buscar cliente..." required><datalist id="client-options">${clientOptions}</datalist><button type="button" class="secondary" data-action="new-client-quick">+ Adicionar novo cliente</button></div>${paymentBlock.markup.items('product-options')}<datalist id="product-options">${productOptions}</datalist><div class="field full"><button type="button" class="secondary" data-action="new-product-quick">+ Adicionar novo produto ou serviço</button></div><div class="field"><label>Data da venda *</label><input name="date" type="date" value="${today()}" max="${today()}" required></div>${paymentBlock.markup.discount()}${paymentBlock.markup.payment({dues: true})}<p class="muted field full" data-show="carne">No carnê, a primeira parcela vence no dia ${data.settings.dueDay || 12} do mês seguinte à data da venda.</p>${editing ? '<p class="muted field full">Ao salvar, o estoque é acertado (o que esta venda tirou volta e o novo é descontado) e, se a venda já estava paga, o recibo antigo é cancelado e um novo é emitido.</p>' : ''}<p class="negative field full" id="sale-error" hidden></p><div class="actions field full"><button type="button" class="secondary" data-action="close-modal">Cancelar</button><button class="primary">${editing ? 'Salvar alterações' : 'Registrar venda'}</button></div></form>`);
 
     const form = byId('sale-form');
     let initial = {};
@@ -38,7 +38,7 @@
       form.elements.invoiceIssued.checked = !!(editing.invoice && editing.invoice.issued);
       form.elements.invoiceNumber.value = (editing.invoice && editing.invoice.number) || "";
       paymentBlock.fillItems(form, editing.items || []);
-      initial = {modality: p.modality, installments: p.installments, account: p.account, entry: editing.entry || 0, firstDue: editing.firstDue || '', feeRate: p.feeRate, baseRate: p.baseRate, extraRate: p.extraRate};
+      initial = {modality: p.modality, installments: p.installments, account: p.account, entry: editing.entry || 0, firstDue: editing.firstDue || '', extraDues: editing.extraDues || [], feeRate: p.feeRate, baseRate: p.baseRate, extraRate: p.extraRate};
     }
     if (prefill) {   // volta do cadastro rápido: devolve o que já estava digitado
       App.ui.applyForm(form, prefill);
@@ -48,9 +48,9 @@
     App.ui.groupFields(form, [
       {kind: 'client', title: 'Cliente', items: ['client', '[data-action="new-product-quick"]']},
       {kind: 'product', title: 'Produto ou serviço', items: ['.item-block', '#add-item', '.items-help']},
-      {kind: 'pay', title: 'Pagamento e datas', items: ['date', 'discount', 'modality', 'installments', 'account', 'entry', 'firstDue', 'feeRate', 'baseRate', 'extraRate', '#pay-compare', '#pay-schedule', 'p[data-show="carne"]', 'invoiceIssued', 'invoiceNumber']}
+      {kind: 'pay', title: 'Pagamento e datas', items: ['date', 'discount', 'modality', 'installments', 'account', 'entry', 'firstDue', '#extra-dues-box', 'feeRate', 'baseRate', 'extraRate', '#pay-compare', '#pay-schedule', 'p[data-show="carne"]', 'invoiceIssued', 'invoiceNumber']}
     ]);
-    form.elements.installments.max = data.settings.maxInstallments;
+    form.elements.installments.max = Math.min(12, Math.max(1, Math.round(Number(data.settings.maxInstallments)) || 12));
     if (editing) form.querySelectorAll('[data-action="new-client-quick"], [data-action="new-product-quick"]').forEach(button => button.remove());   // o cadastro rápido reabriria uma venda nova
     else if (clientName) { form.elements.client.value = clientName; form.elements.client.dispatchEvent(new Event('change')); }   // vindo da tela do cliente
 
@@ -114,7 +114,7 @@
     const clientOptions = data.clients.map(c => `<option value="${esc(c.name)}">`).join('');
     const productOptions = data.products.map(p => `<option value="${esc(p.name)}">`).join('');
     const rows = (sale.items || []).map((item, i) => `<div class="item-block"><div class="field item-name"><label>Item ${i + 1}</label><input name="name${i}" list="limited-products" value="${esc(item.name || '')}"></div><div class="field"><label>Quantidade</label><input value="${item.qty || 1}" disabled></div><div class="field"><label>VENDA (R$) <small>cada</small></label><input value="${item.unit ?? round2(item.amount / (item.qty || 1))}" disabled></div><div class="field"><label>COMPRA (R$) <small>cada · eu pago</small></label><input name="cost${i}" type="number" min="0" step="0.01" value="${item.unitCost ?? (item.cost === undefined ? '' : round2(item.cost / (item.qty || 1)))}"></div></div>`).join('');
-    openModal(`<h2>Editar venda ${sale.id}</h2><form id="limited-form" class="form-grid"><div class="field full"><label>Cliente *</label><input name="client" list="limited-clients" value="${esc(sale.client)}" required><datalist id="limited-clients">${clientOptions}</datalist></div>${rows}<datalist id="limited-products">${productOptions}</datalist><div class="field"><label>Data da venda *</label><input name="date" type="date" value="${sale.date}" max="${today()}" required></div><p class="muted field full">Esta venda ${sale.pricing ? 'já tem pagamentos recebidos' : 'é antiga (feita antes do formulário atual)'}, por isso o <b>valor, a forma de pagamento e as parcelas não mudam aqui</b>. Dá para corrigir o cliente, a data e os nomes e custos dos itens. Para mudar o valor ou as parcelas, cancele a venda e registre de novo (os pagamentos já recebidos ficam no histórico).</p><p class="negative field full" id="limited-error" hidden></p><div class="actions field full"><button type="button" class="secondary" data-action="close-modal">Cancelar</button><button class="primary">Salvar alterações</button></div></form>`);
+    openModal(`<h2>Editar venda ${esc(sale.id)}</h2><form id="limited-form" class="form-grid"><div class="field full"><label>Cliente *</label><input name="client" list="limited-clients" value="${esc(sale.client)}" required><datalist id="limited-clients">${clientOptions}</datalist></div>${rows}<datalist id="limited-products">${productOptions}</datalist><div class="field"><label>Data da venda *</label><input name="date" type="date" value="${sale.date}" max="${today()}" required></div><p class="muted field full">Esta venda ${sale.pricing ? 'já tem pagamentos recebidos' : 'é antiga (feita antes do formulário atual)'}, por isso o <b>valor, a forma de pagamento e as parcelas não mudam aqui</b>. Dá para corrigir o cliente, a data e os nomes e custos dos itens. Para mudar o valor ou as parcelas, cancele a venda e registre de novo (os pagamentos já recebidos ficam no histórico).</p><p class="negative field full" id="limited-error" hidden></p><div class="actions field full"><button type="button" class="secondary" data-action="close-modal">Cancelar</button><button class="primary">Salvar alterações</button></div></form>`);
     const form = byId('limited-form');
     App.ui.groupFields(form, [
       {kind: 'client', title: 'Cliente', items: ['client']},
@@ -128,6 +128,7 @@
       const names = (sale.items || []).map((_, i) => f[`name${i}`].value.trim());
       if (names.some(name => !name)) { const box = byId('limited-error'); box.textContent = 'Todo item precisa de um nome.'; box.hidden = false; return; }
       App.finance.ensureProducts(names.map(name => ({name})));
+      const hadStockOut = !!(sale.stockOut && sale.stockOut.length);   // venda antiga sem baixa registrada: não dá baixa agora
       App.stock.restore(sale);
       sale.items.forEach((item, i) => {
         const qty = item.qty || 1, cost = f[`cost${i}`].value === '' ? item.unitCost : Number(f[`cost${i}`].value) || 0;
@@ -140,7 +141,7 @@
         sale.cost = round2(sale.items.reduce((total, i) => total + i.cost, 0));
         sale.pricing.profit = round2(sale.pricing.net - sale.cost);
       }
-      App.stock.consume(sale);
+      if (hadStockOut) App.stock.consume(sale);
       // recibos desta venda acompanham: cliente (se o recibo é só desta venda) e descrição dos itens
       for (const r of data.receipts) {
         const mine = r.lines ? r.lines.some(l => l.saleId === sale.id) : r.saleId === sale.id;
@@ -183,7 +184,10 @@
     byId('quick-client').onsubmit = event => {
       event.preventDefault();
       const client = Object.fromEntries(new FormData(event.target));
-      data.clients.push({...client, createdAt: today()});
+      client.name = String(client.name || '').trim();
+      const existing = App.store.findByName('clients', client.name);
+      if (existing) client.name = existing.name;            // já cadastrado: usa o cadastro que existe (não duplica)
+      else data.clients.push({...client, createdAt: today()});
       save();
       closeModal();
       const form = reopenQuick();
@@ -237,6 +241,9 @@
     sale.canceledAt = today();
     App.stock.restore(sale);   // as peças vendidas voltam para o estoque
     (sale.payments || []).forEach(payment => App.receipts.cancelFor(payment));
+    // orçamento que virou esta venda volta para "Aprovado" (pode ser fechado de novo); ordem de serviço não muda de andamento
+    const quote = sale.quoteId && data.quotes.find(q => q.id === sale.quoteId);
+    if (quote && quote.kind !== 'os' && quote.saleId === sale.id) { quote.status = 'Aprovado'; delete quote.saleId; }
     save();
     closeModal();
     go('sales');

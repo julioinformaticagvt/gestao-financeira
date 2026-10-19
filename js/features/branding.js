@@ -8,7 +8,13 @@
   const MAX = 320;   // lado máximo em pixels (a imagem é reduzida para não pesar nos dados)
 
   // 'top' = topo do sistema, 'pdf' = documentos (recibo e extrato). Devolve {src, w, h} ou null.
-  const logoFor = kind => { const b = data.settings.business; return (kind === 'pdf' ? b.logoPdf : b.logoTop) || b.logo || null; };
+  // SEGURANÇA: o endereço da logo vem dos dados (que podem vir de um backup ou do Drive). Só vale uma imagem embutida no formato
+  // data:image/png|jpeg|gif|webp;base64,...: qualquer outra coisa é tratada como "sem logo" (assim um arquivo malicioso não consegue
+  // colocar código dentro de um <img>).
+  const SAFE_SRC = /^data:image\/(?:png|jpe?g|gif|webp);base64,[A-Za-z0-9+\/=]+$/;
+  const safeSrc = src => (typeof src === 'string' && SAFE_SRC.test(src) ? src : '');
+  const pick = logo => (logo && safeSrc(logo.src) ? logo : null);
+  const logoFor = kind => { const b = data.settings.business; return pick(kind === 'pdf' ? b.logoPdf : b.logoTop) || pick(b.logo) || null; };
 
   // Lê um arquivo de imagem e devolve a logo já reduzida.
   function fromFile(file) {
@@ -62,5 +68,5 @@
     if (img) img.alt = showName ? '' : label;
   }
 
-  App.branding = {logoFor, fromFile, apply, topHeight, setTopHeight, DEFAULT_TOP, MIN_TOP, MAX_TOP};
+  App.branding = {logoFor, safeSrc, fromFile, apply, topHeight, setTopHeight, DEFAULT_TOP, MIN_TOP, MAX_TOP};
 })();

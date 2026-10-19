@@ -82,7 +82,7 @@
 
   // Pagamentos ainda válidos que apontam para um recibo.
   function paymentsOf(number) {
-    return data.sales.flatMap(sale => (sale.payments || []).filter(p => p.receipt === number && !p.voided).map(payment => ({sale, payment})));
+    return data.sales.filter(sale => sale.status !== 'Cancelada').flatMap(sale => (sale.payments || []).filter(p => p.receipt === number && !p.voided).map(payment => ({sale, payment})));
   }
 
   // Depois de desfazer um pagamento de um recibo com vários: emite um recibo novo só com os que continuam valendo.

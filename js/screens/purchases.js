@@ -83,7 +83,7 @@
         const stock = Number(product.stock) || 0, prevCost = Number(product.cost) || 0;
         const base = Math.max(0, stock);   // estoque negativo não pesa na média
         const avg = base + item.qty > 0 ? round2((base * prevCost + item.qty * item.unitCost) / (base + item.qty)) : item.unitCost;
-        purchase.items.push({...item, prevStock: stock, prevCost});
+        purchase.items.push({...item, name: product.name, prevStock: stock, prevCost});   // nome do cadastro
         product.stock = stock + item.qty;
         product.cost = avg;
         purchase.total = round2(purchase.total + item.qty * item.unitCost);
@@ -125,7 +125,9 @@
       const product = App.stock.productByName(item.name);
       if (!product) continue;
       product.stock = (Number(product.stock) || 0) - item.qty;
-      product.cost = item.prevCost;
+      // o custo só volta ao de antes se não houve compra mais nova deste produto (senão, o custo atual já reflete a compra mais nova)
+      const newer = data.purchases.some(p => p !== purchase && p.status !== 'Estornada' && (p.date > purchase.date || (p.date === purchase.date && p.id > purchase.id)) && p.items.some(i => App.store.findByName('products', i.name) === product));
+      if (!newer) product.cost = item.prevCost;
     }
     const index = data.payables.findIndex(b => b.id === purchase.payableId);
     if (index >= 0) data.payables.splice(index, 1);

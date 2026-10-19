@@ -103,3 +103,9 @@
 }
 /* O ajuste de largura da tela nunca vale na impressão: o PDF sai no tamanho de sempre. */
 @media print { .doc { zoom: 1 !important; } }
+
+.doc-ico { width: 1.05em; height: 1.05em; fill: currentColor; vertical-align: -0.18em; margin-right: 5px; }
+
+.doc-contact { display: inline-block; margin-right: 14px; white-space: nowrap; }
+.doc-contact:last-child { margin-right: 0; }
+.doc.eco .doc-ico { filter: grayscale(1); }

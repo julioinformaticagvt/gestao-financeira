@@ -30,19 +30,20 @@
     discount() {
       return '<div class="field"><label>Desconto da venda inteira <small>em R$ ou em %</small></label><div class="discount-row"><input name="discount" type="number" min="0" step="0.01" value="0"><select name="discountType"><option value="money">R$</option><option value="percent">%</option></select></div></div>';
     },
-    payment() {
+    payment(options = {}) {
       return `<div class="field"><label>Forma de pagamento</label><select name="modality">${P.MODALITIES.map(m => `<option value="${m.key}">${m.label}</option>`).join('')}</select></div>
         <div class="field" data-show="credit,carne"><label>Parcelas</label><input name="installments" type="number" min="1" max="12" value="1"></div>
         <div class="field" data-show="pix"><label>Conta que recebeu</label><select name="account"><option value="PJ">Conta PJ (da empresa)</option><option value="PF">Conta PF (pessoal)</option></select></div>
         <div class="field" data-show="carne"><label>Entrada (R$)</label><input name="entry" type="number" min="0" step="0.01" value="0"></div>
         <div class="field" data-show="carne"><label>Vence a 1ª parcela <small>vazio = dia ${Number(data.settings.dueDay) || 12} do mês seguinte</small></label><input name="firstDue" type="date"></div>
+        ${options.dues ? '<div class="field full" data-show="carne" id="extra-dues-box"><input type="hidden" name="extraDues" value=""><div id="extra-dues"></div></div>' : ''}
         <div class="field" data-show="debit,credit"><label>Taxa da maquininha (%)</label><input name="feeRate" type="number" min="0" step="0.01"></div>
         <div class="field"><label>Juros base (%) <small>padrão = taxa da maquininha</small></label><input name="baseRate" type="number" min="0" step="0.01" value="0"></div>
         <div class="field"><label>Cobrar extra (%) <small>acréscimo meu, só desta venda</small></label><input name="extraRate" type="number" min="0" step="0.01" value="0"></div>
         <div class="field full"><div class="pay-compare" id="pay-compare"></div></div>
         <div class="field full" data-show="carne"><div class="muted" id="pay-schedule"></div></div>
-        <div class="field"><label class="inline-check"><input type="checkbox" name="invoiceIssued"> Emiti nota fiscal</label></div>
-        <div class="field"><label>Número da nota <small>opcional</small></label><input name="invoiceNumber" autocomplete="off"></div>`;
+        <div class="field full"><label class="inline-check"><input type="checkbox" name="invoiceIssued"> Esta venda teve nota fiscal</label><small class="muted">Só para controle nos relatórios. O sistema não emite nota; se você não emite, deixe desmarcado.</small></div>
+        <div class="field" id="invoice-number-field" hidden><label>Número da nota <small>opcional</small></label><input name="invoiceNumber" autocomplete="off"></div>`;
     }
   };
 
@@ -58,6 +59,9 @@
   }
 
   // ---------- comportamento ----------
+  // "extraDues" fica num campo escondido como texto "data,data,,data" (assim volta junto quando o formulário é reaberto).
+  const parseDues = text => String(text || '').split(',').map(part => (/^\d{4}-\d{2}-\d{2}$/.test(part) ? part : ''));
+
   function bind(form, initial = {}) {
     const el = name => form.elements[name];
     const touched = {};                                   // campos que o usuário mexeu à mão (não sobrescrever)
@@ -79,10 +83,11 @@
       const f = new FormData(form), items = [];
       visible().forEach(block => {
         const n = Number(block.dataset.item);
-        const name = f.get(productField(n)) || '', qty = Math.max(1, Math.round(num(f.get(`itemQty${n}`)) || 1));
+        const typed = String(f.get(productField(n)) || '').trim(), known = App.store.findByName('products', typed);
+        const name = known ? known.name : typed, qty = Math.max(1, Math.round(num(f.get(`itemQty${n}`)) || 1));   // nome do cadastro (mesmo se digitado com outras maiúsculas/acentos)
         const unit = num(f.get(`itemAmount${n}`)), unitCost = num(f.get(`itemCost${n}`));
         const line = {name, type: itemType(name), qty, unit, unitCost, amount: P.round2(qty * unit), cost: P.round2(qty * unitCost)};
-        const product = data.products.find(p => p.name === name);
+        const product = known;
         if (product && product.activityId) line.activityId = product.activityId;   // atividade do produto no momento da venda (cópia gravada)
         if (n === 1 ? (name || unit > 0) : (name && unit > 0)) items.push(line);
       });
@@ -100,8 +105,9 @@
       const result = P.compare({price, cost, base: num(f.get('baseRate')), extra: num(f.get('extraRate')), feeRate, installments});
       const entry = modality === 'carne' ? Math.min(Math.max(0, num(f.get('entry'))), result.withExtra.total) : 0;
       const firstDue = modality === 'carne' ? (f.get('firstDue') || '') : '';
+      const extraDues = firstDue ? parseDues(f.get('extraDues')).slice(0, Math.max(0, installments - 1)) : [];   // datas escolhidas da 2ª parcela em diante ('' = dia padrão)
       const invoiceIssued = f.get('invoiceIssued') === 'on', invoiceNumber = String(f.get('invoiceNumber') || '').trim();
-      return {items, invoiceIssued, invoiceNumber, discount, discountType, discountValue, sold, price, cost, modality, account: f.get('account') || 'PJ', installments, base: num(f.get('baseRate')), extra: num(f.get('extraRate')), feeRate, entry, firstDue, ...result};
+      return {items, invoiceIssued, invoiceNumber, discount, discountType, discountValue, sold, price, cost, modality, account: f.get('account') || 'PJ', installments, base: num(f.get('baseRate')), extra: num(f.get('extraRate')), feeRate, entry, firstDue, extraDues, ...result};
     }
 
     function renderCompare() {
@@ -115,7 +121,7 @@
       const box = document.getElementById('pay-schedule');
       if (box) {
         if (r.modality === 'carne' && b.total > 0) {
-          const schedule = scheduleFor({date: (el('date') && el('date').value) || today(), total: b.total, entry: r.entry, installments: r.installments, firstDue: r.firstDue});
+          const schedule = scheduleFor({date: (el('date') && el('date').value) || today(), total: b.total, entry: r.entry, installments: r.installments, firstDue: r.firstDue, extraDues: r.extraDues});
           box.innerHTML = `<b>Parcelas do carnê:</b> ${schedule.map(s => `${s.number}/${schedule.length} · ${dateLabel(s.due)} · ${money(s.value)}`).join(' &nbsp;|&nbsp; ')}${r.entry > 0 ? ` &nbsp;(entrada de ${money(r.entry)} paga na venda)` : ''}`;
         } else box.innerHTML = '';
       }
@@ -130,6 +136,76 @@
         const stock = Number(product.stock) || 0, qty = Math.max(1, Math.round(num(f.get(`itemQty${n}`)) || 1));
         hint.className = `stock-hint${qty > stock ? ' negative' : ''}`;
         hint.textContent = qty > stock ? `Atenção: só há ${stock} em estoque (a venda deixará o estoque negativo).` : `Estoque atual: ${stock}`;
+      });
+    }
+
+    // ---------- datas da 2ª parcela em diante (só na venda) ----------
+    // dues[0] = 2ª parcela, dues[1] = 3ª... ('' = dia padrão). "dueRows" = quantas linhas estão abertas.
+    let dues = [], dueRows = 0;
+    const duesBox = form.querySelector('#extra-dues');
+    const saveDues = () => { const copy = dues.slice(); while (copy.length && !copy[copy.length - 1]) copy.pop(); el('extraDues').value = copy.join(','); };
+    const countInstallments = () => (el('modality').value === 'carne' ? Math.min(12, Math.max(1, Math.round(num(el('installments').value) || 1))) : 1);
+    function renderDues() {
+      if (!duesBox) return;
+      const n = countInstallments(), first = el('firstDue').value;
+      if (!first || n < 2) { duesBox.innerHTML = ''; return; }
+      // linhas abertas: as que a pessoa abriu e as que já têm data (assim nada some se ela trocar a forma ou as parcelas e voltar);
+      // as datas além do número de parcelas ficam guardadas, mas não aparecem nem contam (read() corta pelo número de parcelas).
+      let filled = dues.length; while (filled > 0 && !dues[filled - 1]) filled -= 1;
+      const shownRows = Math.min(Math.max(dueRows, filled), n - 1);
+      const rows = [];
+      for (let i = 0; i < shownRows; i++) {
+        rows.push(`<div class="due-row"><label>Vence a ${i + 2}ª parcela</label><input type="date" class="due-extra" data-idx="${i}" value="${esc(dues[i] || '')}">${i + 2 < n ? `<button type="button" class="link" data-due-all="${i}">Usar este dia nas seguintes</button>` : ''}</div>`);
+      }
+      const last = shownRows === 0 ? first : dues[shownRows - 1];
+      const canAdd = shownRows < n - 1 && last;
+      dueRows = shownRows;
+      duesBox.innerHTML = `${rows.join('')}<div class="due-actions">${canAdd ? '<button type="button" class="link" data-due-add>+ Personalizar a próxima parcela</button>' : ''}${shownRows > 0 ? '<button type="button" class="link" data-due-reset>Voltar ao padrão</button>' : ''}</div>`;
+      checkDues();
+    }
+    // Uma data não pode vir antes da parcela anterior.
+    function checkDues() {
+      if (!duesBox) return;
+      const n = countInstallments();
+      const dates = App.finance.dueDates({date: (el('date') && el('date').value) || today(), count: n, firstDue: el('firstDue').value, extraDues: dues.slice(0, Math.max(0, n - 1))});
+      duesBox.querySelectorAll('.due-extra').forEach(input => {
+        const i = Number(input.dataset.idx);
+        input.setCustomValidity(input.value && i + 1 < dates.length && i >= 0 && dates[i] && input.value < dates[i] ? `A ${i + 2}ª parcela não pode vencer antes da ${i + 1}ª (${dateLabel(dates[i])}).` : '');
+      });
+    }
+    // A 1ª parcela do carnê não pode vencer antes da data da venda (nasceria atrasada, com multa e juros).
+    function checkFirstDue() {
+      const first = el('firstDue'), date = el('date');
+      if (!first || !date) return;
+      const late = el('modality').value === 'carne' && first.value && date.value && first.value < date.value;
+      first.setCustomValidity(late ? `A 1ª parcela não pode vencer antes da data da venda (${dateLabel(date.value)}).` : '');
+    }
+    function loadDues(list) {
+      dues = list.slice();
+      dueRows = dues.length;
+      while (dueRows > 0 && !dues[dueRows - 1]) dueRows -= 1;
+      saveDues();
+      renderDues();
+    }
+    if (duesBox) {
+      duesBox.addEventListener('change', event => {
+        const input = event.target.closest('.due-extra');
+        if (!input) return;
+        dues[Number(input.dataset.idx)] = input.value;
+        saveDues(); renderDues(); renderCompare();
+      });
+      duesBox.addEventListener('click', event => {
+        const add = event.target.closest('[data-due-add]'), all = event.target.closest('[data-due-all]'), reset = event.target.closest('[data-due-reset]');
+        if (add) { dueRows += 1; while (dues.length < dueRows) dues.push(''); renderDues(); }
+        if (reset) { dues = []; dueRows = 0; saveDues(); renderDues(); renderCompare(); }
+        if (all) {      // copia o mesmo dia do mês para todas as parcelas seguintes
+          const i = Number(all.dataset.dueAll), from = dues[i];
+          if (!from) return;
+          const n = countInstallments();
+          for (let j = i + 1; j < n - 1; j++) dues[j] = App.finance.monthDay(App.format.shiftMonth(from.slice(0, 7), j - i), Number(from.slice(8, 10)));
+          dueRows = n - 1;
+          saveDues(); renderDues(); renderCompare();
+        }
       });
     }
 
@@ -152,7 +228,7 @@
 
     // Escolheu um produto cadastrado: preenche VENDA (preço padrão) e COMPRA (custo) se o usuário ainda não mexeu.
     function fillFromProduct(n) {
-      const product = data.products.find(p => p.name === el(productField(n)).value);
+      const product = App.store.findByName('products', el(productField(n)).value);
       if (!product) return;
       if (!touched[`itemAmount${n}`] && Number(product.price) > 0) set(`itemAmount${n}`, product.price, true);
       if (!touched[`itemCost${n}`] && Number(product.cost) > 0) set(`itemCost${n}`, product.cost, true);
@@ -170,14 +246,23 @@
       el('modality').classList.add('auto');
     }
 
+    // O número da nota só aparece quando a caixa "teve nota fiscal" está marcada.
+    const syncInvoice = () => { const box = form.querySelector('#invoice-number-field'); if (box) box.hidden = !el('invoiceIssued').checked; };
+
     form.addEventListener('input', event => {
       const name = event.target.name;
       if (!name) return;
+      if (name === 'invoiceIssued') syncInvoice();
       event.target.classList.remove('auto');               // digitou por cima: deixa de ser "automático"
       if (['baseRate', 'extraRate'].includes(name) || /^item(Amount|Cost)\d+$/.test(name)) touched[name] = true;
       if (name === 'modality') { applyVisibility(); applyDefaults(); }
       else if (name === 'installments') applyDefaults();
       else if (name === 'feeRate' && !touched.baseRate && el('modality').value !== 'carne') set('baseRate', el('feeRate').value === '' ? 0 : el('feeRate').value, true);
+      if (['modality', 'installments', 'firstDue', 'date'].includes(name)) {      // datas da 2ª parcela em diante
+        if (name === 'firstDue' && !event.target.value) { dues = []; dueRows = 0; saveDues(); }   // sem a 1ª data, volta tudo ao padrão
+        renderDues();
+        checkFirstDue();
+      }
       const match = /^product(\d*)$/.exec(name);
       if (match && event.target.value) fillFromProduct(match[1] ? Number(match[1]) : 1);
       renderStock();
@@ -202,12 +287,15 @@
     applyDefaults();
     for (const key of ['installments', 'account', 'entry', 'firstDue']) if (initial[key] !== undefined) set(key, initial[key]);
     if (initial.modality) applyDefaults();               // recalcula padrões com as parcelas iniciais
+    if (duesBox) loadDues(initial.extraDues ? initial.extraDues : parseDues(el('extraDues').value));
     for (const key of ['feeRate', 'baseRate', 'extraRate']) if (initial[key] !== undefined && initial[key] !== null) { set(key, initial[key]); touched[key] = true; }
     let shown = 1;
     blocks().forEach((block, i) => { const n = i + 1; if (el(productField(n)).value || el(`itemAmount${n}`).value) shown = n; });
     showItems(shown);
     renderStock();
     renderCompare();
+    syncInvoice();
+    checkFirstDue();
     return {read, showItems, refresh: () => { renderStock(); renderCompare(); }};
   }
 

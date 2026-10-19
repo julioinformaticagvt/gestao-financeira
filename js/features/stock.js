@@ -11,7 +11,7 @@
 
   const DEFAULT_MIN = 2;   // valor de partida; o usuário muda em Configurações (settings.defaultMinStock)
   const defaultMin = () => { const raw = data.settings.defaultMinStock, n = Number(raw); return raw !== '' && raw != null && Number.isFinite(n) ? n : DEFAULT_MIN; };
-  const productByName = name => data.products.find(p => p.name === name);
+  const productByName = name => App.store.findByName('products', name);   // "mouse usb" acha "Mouse USB" (sem diferenciar maiúsculas e acentos)
   const hasStock = product => !!product && product.type !== 'Serviço';
   // Estoque mínimo que vale para o produto: o dele, ou o padrão se ele não tiver um (campo em branco).
   const hasOwnMin = product => product.minStock !== undefined && product.minStock !== null && product.minStock !== '';

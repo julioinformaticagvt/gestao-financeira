@@ -11,7 +11,7 @@
   const text = value => String(value ?? '');
   // Texto com ; " ou quebra de linha vai entre aspas (aspas viram aspas duplas).
   // Texto que começa com = + - @ viraria fórmula no Excel: ganha um apóstrofo na frente (números negativos como -12,50 ficam como estão).
-  const cell = value => { let s = text(value); if (/^[=+@]/.test(s) || (/^-/.test(s) && !/^-?[\d.,]+$/.test(s))) s = "'" + s; return /[;"\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  const cell = value => { let s = text(value); if (/^[=+@\t\r]/.test(s) || (/^-/.test(s) && !/^-?[\d.,]+$/.test(s))) s = "'" + s; return /[;"\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
   const toCsv = (headers, rows) => '﻿' + [headers, ...rows].map(row => row.map(cell).join(';')).join('\r\n') + '\r\n';
 
   // Período: {kind: 'month'|'year'|'all', value: 'AAAA-MM' | 'AAAA'}
@@ -70,7 +70,7 @@
 
   // ---------- painel (dentro de Configurações > Backup e exportação) ----------
   function panelHtml() {
-    return `<hr><h3>Exportar para o contador (CSV)</h3><p class="muted">Arquivos que abrem direto no Excel: separador ponto e vírgula, datas dd/mm/aaaa e vírgula como decimal. Atenção: clientes e vendas têm dados pessoais; envie ao contador por um canal seguro.</p><div class="form-grid"><div class="field"><label>Período</label><select id="export-kind"><option value="month">Um mês</option><option value="year">Um ano</option><option value="all">Tudo</option></select></div><div class="field"><label id="export-label">Mês</label><input id="export-month" type="month" value="${today().slice(0, 7)}"><input id="export-year" type="number" min="2000" max="2100" value="${today().slice(0, 4)}" hidden></div></div><div class="actions" style="justify-content:flex-start"><button type="button" class="primary" id="export-all">Exportar os 6 arquivos</button>${Object.keys(FILES).map(key => `<button type="button" class="secondary" data-export="${key}">${FILES[key].title}</button>`).join('')}</div><p id="export-status" class="positive"></p>`;
+    return `<hr><h3>Exportar para o contador (CSV)</h3><p class="muted">Arquivos que abrem direto no Excel: separador ponto e vírgula, datas dd/mm/aaaa e vírgula como decimal. Atenção: clientes e vendas têm dados pessoais; envie ao contador por um canal seguro.</p><div class="form-grid"><div class="field"><label>Período</label><select id="export-kind"><option value="month">Um mês</option><option value="year">Um ano</option><option value="all">Tudo</option></select></div><div class="field"><label id="export-label">Mês</label><input id="export-month" type="month" value="${today().slice(0, 7)}"><input id="export-year" type="number" min="2000" max="2100" value="${today().slice(0, 4)}" hidden></div></div><div class="actions" style="justify-content:flex-start"><button type="button" class="primary" id="export-all">Exportar os ${Object.keys(FILES).length} arquivos</button>${Object.keys(FILES).map(key => `<button type="button" class="secondary" data-export="${key}">${FILES[key].title}</button>`).join('')}</div><p id="export-status" class="positive"></p>`;
   }
 
   function bind() {

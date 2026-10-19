@@ -32,7 +32,8 @@
     if (warranty) sale.warranty = warranty;              // garantia da OS (texto), usada no recibo
     if (pay.discount > 0) { sale.discountType = pay.discountType; sale.discountValue = pay.discountValue; }   // o que foi digitado (R$ ou %)
     if (pay.firstDue) sale.firstDue = pay.firstDue;     // data da 1ª parcela escolhida (as seguintes seguem o dia padrão)
-    if (sale.installments > 1) sale.dueDates = App.finance.dueDates({date: sale.date, count: sale.installments, firstDue: sale.firstDue});   // datas congeladas
+    if (pay.firstDue && pay.extraDues && pay.extraDues.some(Boolean)) sale.extraDues = pay.extraDues;   // datas escolhidas da 2ª parcela em diante
+    if (sale.installments > 1) sale.dueDates = App.finance.dueDates({date: sale.date, count: sale.installments, firstDue: sale.firstDue, extraDues: sale.extraDues});   // datas congeladas
     App.stock.consume(sale);                            // dá baixa no estoque dos produtos vendidos
 
     if (meta.immediate) {

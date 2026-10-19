@@ -30,7 +30,10 @@
     App.ui.groupFields(byId('client-form'), [{kind: 'client', title: 'Cliente', items: ['name', 'doc', 'phone', 'email']}, {kind: 'other', title: 'Observações', items: ['notes']}]);
     byId('client-form').onsubmit = event => {
       event.preventDefault();
-      data.clients.push({...Object.fromEntries(new FormData(event.target)), createdAt: today()});
+      const values = Object.fromEntries(new FormData(event.target));
+      values.name = String(values.name || '').trim();
+      if (App.store.findByName('clients', values.name)) return alert(`Já existe um cliente chamado "${App.store.findByName('clients', values.name).name}". Use outro nome (por exemplo, com o sobrenome).`);
+      data.clients.push({...values, createdAt: today()});
       save();
       closeModal();
       go('clients');
@@ -98,7 +101,8 @@
     const payRows = payments.map(({payment, sale, index}) => {
       const state = sale.status === 'Cancelada' ? 'Venda cancelada' : payment.voided ? `Desfeito em ${dateLabel(payment.voidedAt)}` : 'Valendo';
       const canEdit = !payment.voided && sale.status !== 'Cancelada';
-      return `<tr class="${canEdit ? '' : 'voided'}"><td>${dateLabel(payment.date)}</td><td>${money(payment.amount)}</td><td>${esc(payment.method)}</td><td>${sale.id}${payment.installment ? ` / ${payment.installment}` : ''}</td><td>${esc(payment.note || '-')}</td><td>${state}</td><td>${payment.receipt ? `<button class="secondary" data-action="view-receipt" data-number="${payment.receipt}">Recibo ${App.receipts.pad(payment.receipt)}</button>` : ''}${canEdit ? ` <button class="secondary" data-action="edit-payment" data-sale="${sale.id}" data-payment="${index}">Editar</button> <button class="secondary" data-action="undo-payment" data-sale="${sale.id}" data-payment-index="${index}" data-installment="${payment.installment}">Desfazer</button>` : ''}</td></tr>`;
+      const isEntry = payment.installment === 0 && sale.installments > 1;   // entrada do carnê: desfazer deixaria o valor fora das Contas a receber
+      return `<tr class="${canEdit ? '' : 'voided'}"><td>${dateLabel(payment.date)}</td><td>${money(payment.amount)}</td><td>${esc(payment.method)}</td><td>${sale.id}${payment.installment ? ` / ${payment.installment}` : ''}</td><td>${esc(payment.note || '-')}</td><td>${state}</td><td>${payment.receipt ? `<button class="secondary" data-action="view-receipt" data-number="${payment.receipt}">Recibo ${App.receipts.pad(payment.receipt)}</button>` : ''}${canEdit ? ` <button class="secondary" data-action="edit-payment" data-sale="${sale.id}" data-payment="${index}">Editar</button> ${isEntry ? '<small class="muted">entrada: para mudar, edite a venda</small>' : `<button class="secondary" data-action="undo-payment" data-sale="${esc(sale.id)}" data-payment-index="${index}" data-installment="${esc(payment.installment)}">Desfazer</button>`}` : ''}</td></tr>`;
     }).join('');
 
     openModal(`<h2>Histórico · ${esc(client.name)}</h2><div class="cards"><div class="card"><span class="label">Total comprado</span><div class="metric">${money(sum(sales, s => s.total))}</div></div><div class="card"><span class="label">Total pago</span><div class="metric positive">${money(sum(valid, ({payment}) => Number(payment.amount)))}</div></div><div class="card"><span class="label">Total em aberto</span><div class="metric warning">${money(sum(sales, s => s.balance))}</div></div><div class="card"><span class="label">Total vencido</span><div class="metric negative">${money(overdue)}</div></div></div><p><b>Próximo vencimento:</b> ${next ? dateLabel(next.due) : 'Nenhum'}</p><h3>Compras</h3>${allSales.length ? `<div class="table-wrap"><table><thead><tr><th>Data</th><th>Produto</th><th>Quantidade</th><th>Unitário</th><th>Desconto</th><th>Total</th><th>Origem do produto</th></tr></thead><tbody>${salesRows}</tbody></table></div>` : '<div class="empty">Nenhuma compra.</div>'}<h3>Pagamentos</h3>${payments.length ? `<div class="table-wrap"><table><thead><tr><th>Data</th><th>Valor</th><th>Forma</th><th>Venda/parcela</th><th>Observação</th><th>Situação</th><th></th></tr></thead><tbody>${payRows}</tbody></table></div>` : '<div class="empty">Nenhum pagamento.</div>'}`);
@@ -159,11 +163,11 @@
       // Mesmas regras de receber: valor positivo, não passar do que a parcela deve, data entre a venda e hoje.
       const charges = Number(payment.charges || 0), n = payment.installment;
       const item = n ? App.finance.installmentsFor(sale).find(i => i.number === n) : null;
-      const cap = n === 0 ? Number(sale.entry) || 0 : item ? item.value : sale.total;
+      const cap = n === 0 && sale.installments > 1 ? Number(sale.entry) || 0 : item ? item.value : sale.total;   // entrada do carnê, parcela, ou a venda inteira
       const others = App.finance.activePayments(sale).filter(p => p !== payment && p.installment === n).reduce((total, p) => total + App.finance.principalOf(p), 0);
       if (!(amount > 0)) return fail('Digite um valor maior que zero.');
       if (amount < charges - 0.004) return fail(`O valor não pode ser menor que a multa e os juros já cobrados neste pagamento (${money(charges)}).`);
-      if (sale.installments > 1 && amount - charges > cap - others + 0.004) return fail(`O valor passa do que esta parcela deve (${money(Math.max(0, cap - others) + charges)}).`);
+      if (amount - charges > cap - others + 0.004) return fail(`O valor passa do que esta parcela deve (${money(Math.max(0, cap - others) + charges)}).`);
       if (date > today()) return fail('A data do pagamento não pode ser no futuro.');
       if (date < sale.date) return fail(`A data do pagamento não pode ser antes da venda (${dateLabel(sale.date)}).`);
       Object.assign(payment, {amount, date, method: f.get('method')});

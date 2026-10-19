@@ -1,5 +1,19 @@
 # Novidades
 
+## Versão 0.16.0 · Parcelas, recibo e revisão · 19/10/2026
+
+- Carnê: depois de escolher a data da 1ª parcela, dá para escolher a data de cada parcela seguinte (ou "usar este dia nas seguintes").
+- Recibo: CNPJ ou CPF reconhecido sozinho, ícones coloridos do WhatsApp e da rede social (Instagram, Facebook, TikTok, YouTube, site) e sem campos entre colchetes.
+- Nota fiscal: a caixa ficou mais clara ("Esta venda teve nota fiscal") e o número só aparece quando ela é marcada.
+- Fechar venda de um orçamento usa a data de hoje; cancelar essa venda devolve o orçamento para "Aprovado".
+- Revisão geral: nomes de produto com outras maiúsculas ou acentos são reconhecidos, Enter no orçamento não fecha venda sem perguntar, período "Personalizado" correto e outras correções.
+
+## Versão 0.15.1 · Segurança · 17/10/2026
+
+- Revisão de segurança: arquivos de backup ou do Drive com conteúdo suspeito agora são recusados.
+- A logo e os códigos de vendas e orçamentos ficaram protegidos contra código escondido.
+- Nada muda no uso do dia a dia.
+
 ## Versão 0.15.0 · Valores em reais e conforto no celular · 16/10/2026
 
 - Os campos de valor mostram R$ 1.234,56 enquanto você digita (como aplicativo de banco: digite só os números).

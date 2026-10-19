@@ -68,7 +68,7 @@
     const charges = sum(payments, p => Number(p.charges || 0));                          // multa e juros recebidos
     const open = sum(future, i => i.balance);
     const fees = sum(sales, saleFee);                                                    // taxas da maquininha (já descontadas do saldo)
-    const types = monthTypeTotals(today().slice(0, 7));
+    const types = monthTypeTotals(month);   // mês escolhido
 
     // Recebimentos por forma: barras horizontais, uma cor por forma (a cor sempre vem com o nome e o valor).
     // Aqui é uso interno, então Pix PJ e Pix PF aparecem separados.

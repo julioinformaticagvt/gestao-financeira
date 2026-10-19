@@ -40,18 +40,20 @@
 
   // Datas de vencimento das parcelas. Sem "firstDue": a 1ª vence no dia padrão do mês seguinte à venda.
   // Com "firstDue" (o usuário escolheu a data da 1ª): a 1ª vence nela e as seguintes, no dia padrão dos meses seguintes.
-  function dueDates({date, count, firstDue}) {
+  // "extraDues" (opcional): datas escolhidas à mão da 2ª parcela em diante; a posição vazia segue o dia padrão.
+  function dueDates({date, count, firstDue, extraDues}) {
     const day = Number(data.settings.dueDay) || 12;
     return Array.from({length: count}, (_, i) => {
+      if (i > 0 && extraDues && extraDues[i - 1]) return extraDues[i - 1];
       if (!firstDue) return addMonths(date, i + 1);
       return i === 0 ? firstDue : monthDay(App.format.shiftMonth(firstDue.slice(0, 7), i), day);
     });
   }
 
   // Parcelas de um carnê ANTES de gravar (usado na prévia do formulário): [{number, due, value}]
-  function scheduleFor({date, total, entry = 0, installments, firstDue}) {
+  function scheduleFor({date, total, entry = 0, installments, firstDue, extraDues}) {
     const financed = Math.max(0, total - (Number(entry) || 0)), value = financed / installments;
-    const dates = dueDates({date, count: installments, firstDue});
+    const dates = dueDates({date, count: installments, firstDue, extraDues});
     return dates.map((due, i) => ({number: i + 1, due, value: i === installments - 1 ? round2(financed - round2(value) * i) : round2(value)}));
   }
 
@@ -62,7 +64,7 @@
     const financed = Math.max(0, sale.total - (Number(sale.entry) || 0));
     const value = round2(financed / sale.installments);   // cada parcela em centavos
     const frozen = sale.dueDates && sale.dueDates.length === sale.installments;   // datas congeladas na venda (não mudam se o dia padrão mudar)
-    const dates = frozen ? sale.dueDates : dueDates({date: sale.date, count: sale.installments, firstDue: sale.firstDue});
+    const dates = frozen ? sale.dueDates : dueDates({date: sale.date, count: sale.installments, firstDue: sale.firstDue, extraDues: sale.extraDues});
     // quanto já foi pago em cada parcela (só a parte que abate a parcela)
     const paidBy = activePayments(sale).reduce((all, payment) => {
       if (payment.installment) all[payment.installment] = (all[payment.installment] || 0) + principalOf(payment);
@@ -129,7 +131,7 @@
   ];
 
   // 'Produto' ou 'Serviço' de um item pelo nome (se não achar, é Produto).
-  const itemType = name => (data.products.find(p => p.name === name) || {}).type || 'Produto';
+  const itemType = name => (App.store.findByName('products', name) || {}).type || 'Produto';
 
   // Soma uma lista de itens separando Produto e Serviço: {product: 0, service: 0}
   const totalsByType = rows => rows.reduce((all, row) => { all[row.type === 'Serviço' ? 'service' : 'product'] += Number(row.amount) || 0; return all; }, {product: 0, service: 0});
@@ -181,7 +183,7 @@
     let changed = false;
     for (const sale of data.sales) {
       if (sale.installments > 1 && !(sale.dueDates && sale.dueDates.length === sale.installments)) {
-        sale.dueDates = dueDates({date: sale.date, count: sale.installments, firstDue: sale.firstDue});
+        sale.dueDates = dueDates({date: sale.date, count: sale.installments, firstDue: sale.firstDue, extraDues: sale.extraDues});
         changed = true;
       }
     }
