@@ -161,6 +161,10 @@
       else if (os && quote.status !== before) SO().afterChange(quote, quote.status);
     };
 
+    // Enter numa caixa de texto não envia o formulário: o único "enviar" daqui é Fechar venda, que deve ser escolhido de propósito.
+    form.addEventListener('keydown', event => {
+      if (event.key === 'Enter' && event.target.tagName === 'INPUT' && !['button', 'submit', 'checkbox', 'radio'].includes(event.target.type)) event.preventDefault();
+    });
     form.onsubmit = event => {
       event.preventDefault();
       const already = quote.saleId && data.sales.find(s => s.id === quote.saleId && s.status !== 'Cancelada');

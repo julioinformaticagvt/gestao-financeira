@@ -1,6 +1,11 @@
 // "O que há de novo": lista de versões em linguagem simples, da mais nova para a mais antiga.
 // A cada versão aprovada, acrescente uma entrada AQUI (e em version.js, na tabela do CLAUDE.md e na etiqueta do Git).
 window.CHANGELOG = [
+  {version: '0.16.1', name: 'Conferência', date: '20/10/2026', items: [
+    'Ao escolher um nome na lista de sugestões, a lista fecha (antes podia reabrir com nomes parecidos).',
+    'No orçamento e na ordem de serviço, apertar Enter numa caixa não abre mais a pergunta de fechar venda.',
+    'Sincronização: se o aparelho estiver sem espaço ao baixar dados do Drive, o sistema continua funcionando normalmente.'
+  ]},
   {version: '0.16.0', name: 'Parcelas, recibo e revisão', date: '19/10/2026', items: [
     'Carnê: depois de escolher a data da 1ª parcela, dá para escolher a data de cada parcela seguinte (ou "usar este dia nas seguintes").',
     'Recibo: CNPJ ou CPF reconhecido sozinho, ícones coloridos do WhatsApp e da rede social (Instagram, Facebook, TikTok, YouTube, site) e sem campos entre colchetes.',

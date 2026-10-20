@@ -207,9 +207,9 @@
   // Grava no aparelho os dados vindos do Drive e recarrega a página para o sistema abrir com eles.
   function applyRemote(env, meta) {
     const merged = mergeDevice(env.data, data);
-    App.store.freeze();   // nada desta janela pode gravar por cima dos dados novos
     try { localStorage.setItem(KEY, JSON.stringify(merged)); }
     catch { throw Object.assign(new Error('O navegador não tem espaço para guardar os dados do Drive. Nada foi alterado.'), {code: 'space'}); }
+    App.store.freeze();   // gravou: a partir daqui nada desta janela (com os dados velhos na memória) pode gravar por cima
     setState({lastRev: meta.rev, lastHash: hashData(merged), lastAt: nowIso(), appliedPending: true, conflict: null, otherDevice: true});
     run.dirty = false; run.conflictRemote = null;
     run.reloading = true;   // a partir daqui, esta janela (com os dados velhos na memória) NUNCA mais envia nada ao Drive: só recarrega
@@ -394,8 +394,8 @@
     try {
       await saveCopy('Dados deste aparelho, antes de restaurar uma cópia');
       const merged = mergeDevice(JSON.parse(rec.json), data);
+      localStorage.setItem(KEY, JSON.stringify(merged));   // se o navegador recusar, cai no aviso abaixo e esta janela continua normal
       App.store.freeze();
-      localStorage.setItem(KEY, JSON.stringify(merged));
       run.reloading = true; clearTimeout(timer);
       hooks.reload();
     } catch (error) { alert(`Não consegui restaurar: ${(error && error.message) || 'erro desconhecido'}`); }

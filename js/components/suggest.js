@@ -7,6 +7,7 @@
   const LIMIT = 6;
 
   let open = null;   // {input, box, items, index}
+  let picking = false;   // durante a escolha: o "input" que a própria escolha dispara não reabre a lista
 
   const optionsOf = id => { const list = document.getElementById(id); return list ? [...list.options].map(o => o.value).filter(Boolean) : []; };
 
@@ -22,8 +23,11 @@
     const {input} = open;
     close();
     input.value = value;
-    input.dispatchEvent(new Event('input', {bubbles: true}));
-    input.dispatchEvent(new Event('change', {bubbles: true}));
+    picking = true;
+    try {
+      input.dispatchEvent(new Event('input', {bubbles: true}));
+      input.dispatchEvent(new Event('change', {bubbles: true}));
+    } finally { picking = false; }
   }
 
   function matches(all, text) {
@@ -72,7 +76,7 @@
     input.setAttribute('autocomplete', 'off');
     input.setAttribute('aria-autocomplete', 'list');
     input.addEventListener('focus', () => show(input));
-    input.addEventListener('input', () => show(input));
+    input.addEventListener('input', () => { if (!picking) show(input); });
     input.addEventListener('keydown', event => {
       if (!open || open.input !== input) return;
       if (event.key === 'ArrowDown') { event.preventDefault(); open.index = (open.index + 1) % open.items.length; render(); }

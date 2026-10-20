@@ -1,5 +1,11 @@
 # Novidades
 
+## Versão 0.16.1 · Conferência · 20/10/2026
+
+- Ao escolher um nome na lista de sugestões, a lista fecha (antes podia reabrir com nomes parecidos).
+- No orçamento e na ordem de serviço, apertar Enter numa caixa não abre mais a pergunta de fechar venda.
+- Sincronização: se o aparelho estiver sem espaço ao baixar dados do Drive, o sistema continua funcionando normalmente.
+
 ## Versão 0.16.0 · Parcelas, recibo e revisão · 19/10/2026
 
 - Carnê: depois de escolher a data da 1ª parcela, dá para escolher a data de cada parcela seguinte (ou "usar este dia nas seguintes").
