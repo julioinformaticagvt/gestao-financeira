@@ -83,8 +83,8 @@
     sale.stockOut = [];
   }
 
-  // Produtos com estoque no mínimo ou abaixo (inclui zerado e negativo).
-  const lowStock = () => data.products.filter(product => hasStock(product) && (Number(product.stock) || 0) <= minOf(product));
+  // Produtos com estoque ABAIXO do mínimo (inclui zerado e negativo). Mínimo 1 = "quero ter sempre pelo menos 1": com 1 está bom, com 0 avisa (SPECS 39.3).
+  const lowStock = () => data.products.filter(product => hasStock(product) && (Number(product.stock) || 0) < minOf(product));
 
   // ---------- origem (para mostrar) ----------
   const describeLot = lot => {

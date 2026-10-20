@@ -22,7 +22,7 @@
   }
 
   function messageModal(title, message, client) {
-    const wa = client && App.whatsapp.phoneOf(client) ? `<button type="button" class="secondary" data-action="wa-open" data-client="${esc(client)}">Abrir no WhatsApp</button>` : '';
+    const wa = client && App.whatsapp.phoneOf(client) ? `<button type="button" class="secondary" data-action="wa-open" data-client="${esc(client)}">${App.whatsapp.label()}</button>` : '';
     openModal(`<h2>${title}</h2><textarea id="confirmation-message" class="message-box">${esc(message)}</textarea><div class="actions"><button class="primary" data-action="copy-message">Copiar mensagem</button>${wa}</div><p id="copy-status" class="positive"></p>`);
   }
 

@@ -289,5 +289,5 @@
     openDocument({title: `Extrato da conta · ${esc(client)}`, fileName: `Extrato-${client.replace(/\s+/g, '-')}-${asOf}`, client, build: eco => extractDocument(client, asOf, eco), message: () => extractMessage(client, asOf)});
   }
 
-  App.documents = {header, frame, section, customerMethod, settlement, LIMITS, COLORS, pill, itemsText, situation, receiptDocument, extractDocument, receiptMessage, extractMessage, collectionMessage, openDocument, showExtract, printDocument, linesOf, pad, dm};
+  App.documents = {ICONS, header, frame, section, customerMethod, settlement, LIMITS, COLORS, pill, itemsText, situation, receiptDocument, extractDocument, receiptMessage, extractMessage, collectionMessage, openDocument, showExtract, printDocument, linesOf, pad, dm};
 })();

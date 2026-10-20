@@ -1,5 +1,13 @@
 # Novidades
 
+## Versão 0.17.0 · Catálogo online · 20/10/2026
+
+- Catálogo online: o botão "Mandar para o catálogo" (em Produtos) atualiza o seu catálogo na internet com um clique. Preço, custo, quantidade e clientes nunca vão para o site.
+- No cadastro do produto e do serviço: mostrar no catálogo, categoria, marca, descrição, especificações (com "Colar ficha técnica") e até 3 fotos, escolhidas de uma vez e na ordem que você quiser (a 1ª é a capa).
+- Configurações → Catálogo online: repositório, categorias, chave do GitHub (fica só neste aparelho), "Testar conexão" e "Ver o arquivo para conferir".
+- Os botões "Abrir no WhatsApp" ganharam o símbolo verde do WhatsApp.
+- Estoque mínimo: o aviso para comprar vem quando o estoque fica abaixo do mínimo (mínimo 1 = avisa quando acabar).
+
 ## Versão 0.16.1 · Conferência · 20/10/2026
 
 - Ao escolher um nome na lista de sugestões, a lista fecha (antes podia reabrir com nomes parecidos).

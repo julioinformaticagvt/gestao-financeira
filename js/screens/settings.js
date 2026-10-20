@@ -12,7 +12,7 @@
 
   // ---------- painéis ----------
   function rulesPanel() {
-    return `<section class="panel g-pay"><h2>Regras financeiras</h2><p class="muted">Valores alterados valem para novas operações; históricos preservam os valores usados.</p><form id="settings-form" class="form-grid"><div class="field"><label>Máximo de parcelas</label><input name="maxInstallments" type="number" value="${data.settings.maxInstallments}"></div><div class="field"><label>Dia padrão de vencimento</label><input name="dueDay" type="number" min="1" max="28" value="${data.settings.dueDay || 12}"></div><div class="field"><label>Estoque mínimo padrão <small>avisa quando o produto chegar nele (cada produto pode ter o seu)</small></label><input name="defaultMinStock" type="number" min="0" step="1" value="${App.stock.defaultMin()}"></div><div class="field"><label>Margem de ganho padrão (%) <small>em cima do custo, para sugerir o preço dos produtos</small></label><input name="defaultMargin" type="number" min="0" step="0.01" value="${data.settings.defaultMargin ?? 40}"></div><div class="field"><label>Quando o cliente paga várias parcelas de uma vez</label><select name="receiptMode"><option value="one" ${data.settings.receiptMode !== 'each' ? 'selected' : ''}>Um recibo para tudo</option><option value="each" ${data.settings.receiptMode === 'each' ? 'selected' : ''}>Um recibo por parcela</option></select></div><div class="actions field full"><button class="primary">Salvar configurações</button></div></form></section>`;
+    return `<section class="panel g-pay"><h2>Regras financeiras</h2><p class="muted">Valores alterados valem para novas operações; históricos preservam os valores usados.</p><form id="settings-form" class="form-grid"><div class="field"><label>Máximo de parcelas</label><input name="maxInstallments" type="number" value="${data.settings.maxInstallments}"></div><div class="field"><label>Dia padrão de vencimento</label><input name="dueDay" type="number" min="1" max="28" value="${data.settings.dueDay || 12}"></div><div class="field"><label>Estoque mínimo padrão <small>avisa para comprar quando o produto ficar abaixo dele (cada produto pode ter o seu)</small></label><input name="defaultMinStock" type="number" min="0" step="1" value="${App.stock.defaultMin()}"></div><div class="field"><label>Margem de ganho padrão (%) <small>em cima do custo, para sugerir o preço dos produtos</small></label><input name="defaultMargin" type="number" min="0" step="0.01" value="${data.settings.defaultMargin ?? 40}"></div><div class="field"><label>Quando o cliente paga várias parcelas de uma vez</label><select name="receiptMode"><option value="one" ${data.settings.receiptMode !== 'each' ? 'selected' : ''}>Um recibo para tudo</option><option value="each" ${data.settings.receiptMode === 'each' ? 'selected' : ''}>Um recibo por parcela</option></select></div><div class="actions field full"><button class="primary">Salvar configurações</button></div></form></section>`;
   }
 
   // Uma linha de logo: prévia, escolher arquivo e remover.
@@ -73,8 +73,9 @@
 
   // ---------- tela ----------
   function render() {
-    byId('app').innerHTML = App.sync.panelHtml() + App.motion.panelHtml() + rulesPanel() + businessPanel() + meiPanel() + machinePanel() + App.serviceOrders.settingsPanel() + App.revenue.settingsPanel() + App.pwa.settingsPanel() + App.firstRun.settingsPanels();
+    byId('app').innerHTML = App.sync.panelHtml() + App.motion.panelHtml() + rulesPanel() + businessPanel() + meiPanel() + machinePanel() + App.serviceOrders.settingsPanel() + App.catalog.settingsPanel() + App.revenue.settingsPanel() + App.pwa.settingsPanel() + App.firstRun.settingsPanels();
     App.serviceOrders.bindSettings();
+    App.catalog.bindSettings();
     App.revenue.bindSettings();
 
     byId('settings-form').onsubmit = event => {

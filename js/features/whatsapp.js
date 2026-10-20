@@ -23,8 +23,14 @@
     return true;
   }
 
-  // Botão "Abrir no WhatsApp" (só quando o cliente tem telefone).
-  const buttonHtml = (client, id) => phoneOf(client) ? `<button type="button" class="secondary" id="${id}" data-wa-client="${String(client).replace(/"/g, '&quot;')}">Abrir no WhatsApp</button>` : '';
+  // Símbolo verde do WhatsApp (o mesmo do recibo, em features/documents.js), para os botões (SPECS 39.2). Fica "escondido" para
+  // leitores de tela, porque o texto do botão já diz "WhatsApp".
+  const icon = () => ((App.documents && App.documents.ICONS && App.documents.ICONS.whatsapp) || '')
+    .replace('class="doc-ico"', 'class="wa-ico"').replace('role="img" aria-label="WhatsApp"', 'aria-hidden="true" focusable="false"');
+  const label = () => `${icon()}Abrir no WhatsApp`;
 
-  App.whatsapp = {clean, url, phoneOf, open, buttonHtml};
+  // Botão "Abrir no WhatsApp" (só quando o cliente tem telefone).
+  const buttonHtml = (client, id) => phoneOf(client) ? `<button type="button" class="secondary" id="${id}" data-wa-client="${String(client).replace(/"/g, '&quot;')}">${label()}</button>` : '';
+
+  App.whatsapp = {clean, url, phoneOf, open, buttonHtml, icon, label};
 })();
