@@ -43,7 +43,7 @@
       field('Número de série', `<input name="os_serial" value="${v(e.serial)}">`),
       field('Acessórios deixados <small>carregador, mouse...</small>', `<input name="os_accessories" value="${v(e.accessories)}">`, true),
       field('Estado de entrada <small>riscos, avarias</small>', `<input name="os_condition" value="${v(e.condition)}">`, true),
-      field('Senha ou PIN do equipamento <small>opcional · fica salvo só neste computador e nunca é impresso</small>', `<input name="os_pin" value="${v(o.pin)}" autocomplete="off">`),
+      field('Senha ou PIN do equipamento <small>opcional · nunca é impresso</small>', `<input name="os_pin" value="${v(o.pin)}" autocomplete="off">`),
       field('Defeito relatado pelo cliente', `<textarea name="os_defect" rows="2">${v(o.defect)}</textarea>`, true),
       field('Diagnóstico do técnico', `<textarea name="os_diagnosis" rows="2">${v(o.diagnosis)}</textarea>`, true),
       field('Data de entrada', `<input name="os_entryDate" type="date" value="${v(o.entryDate)}">`),
@@ -185,7 +185,7 @@
 
   function showMessage(quote, kind) {
     kind = kind || kindForStatus(quote.status);
-    App.ui.openModal(`<h2>Avisar o cliente · ${esc(quote.id)}</h2><p class="muted">Nada é enviado sozinho: copie a mensagem e envie pelo WhatsApp.</p><div class="field"><textarea id="os-message" class="message-box" rows="6">${esc(messageFor(quote, kind))}</textarea></div><div class="actions"><button type="button" class="secondary" data-action="close-modal">Fechar</button><button type="button" class="primary" id="os-copy">Copiar mensagem</button>${App.whatsapp.buttonHtml(quote.client, 'os-wa')}</div><p id="os-copy-status" class="positive"></p>`);
+    App.ui.openModal(`<h2>Avisar o cliente · ${esc(quote.id)}</h2><p class="muted">Copie e envie pelo WhatsApp.</p><div class="field"><textarea id="os-message" class="message-box" rows="6">${esc(messageFor(quote, kind))}</textarea></div><div class="actions"><button type="button" class="secondary" data-action="close-modal">Fechar</button><button type="button" class="primary" id="os-copy">Copiar mensagem</button>${App.whatsapp.buttonHtml(quote.client, 'os-wa')}</div><p id="os-copy-status" class="positive"></p>`);
     App.ui.byId('os-copy').onclick = () => {
       const area = App.ui.byId('os-message'), done = () => { App.ui.byId('os-copy-status').textContent = 'Mensagem copiada!'; };
       if (navigator.clipboard) navigator.clipboard.writeText(area.value).then(done); else { area.select(); document.execCommand('copy'); done(); }
@@ -237,12 +237,12 @@
   const MESSAGE_HELP = 'Marcadores: {cliente}, {os}, {equipamento}, {valor}.';
   function settingsPanel() {
     const c = cfg(), area = (name, label, value) => `<div class="field full"><label>${label}</label><textarea name="${name}" rows="3">${esc(value)}</textarea></div>`;
-    return `<section class="panel g-product"><h2>Ordem de serviço</h2><p class="muted">Use a ordem de serviço quando o cliente deixa o equipamento para conserto. Desligando, nada é apagado: as ordens ficam guardadas.</p><form id="os-form" class="form-grid">
+    return `<section class="panel g-product"><h2>Ordem de serviço</h2><p class="muted">Para equipamentos deixados para conserto. Desligar não apaga nada.</p><form id="os-form" class="form-grid">
       <div class="field full"><label class="inline-check"><input type="checkbox" name="enabled" ${c.enabled ? 'checked' : ''}> <b>Uso ordem de serviço</b></label></div>
       <div class="field"><label>Garantia padrão (dias)</label><input name="warrantyDays" type="number" min="0" step="1" value="${c.warrantyDays}"></div>
       <div class="field"><label>Avisar se aguardando aprovação há mais de (dias)</label><input name="approvalDays" type="number" min="1" step="1" value="${c.approvalDays}"></div>
       <div class="field"><label>Avisar se pronto e sem retirar há mais de (dias)</label><input name="readyDays" type="number" min="1" step="1" value="${c.readyDays}"></div>
-      <div class="field full"><label>Etapas que eu uso <small>desmarque as que não usa; "Recebido", "Aguardando aprovação", "Pronto" e "Entregue" ficam sempre</small></label><div class="os-steps">${OPTIONAL.map(s => `<label class="inline-check"><input type="checkbox" name="step" value="${esc(s)}" ${c.statusesOff.includes(s) ? '' : 'checked'}> ${esc(s)}</label>`).join('')}</div></div>
+      <div class="field full"><label>Etapas que eu uso <small>desmarque as que não usa</small></label><div class="os-steps">${OPTIONAL.map(s => `<label class="inline-check"><input type="checkbox" name="step" value="${esc(s)}" ${c.statusesOff.includes(s) ? '' : 'checked'}> ${esc(s)}</label>`).join('')}</div></div>
       ${area('warrantyText', 'Texto da garantia (padrão)', c.warrantyText)}
       ${area('entryTerms', 'Termos do comprovante de entrada', c.entryTerms)}
       ${area('msgReceived', `Mensagem: equipamento recebido. ${MESSAGE_HELP}`, c.msgReceived)}

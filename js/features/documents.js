@@ -110,15 +110,28 @@
     return section('Situação de cada compra', `<table class="doc-table"><thead><tr><th>Compra</th><th class="num">Total</th><th class="num">Já pago</th><th class="num">Falta pagar</th></tr></thead><tbody>${rows}<tr class="doc-total"><td colspan="3">Total em aberto</td><td class="num"><strong>${money(sum(purchases, p => p.remaining))}</strong></td></tr></tbody></table>`);
   }
 
-  // Próximos vencimentos (limit linhas + linha-resumo "E mais N parcelas da Compra 2, em ...").
-  function upcomingList(upcoming, purchases, limit) {
+  // Próximos vencimentos (SPECS 41): a DATA e o VALOR em destaque (a pessoa bate o olho e vê quanto deve e quando); a compra e a
+  // parcela vêm embaixo, menores. mode 'summary' (Resumido): detalha as parcelas do mês de refDate e do mês seguinte; as demais viram
+  // uma linha por compra ("mais 5 parcelas de R$ 100,00, de jan/2027 a mai/2027" + total). mode 'full' (Detalhado): todas, uma por linha.
+  const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  const shortMonth = due => `${MONTHS[Number(due.slice(5, 7)) - 1]}/${due.slice(0, 4)}`;
+  function upcomingBlock(upcoming, purchases, mode, refDate) {
     if (!upcoming.length) return '';
-    const shown = upcoming.slice(0, limit), rest = upcoming.slice(limit);
-    const rows = shown.map(u => `<div class="doc-row"><strong>${dateLabel(u.due)}</strong>${pill(numberOf(purchases, u.saleId), u.saleDate)}<span class="doc-muted">parcela ${u.installment} de ${u.of}</span><span class="doc-amount">${money(u.value)}</span></div>`).join('');
+    const limit = App.format.shiftMonth(refDate.slice(0, 7), 1);   // mês seguinte ao do documento
+    let detailed = mode === 'full' ? upcoming : upcoming.filter(u => u.due.slice(0, 7) <= limit);
+    if (!detailed.length) detailed = upcoming.slice(0, 1);   // a próxima parcela sempre aparece em destaque
+    const rest = upcoming.filter(u => !detailed.includes(u));
+    const rows = detailed.map(u => `<div class="doc-due"><span class="doc-due-date">${dateLabel(u.due)}</span><span class="doc-due-value">${money(u.value)}</span><span class="doc-due-ref">${pill(numberOf(purchases, u.saleId), u.saleDate)} parcela ${u.installment} de ${u.of}</span></div>`).join('');
     const bySale = {};
     rest.forEach(u => { (bySale[u.saleId] = bySale[u.saleId] || []).push(u); });
-    const more = Object.entries(bySale).map(([id, items]) => `E mais ${plural(items.length, 'parcela', 'parcelas')} da Compra ${numberOf(purchases, id)}, em ${list(items.map(u => dateLabel(u.due)))}.`).join(' ');
-    return section('Próximos vencimentos', `${rows}${more ? `<p class="doc-note">${more}</p>` : ''}`);
+    const more = Object.entries(bySale).map(([id, items]) => {
+      const same = items.every(u => Math.abs(u.value - items[0].value) < 0.005);
+      const first = shortMonth(items[0].due), last = shortMonth(items[items.length - 1].due);
+      const when = first === last ? `em ${first}` : `de ${first} a ${last}`;
+      return `<div class="doc-due-more"><span class="doc-due-ref">${pill(numberOf(purchases, id), items[0].saleDate)}</span><span>mais ${plural(items.length, 'parcela', 'parcelas')}${same ? ` de ${money(items[0].value)}` : ''}, ${when}</span><strong>${money(sum(items, u => u.value))}</strong></div>`;
+    }).join('');
+    const total = `<div class="doc-due-total"><span>Total a vencer</span><strong>${money(sum(upcoming, u => u.value))}</strong></div>`;
+    return section('Próximos vencimentos', rows + more + total);
   }
 
   // Caixa vermelha de atraso. withCalc = true no extrato (mostra o cálculo do dia); false no recibo (só avisa).
@@ -136,7 +149,9 @@
   // Recibo antigo (sem "lines"): monta as linhas a partir do que ele já guardava.
   const linesOf = r => r.lines || [{kind: r.installments ? (r.installments.number ? 'parcela' : 'entrada') : 'vista', saleId: r.saleId, installment: r.installments ? r.installments.number : 0, of: r.installments ? r.installments.count : 1, value: r.amount - (r.charges || 0), charges: r.charges || 0, items: r.items, legacy: true}];
 
-  function receiptDocument(r, eco) {
+  // opts.mode: 'summary' (Resumido, padrão) ou 'full' (Detalhado); opts.copy: true marca "2ª via" (recibo reaberto depois do dia em que foi emitido).
+  function receiptDocument(r, eco, opts = {}) {
+    const kind = opts.copy ? 'Recibo · 2ª via' : 'Recibo';
     const lines = linesOf(r), after = r.after, b = r.business || data.settings.business;
     const installmentSale = lines.some(l => l.kind !== 'vista') && after;
     const main = `<p class="doc-label">RECIBO DE PAGAMENTO</p><p class="doc-lead-2">Comprovante de pagamento no valor de</p><p class="doc-value">${money(r.amount)}</p><p class="doc-who">Recebido de <b>${esc(r.client)}</b></p><p class="doc-muted">Pago em ${dateLabel(r.date)} · ${esc(customerMethod(r.method))}</p>${r.canceled ? '<p class="doc-bad doc-strong">RECIBO CANCELADO</p>' : ''}`;
@@ -150,7 +165,7 @@
       const note = first.kind === 'entrada' ? '<p class="doc-note">Este recibo é da entrada da venda.</p>' : '';
       const body = section('Itens', `<table class="doc-table"><thead><tr><th>Item</th><th class="num">Qtd.</th><th class="num">Valor</th></tr></thead><tbody>${items}</tbody></table>${note}`)
         + section('Pagamento', `<div class="doc-row"><span>Forma de pagamento</span><span class="doc-amount">${esc(customerMethod(r.method))}</span></div><div class="doc-row"><span>Pago em</span><span class="doc-amount">${dateLabel(r.date)}</span></div>${r.discount > 0 ? `<div class="doc-row"><span>Desconto</span><span class="doc-amount doc-ok">− ${money(r.discount)}</span></div>` : ''}${warranty ? `<div class="doc-row"><span>Garantia</span><span class="doc-amount">${esc(warranty)}</span></div>` : ''}`);
-      return frame(header('Recibo', `nº ${pad(r.number)}`, r.date, eco), main, lead + body + foot, eco);
+      return frame(header(kind, `nº ${pad(r.number)}`, r.date, eco), main, lead + body + foot, eco);
     }
 
     const purchases = after.purchases;
@@ -174,21 +189,21 @@
     }).join('');
     const applied = r.applied ? '<p class="doc-note">O valor pago foi aplicado primeiro à parcela mais antiga em atraso.</p>' : '';
     let body = section(lines.length > 1 ? 'Parcelas pagas hoje' : 'Parcela paga hoje', blocks + applied);
-    body += lateBox(after.late, purchases, false) + purchasesTable(purchases) + upcomingList(after.upcoming, purchases, LIMITS.receiptUpcoming);
+    body += lateBox(after.late, purchases, false) + purchasesTable(purchases) + upcomingBlock(after.upcoming, purchases, opts.mode, r.date);
     if (!r.canceled && settlement(r).kind === 'all') body += '<p class="doc-allpaid">Todas as contas quitadas. Obrigado!</p>';
     const garantia = (r.discount > 0 ? `<p class="doc-note doc-ok">Desconto concedido na compra: − ${money(r.discount)}</p>` : '') + (warranty ? `<p class="doc-note">Garantia: ${esc(warranty)}</p>` : '');
-    return frame(header('Recibo', `nº ${pad(r.number)}`, r.date, eco), main, lead + body + garantia + foot, eco);
+    return frame(header(kind, `nº ${pad(r.number)}`, r.date, eco), main, lead + body + garantia + foot, eco);
   }
 
   // ---------- EXTRATO ----------
-  function extractDocument(client, asOf = today(), eco = false) {
+  function extractDocument(client, asOf = today(), eco = false, mode = 'summary') {
     const s = situation(client, asOf), n = s.purchases.length;
     const clean = !s.purchases.length;
     const main = `<p class="doc-label">EXTRATO DA CONTA</p><p class="doc-lead-2">Situação de <b>${esc(client)}</b> em ${dateLabel(asOf)}</p>${clean
       ? '<p class="doc-value doc-ok-big">Sem pendências</p><p class="doc-who">Nenhuma parcela em aberto.</p>'
       : `<p class="doc-value">${money(s.totalOpen)}</p><p class="doc-who">em aberto, em ${plural(n, 'compra', 'compras')}</p>${s.late.length ? `<p class="doc-bad">${money(s.totalLate)} já estão em atraso, com multa e juros até hoje</p>` : ''}`}`;
     const lead = '<p class="doc-lead">Compras, atrasos e próximos vencimentos</p>';
-    const body = clean ? '' : lateBox(s.late, s.purchases, true) + purchasesTable(s.purchases) + upcomingList(s.upcoming, s.purchases, LIMITS.extractUpcoming);
+    const body = clean ? '' : lateBox(s.late, s.purchases, true) + purchasesTable(s.purchases) + upcomingBlock(s.upcoming, s.purchases, mode, asOf);
     const foot = '<p class="doc-foot">Este extrato mostra a situação da conta na data indicada. Valores com atraso mudam a cada dia.</p>';
     return frame(header('Extrato', client, asOf, eco), main, lead + body + foot, eco);
   }
@@ -255,10 +270,15 @@
 
   // build(eco) devolve o HTML do documento; message() devolve o texto do WhatsApp; extra = HTML de campos a mais.
   // message (opcional): sem ela, o documento não mostra a caixa de mensagem (relatórios). client (opcional): liga "Abrir no WhatsApp".
-  function openDocument({title, fileName, build, message, extra = '', onExtra, client}) {
+  // modes: true mostra a escolha "Resumido / Detalhado" (recibo e extrato); a última escolha fica lembrada neste aparelho.
+  const MODE_KEY = 'julio-informatica-doc-modo';
+  const loadMode = () => { try { return localStorage.getItem(MODE_KEY) === 'full' ? 'full' : 'summary'; } catch { return 'summary'; } };
+  function openDocument({title, fileName, build, message, extra = '', onExtra, client, modes = false}) {
+    let mode = loadMode();
+    const modeHtml = modes ? `<div class="doc-mode" role="group" aria-label="Como mostrar as próximas parcelas">${[['summary', 'Resumido'], ['full', 'Detalhado']].map(([key, label]) => `<button type="button" class="filter-pill${mode === key ? ' active' : ''}" data-doc-mode="${key}" aria-pressed="${mode === key}">${label}</button>`).join('')}</div>` : '';
     const wa = client ? App.whatsapp.buttonHtml(client, 'doc-wa') : '';
     const messageBox = message ? `<div class="field"><label>Mensagem para o WhatsApp (editável)</label><textarea id="doc-message" class="message-box">${esc(message())}</textarea></div>` : '';
-    App.ui.openModal(`<h2>${title}</h2><div class="doc-wrap" id="doc-preview">${build(false)}</div><div class="doc-controls">${extra}<label class="doc-eco-toggle"><input type="checkbox" id="doc-eco"> Versão econômica (sem fundo escuro, para imprimir em papel)</label>${messageBox}<div class="actions"><button type="button" class="primary" id="doc-pdf">Baixar PDF</button>${message ? '<button type="button" class="secondary" id="doc-copy">Copiar mensagem</button>' : ''}${wa}</div><p class="muted mobile-only">No celular: se o botão não abrir a impressão, use o menu do navegador (os três pontinhos ou Compartilhar) e escolha Imprimir ou Salvar como PDF.</p><p id="doc-status" class="positive"></p></div>`);
+    App.ui.openModal(`<h2>${title}</h2><div class="doc-wrap" id="doc-preview">${build(false, mode)}</div><div class="doc-controls">${modeHtml}${extra}<label class="doc-eco-toggle"><input type="checkbox" id="doc-eco"> Versão econômica (sem fundo escuro, para imprimir em papel)</label>${messageBox}<div class="actions"><button type="button" class="primary" id="doc-pdf">Baixar PDF</button>${message ? '<button type="button" class="secondary" id="doc-copy">Copiar mensagem</button>' : ''}${wa}</div><p class="muted mobile-only">Não abriu? Use o menu do navegador → Imprimir.</p><p id="doc-status" class="positive"></p></div>`);
     document.querySelector('#modal .modal-card').classList.add('wide');
     // Cabe tudo na largura da tela (SPECS 33.3): se o documento passar da largura disponível (celular), ele é reduzido inteiro para caber em
     // uma tela só. Só na tela: no PDF e na impressão o tamanho não muda (css/documents.css).
@@ -269,7 +289,13 @@
       const available = wrap.clientWidth, needed = Math.max(doc.scrollWidth, ...[...doc.querySelectorAll('table')].map(table => table.scrollWidth));
       if (available > 0 && needed > available + 1) doc.style.zoom = String(Math.max(0.35, available / needed).toFixed(3));
     };
-    const redraw = () => { App.ui.byId('doc-preview').innerHTML = build(App.ui.byId('doc-eco').checked); fit(); watchImages(); };
+    const redraw = () => { App.ui.byId('doc-preview').innerHTML = build(App.ui.byId('doc-eco').checked, mode); fit(); watchImages(); };
+    document.querySelectorAll('#modal [data-doc-mode]').forEach(button => { button.onclick = () => {
+      mode = button.dataset.docMode;
+      try { localStorage.setItem(MODE_KEY, mode); } catch { /* sem acesso: vale só agora */ }
+      document.querySelectorAll('#modal [data-doc-mode]').forEach(other => { other.classList.toggle('active', other === button); other.setAttribute('aria-pressed', String(other === button)); });
+      redraw();
+    }; });
     const watchImages = () => App.ui.byId('doc-preview').querySelectorAll('img').forEach(image => { if (!image.complete) image.addEventListener('load', fit, {once: true}); });
     fit(); watchImages();
     if (window.ResizeObserver) new ResizeObserver(fit).observe(App.ui.byId('doc-preview'));   // girar a tela refaz a medida
@@ -286,7 +312,7 @@
 
   function showExtract(client) {
     const asOf = today();
-    openDocument({title: `Extrato da conta · ${esc(client)}`, fileName: `Extrato-${client.replace(/\s+/g, '-')}-${asOf}`, client, build: eco => extractDocument(client, asOf, eco), message: () => extractMessage(client, asOf)});
+    openDocument({title: `Extrato da conta · ${esc(client)}`, fileName: `Extrato-${client.replace(/\s+/g, '-')}-${asOf}`, client, modes: true, build: (eco, mode) => extractDocument(client, asOf, eco, mode), message: () => extractMessage(client, asOf)});
   }
 
   App.documents = {ICONS, header, frame, section, customerMethod, settlement, LIMITS, COLORS, pill, itemsText, situation, receiptDocument, extractDocument, receiptMessage, extractMessage, collectionMessage, openDocument, showExtract, printDocument, linesOf, pad, dm};

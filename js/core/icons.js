@@ -19,7 +19,10 @@
     collection: '<path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 21h4"/>',                                             // sino
     reports: '<path d="M5 20V4h10l4 4v12z"/><path d="M9 16v-3M12 16v-6M15 16v-4"/>',                                               // relatório
     purchases: '<path d="M6 3h12l2 5H4z"/><path d="M5 8v12h14V8M10 12h4"/>',                                                         // loja
-    suppliers: '<path d="M3 6h11v10H3zM14 9h4l3 3v4h-7"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/>'         // caminhão
+    suppliers: '<path d="M3 6h11v10H3zM14 9h4l3 3v4h-7"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/>',        // caminhão
+    tool: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.3L4 16.9 7.1 20l5.3-5.3a4 4 0 0 0 5.3-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>',                 // ferramenta (ordem de serviço)
+    percent: '<path d="M19 5L5 19"/><circle cx="7" cy="7" r="2.2"/><circle cx="17" cy="17" r="2.2"/>',                              // porcentagem (margem)
+    alert: '<path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17.2v.1"/>'                                                               // triângulo de atenção
   };
 
   // Qual ícone vai em cada tela (nome da tela -> chave do ícone).

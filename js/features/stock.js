@@ -46,11 +46,26 @@
     return lots;
   }
 
-  // Tira "qty" dos lotes mais antigos; o que não couber vira "origem desconhecida" (estoque inicial).
-  function allocate(lots, qty) {
+  // Compras de um produto que ainda têm peças, com a data e o custo de cada uma (SPECS 44): é o que aparece para escolher na venda
+  // e no orçamento ("Compra P0003 · 12/10 · R$ 1.000,00 (2 un.)") e na ficha do produto.
+  function availableLots(name) {
+    const product = productByName(name);
+    if (!hasStock(product)) return [];
+    return lotsFor(product.name).filter(lot => lot.remaining > 0).map(lot => {
+      const purchase = data.purchases.find(p => p.id === lot.purchaseId);
+      const lines = purchase.items.filter(item => item.name === product.name), qty = lines.reduce((t, i) => t + i.qty, 0);
+      const unitCost = qty > 0 ? Math.round(lines.reduce((t, i) => t + i.qty * i.unitCost, 0) / qty * 100) / 100 : 0;   // a mesma compra pode ter o produto em 2 linhas
+      return {purchaseId: lot.purchaseId, date: purchase.date, remaining: lot.remaining, unitCost};
+    });
+  }
+
+  // Tira "qty" dos lotes: primeiro do lote escolhido na venda (preferred), depois dos mais antigos; o que não couber vira
+  // "origem desconhecida" (estoque inicial).
+  function allocate(lots, qty, preferred) {
     const out = [];
     let left = qty;
-    for (const lot of lots) {
+    const ordered = preferred ? [...lots.filter(l => l.purchaseId === preferred), ...lots.filter(l => l.purchaseId !== preferred)] : lots;
+    for (const lot of ordered) {
       if (left <= 0) break;
       const take = Math.min(Math.max(0, lot.remaining), left);
       if (take > 0) { out.push({purchaseId: lot.purchaseId, qty: take}); lot.remaining -= take; left -= take; }
@@ -70,7 +85,7 @@
       const qty = item.qty || 1;
       product.stock = (Number(product.stock) || 0) - qty;
       byName[product.name] = byName[product.name] || lotsFor(product.name, used);
-      sale.stockOut.push({name: product.name, qty, lots: allocate(byName[product.name], qty)});
+      sale.stockOut.push({name: product.name, qty, lots: allocate(byName[product.name], qty, item.lotId)});   // lotId = compra escolhida na venda
     }
   }
 
@@ -126,5 +141,5 @@
   }
   const usedQty = (purchaseId, name) => usageOf(purchaseId).filter(r => r.name === name).reduce((total, r) => total + r.qty, 0);
 
-  App.stock = {DEFAULT_MIN, defaultMin, productByName, hasStock, hasOwnMin, minOf, consume, restore, lowStock, originLines, originHtml, usageOf, usedQty};
+  App.stock = {DEFAULT_MIN, defaultMin, productByName, hasStock, availableLots, hasOwnMin, minOf, consume, restore, lowStock, originLines, originHtml, usageOf, usedQty};
 })();

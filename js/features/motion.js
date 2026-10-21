@@ -30,7 +30,7 @@
 
   function panelHtml() {
     const buttons = LEVELS.map((l, n) => `<button type="button" role="radio" aria-checked="${n === level}" class="${n === level ? 'primary' : 'secondary'}" data-action="motion-set" data-level="${n}"><b>${n}</b> ${esc(l.name)}</button>`).join('');
-    return `<section class="panel g-other" id="motion-panel"><h2>Aparência e animações</h2><div class="form-grid">${App.appearance.sliderHtml('zoom')}</div><h3>Animações</h3><p class="muted">Escolha o quanto o sistema se mexe. A escolha vale só para este aparelho (o celular pode ter um nível e o computador outro).</p><div class="level-picker" role="radiogroup" aria-label="Nível de animação">${buttons}</div><p class="muted" id="motion-desc"><b>Nível ${level}:</b> ${esc(LEVELS[level].desc)}</p></section>`;
+    return `<section class="panel g-other" id="motion-panel"><h2>Aparência e animações</h2><div class="form-grid">${App.appearance.sliderHtml('zoom')}</div><h3>Animações</h3><p class="muted">Vale só para este aparelho.</p><div class="level-picker" role="radiogroup" aria-label="Nível de animação">${buttons}</div><p class="muted" id="motion-desc"><b>Nível ${level}:</b> ${esc(LEVELS[level].desc)}</p></section>`;
   }
 
   function setLevel(n) {

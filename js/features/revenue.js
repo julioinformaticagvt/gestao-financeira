@@ -154,7 +154,7 @@
     const days = Number(cfg().idleDays) || 90, list = idleProducts(days);
     const rows = list.map(x => `<tr><td>${esc(x.product.name)}</td><td class="num">${x.product.stock}</td><td>${x.lastSale ? `${dateLabel(x.lastSale)} (${x.idleDays} dias)` : 'nunca vendido'}</td><td class="num">${money(x.value)}</td></tr>`).join('');
     const below = belowMargin();
-    return `<p class="muted">Produtos com estoque e sem venda há mais de <b>${days}</b> dias (o prazo é editável em Configurações). Valor parado = custo médio × estoque.</p>${list.length ? `<table class="doc-table report-table"><thead><tr><th>Produto</th><th class="num">Estoque</th><th>Última venda</th><th class="num">Valor parado</th></tr></thead><tbody>${rows}<tr class="doc-total"><td colspan="3">Total parado</td><td class="num"><b>${money(sum(list, x => x.value))}</b></td></tr></tbody></table>` : '<p class="muted">Nenhum produto parado.</p>'}
+    return `<p class="muted">Com estoque e sem venda há mais de <b>${days}</b> dias.</p>${list.length ? `<table class="doc-table report-table"><thead><tr><th>Produto</th><th class="num">Estoque</th><th>Última venda</th><th class="num">Valor parado</th></tr></thead><tbody>${rows}<tr class="doc-total"><td colspan="3">Total parado</td><td class="num"><b>${money(sum(list, x => x.value))}</b></td></tr></tbody></table>` : '<p class="muted">Nenhum produto parado.</p>'}
       ${below.length ? `<h3>Abaixo da margem mínima (${Number(cfg().minMargin)}%)</h3><ul class="os-history">${below.map(p => `<li>${esc(p.name)} · margem ${String(marginOf(p)).replace('.', ',')}%</li>`).join('')}</ul>` : ''}`;
   }
 
@@ -174,10 +174,10 @@
   function settingsPanel() {
     const acts = activities(), m = cfg().messages || {}, M = App.messages;
     const area = (name, label, value) => `<div class="field full"><label>${label}</label><textarea name="${name}" rows="3">${esc(value)}</textarea></div>`;
-    return `<section class="panel g-product"><h2>Atividades do negócio</h2><p class="muted">Use para separar o que entra por tipo de atividade (ex.: Informática, Revenda de peças, Entregas). Cada produto ou serviço pode ter uma atividade; vendas antigas ficam "Sem atividade". Nada é classificado sozinho.</p>
+    return `<section class="panel g-product"><h2>Atividades do negócio</h2><p class="muted">Separe o que entra por atividade (ex.: Informática, Peças).</p>
       <ul class="activity-list">${acts.map(a => `<li><input data-activity="${esc(a.id)}" value="${esc(a.name)}"> <label class="inline-check"><input type="checkbox" data-activity-on="${esc(a.id)}" ${a.active === false ? '' : 'checked'}> ativa</label></li>`).join('') || '<li class="muted">Nenhuma atividade cadastrada.</li>'}</ul>
       <form id="activity-form" class="form-grid"><div class="field"><label>Nova atividade</label><input name="name" placeholder="Ex.: Informática"></div><div class="actions field full"><button class="primary">Salvar atividades</button></div></form></section>
-    <section class="panel g-other"><h2>Modelos de mensagem</h2><p class="muted">Marcadores: {cliente}, {valor}, {vencimento}, {os}, {equipamento}, {negocio}. Nada é enviado sozinho: o sistema só monta o texto e abre o WhatsApp quando você clica.</p><form id="messages-form" class="form-grid">
+    <section class="panel g-other"><h2>Modelos de mensagem</h2><p class="muted">Marcadores: {cliente}, {valor}, {vencimento}, {os}, {equipamento}, {negocio}.</p><form id="messages-form" class="form-grid">
       ${area('collection', 'Cobrança (marcadores extras: {detalhe} e {total})', M.template('collection'))}
       ${area('reminder', 'Lembrete antes do vencimento (extras: {parcela})', M.template('reminder'))}
       ${area('quote', 'Orçamento', M.template('quote'))}
@@ -221,6 +221,6 @@
     };
   }
 
-  App.revenue = {NOTICE, RULE, split, monthRevenue, revenueTableHtml, detailsHtml, revenueTitle, revenueCsv, yearSummary, yearHtml, yearCsv, dayClose, dayHtml,
+  App.revenue = {NOTICE, RULE, shares, split, monthRevenue, revenueTableHtml, detailsHtml, revenueTitle, revenueCsv, yearSummary, yearHtml, yearCsv, dayClose, dayHtml,
     idleProducts, idleHtml, belowMargin, marginOf, activityName, activities, printRevenue, printYear, printDay, settingsPanel, bindSettings};
 })();

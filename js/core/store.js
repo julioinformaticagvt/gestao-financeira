@@ -280,7 +280,7 @@
   // trata como "códigos" (ids, datas, estados). Esses campos só podem ter letras, números e . : - / espaço (estados e formas de pagamento
   // só não podem ter < > " ' `). Textos livres (nomes, observações) são sempre protegidos na hora de mostrar. Devolve o caminho do primeiro
   // campo suspeito ('' = tudo certo).
-  const STRICT_KEYS = new Set(['id', 'uid', 'clientId', 'productId', 'supplierId', 'saleId', 'quoteId', 'osId', 'purchaseId', 'payableId', 'fixedId', 'month', 'startMonth', 'date', 'dueDate', 'paidAt', 'createdAt', 'updatedAt', 'entryDate', 'deliveredAt', 'validUntil', 'firstDue', 'voidedAt', 'at', 'number', 'installment', 'key', 'view', 'kind', 'discountType', 'plan', 'modality', 'account', 'lastSeenVersion', 'backupKey', 'repo', 'branch', 'lastSentAt']);
+  const STRICT_KEYS = new Set(['id', 'uid', 'clientId', 'productId', 'supplierId', 'saleId', 'quoteId', 'osId', 'purchaseId', 'lotId', 'payableId', 'fixedId', 'month', 'startMonth', 'date', 'dueDate', 'paidAt', 'createdAt', 'updatedAt', 'entryDate', 'deliveredAt', 'validUntil', 'firstDue', 'voidedAt', 'at', 'number', 'installment', 'key', 'view', 'kind', 'discountType', 'plan', 'modality', 'account', 'lastSeenVersion', 'backupKey', 'repo', 'branch', 'lastSentAt']);
   const LOOSE_KEYS = new Set(['status', 'method', 'type', 'label']);
   const NUMERIC_KEYS = new Set(['stock', 'qty', 'quantity', 'dueDay', 'amount', 'unit', 'unitCost', 'receipt', 'cost', 'price', 'total', 'paid', 'balance', 'entry', 'minStock', 'installments', 'discount', 'fee', 'charges', 'prevStock', 'prevCost', 'fine', 'interest']);
   const STRICT_TEXT = /^[\w.:\-\/ ]{0,60}$/, LOOSE_TEXT = /^[^<>"'`]*$/, NUMBER_TEXT = /^\s*-?[\d.,]*\s*$/;

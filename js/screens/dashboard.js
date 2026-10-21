@@ -38,12 +38,15 @@
       sold: sum(sales, s => s.total),
       profit: sum(profits.filter(p => p.known), p => p.value),                 // lucro líquido das vendas com custo informado
       noCost: profits.filter(p => !p.known).length,                              // vendas antigas, sem custo informado
+      soldKnown: sum(sales.filter(s => saleProfit(s).known), s => s.total),      // vendido nas vendas com custo informado (base da margem)
       fees: sum(sales, saleFee),                                                  // taxas pagas à maquininha
       charges: sum(payments, p => Number(p.charges || 0)),                        // multa e juros recebidos
       received: sum(payments, p => Number(p.amount)),
       out: sum(outflows, x => x.amount),
       open: sum(receivables.filter(i => sales.includes(i.sale)), i => i.balance),
+      openCount: receivables.filter(i => sales.includes(i.sale)).length,         // parcelas em aberto das vendas do período
       overdue: sum(receivables.filter(i => i.due < today()), i => i.balance),
+      overdueCount: receivables.filter(i => i.due < today()).length,             // parcelas atrasadas
       next: sum(receivables.filter(i => monthKey(i.due) === nextKey), i => i.balance),
       soldRows: months.map(m => ({
         label: shortMonth(m),
@@ -58,8 +61,33 @@
     };
   }
 
-  // Um dos 4 números grandes da faixa. "kind" é uma cor opcional (ex.: 'negative' para vencido).
-  const kpi = (label, value, kind = '', note = '') => `<div class="kpi"><span class="kpi-label">${label}</span><span class="${kind ? `kpi-value ${kind}` : 'kpi-value'}">${money(value)}</span>${note ? `<small class="kpi-note">${note}</small>` : ''}</div>`;
+  // Um dos 4 blocos de cor (SPECS 40.4): rótulo, valor e linha(s) de apoio. "kind" marca o valor (ex.: 'negative' para lucro negativo).
+  const kpi = (label, value, kind = '', notes = []) => `<div class="kpi"><span class="kpi-label">${label}</span><span class="${kind ? `kpi-value ${kind}` : 'kpi-value'}">${money(value)}</span>${notes.filter(Boolean).map(note => `<small class="kpi-note">${note}</small>`).join('')}</div>`;
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+
+  // ---------- Produtos e serviços (rosca) ----------
+  // Regra (SPECS 40.4): vendas do período, pela data da venda. O total de cada venda é dividido entre produto e serviço na proporção
+  // do valor dos itens (a mesma regra do relatório de receitas, App.revenue.shares); o lucro de cada venda com custo informado é
+  // dividido na mesma proporção. Assim Produtos + Serviços = Vendido, e o lucro dos dois = Lucro do bloco âmbar.
+  function typeSplit(sales) {
+    const out = {product: {sold: 0, profit: 0, known: 0}, service: {sold: 0, profit: 0, known: 0}};   // known = vendido com custo informado (base da margem)
+    for (const sale of sales) {
+      const serviceShare = App.revenue.shares(sale).filter(s => s.type === 'Serviço').reduce((total, s) => total + s.share, 0);
+      const profit = saleProfit(sale);
+      out.service.sold += (Number(sale.total) || 0) * serviceShare;
+      out.product.sold += (Number(sale.total) || 0) * (1 - serviceShare);
+      if (profit.known) { out.service.profit += profit.value * serviceShare; out.product.profit += profit.value * (1 - serviceShare); out.service.known += (Number(sale.total) || 0) * serviceShare; out.product.known += (Number(sale.total) || 0) * (1 - serviceShare); }
+    }
+    return out;
+  }
+  function typesBlock(sales, title) {
+    const t = typeSplit(sales), total = t.product.sold + t.service.sold;
+    if (!(total > 0)) return `<section class="block"><h2>${title}</h2><p class="muted">Sem vendas neste período.</p></section>`;
+    const productPct = Math.round(t.product.sold / total * 100), servicePct = 100 - productPct;   // os dois somam sempre 100%
+    const margin = x => x.known > 0 ? ` · ${Math.round(x.profit / x.known * 100)}% de margem` : '';
+    const row = (name, cls, pct, x) => `<div class="donut-row ${cls}"><span class="donut-dot" aria-hidden="true"></span><div><b>${name}</b> <span class="muted">${pct}% das vendas</span><p>Vendido: <b>${money(x.sold)}</b></p><p class="muted">Lucro: ${money(x.profit)}${margin(x)}</p></div></div>`;
+    return `<section class="block"><h2>${title}</h2><div class="donut-wrap"><div class="donut" role="img" aria-label="Produtos ${productPct}% e serviços ${servicePct}% das vendas" style="--p:${productPct}%"><div class="donut-hole"><small>Vendido</small><b>${money(total)}</b></div></div><div class="donut-legend">${row('Produtos', 'is-product', productPct, t.product)}${row('Serviços', 'is-service', servicePct, t.service)}</div></div></section>`;
+  }
   // Um dos números menores logo abaixo da faixa.
   const smallStat = (label, value) => `<span>${label}<b>${money(value)}</b></span>`;
 
@@ -110,26 +138,26 @@
     const now = today();
     const items = receivableItems().filter(i => daysBetween(now, i.due) >= 1 && daysBetween(now, i.due) <= 7).sort((a, b) => a.due.localeCompare(b.due));
     const dayLabel = date => `${new Intl.DateTimeFormat('pt-BR', {weekday: 'short'}).format(new Date(`${date}T12:00:00`)).replace('.', '')}, ${dateLabel(date).slice(0, 5)}`;
-    const rows = items.map(i => `<tr><td>${dayLabel(i.due)}</td><td><b>${esc(i.sale.client)}</b></td><td class="num">${money(i.balance)}</td></tr>`).join('');
-    return `<section class="block"><div class="panel-head"><h2>Próximos vencimentos</h2><span class="muted">Próximos 7 dias · total de ${money(sum(items, i => i.balance))}</span></div>${items.length ? `<div class="table-wrap"><table><tbody>${rows}</tbody></table></div>` : '<p class="muted">Nenhuma parcela vence nos próximos 7 dias.</p>'}</section>`;
+    const C = App.components;
+    const cards = items.map(i => `<div class="due-card"><span class="rcv-avatar" aria-hidden="true">${C.receivableInitial(i.sale.client)}</span><div class="rcv-who"><b>${esc(i.sale.client)}</b><small>${C.saleRef(i.sale, i.number)}</small></div><div class="due-card-end"><b>${money(i.balance)}</b><small>${dayLabel(i.due)} · ${C.receivableSituation(i.due).text}</small></div></div>`).join('');
+    return `<section class="block"><div class="panel-head"><h2>Próximos vencimentos</h2><span class="muted">Próximos 7 dias · total de ${money(sum(items, i => i.balance))}</span></div>${items.length ? `<div class="due-list">${cards}</div>` : '<p class="muted">Nenhuma parcela vence nos próximos 7 dias.</p>'}</section>`;
   }
 
   function render(period = 'current', customStart) {
     const d = summarize(period, customStart);
-    const types = periodMonths(period, customStart).map(monthTypeTotals).reduce((all, t) => ({product: all.product + t.product, service: all.service + t.service}), {product: 0, service: 0});   // período escolhido
     const cashBalance = d.received - d.out - d.fees;   // o que entrou, menos saídas e taxas da maquininha
-    const noCostNote = d.noCost ? `${d.noCost} venda${d.noCost === 1 ? '' : 's'} sem custo informado não entrou${d.noCost === 1 ? '' : 'ram'}` : '';
+    const noCostNote = d.noCost ? `${d.noCost} venda${d.noCost === 1 ? '' : 's'} sem custo fora da conta` : '';
 
-    byId('app').innerHTML = `${migrationNotice()}${App.firstRun.startCardHtml()}${App.firstRun.noticesHtml()}<section class="period-bar"><p class="muted period-text">${periodText(period, customStart)} · valores pelas datas corretas de venda, pagamento e vencimento</p><div class="period-controls"><select id="dashboard-period"><option value="current">Este mês</option><option value="previous">Mês anterior</option><option value="3">Últimos 3 meses</option><option value="6">Últimos 6 meses</option><option value="12">Últimos 12 meses</option><option value="custom">Personalizado</option></select><input id="dashboard-custom" type="month" value="${customStart || today().slice(0, 7)}" style="display:${period === 'custom' ? 'inline-block' : 'none'}"></div></section><section class="kpi-strip">${[
-      kpi('Recebido', d.received),
-      kpi('A receber', d.open),
-      kpi('Vencido', d.overdue, 'negative'),
-      kpi('Lucro', d.profit, d.profit < 0 ? 'negative' : '', noCostNote)
+    byId('app').innerHTML = `${migrationNotice()}${App.firstRun.startCardHtml()}${App.firstRun.noticesHtml()}<section class="period-bar"><p class="muted period-text">${period === 'custom' ? periodText(period, customStart) : ''}</p><div class="period-controls"><select id="dashboard-period"><option value="current">Este mês</option><option value="previous">Mês anterior</option><option value="3">Últimos 3 meses</option><option value="6">Últimos 6 meses</option><option value="12">Últimos 12 meses</option><option value="custom">Personalizado</option></select><input id="dashboard-custom" type="month" value="${customStart || today().slice(0, 7)}" style="display:${period === 'custom' ? 'inline-block' : 'none'}"></div></section><section class="kpi-strip">${[
+      kpi('Recebido', d.received, '', [`de ${money(d.sold)} vendidos`]),
+      kpi('A receber', d.open, '', [plural(d.openCount, 'parcela em aberto', 'parcelas em aberto')]),
+      kpi('Vencido', d.overdue, 'negative', [plural(d.overdueCount, 'parcela atrasada', 'parcelas atrasadas')]),
+      kpi('Lucro', d.profit, d.profit < 0 ? 'negative' : '', [d.soldKnown > 0 ? `${Math.round(d.profit / d.soldKnown * 100)}% de margem` : '', noCostNote])
     ].join('')}</section><p class="kpi-more">${[
       smallStat('Saldo de caixa', cashBalance),
       smallStat('Vendido', d.sold),
       smallStat('Saídas', d.out)
-    ].join('')}</p><div class="dash-grid"><div class="dash-main">${waitingQuotes()}${upcoming()}</div>${App.alerts.panelHtml()}</div><section class="block"><h2>Produtos x Serviços</h2><div class="type-summary"><span>Produtos: ${money(types.product)}</span><span class="warning">Serviços: ${money(types.service)}</span></div></section><section class="block"><h2>Vendido x recebido</h2>${barChart(d.soldRows, 'Vendido', 'Recebido')}</section><div class="grid-2"><section class="block"><h2>Contas a receber por mês</h2>${barChart(d.receivableRowsByMonth, 'A receber', null, {color: 'var(--blue)'})}</section><section class="block"><h2>Recebimentos por forma</h2>${barChart(d.methods.map(row => ({...row, color: App.components.methodColor(row.label), dot: true})), 'Recebido', null, {noLegend: true})}</section></div><section class="block"><h2>Evolução das vendas</h2>${barChart(d.soldRows, 'Vendido')}</section>`;
+    ].join('')}</p><div class="dash-grid"><div class="dash-main">${waitingQuotes()}${upcoming()}</div>${App.alerts.panelHtml()}</div>${typesBlock(d.sales, period === 'current' || period === 'previous' ? 'Produtos e serviços do mês' : 'Produtos e serviços do período')}<section class="block"><h2>Vendido x recebido</h2>${barChart(d.soldRows, 'Vendido', 'Recebido')}</section><div class="grid-2"><section class="block"><h2>Contas a receber por mês</h2>${barChart(d.receivableRowsByMonth, 'A receber', null, {color: 'var(--blue)'})}</section><section class="block"><h2>Recebimentos por forma</h2>${barChart(d.methods.map(row => ({...row, color: App.components.methodColor(row.label), dot: true})), 'Recebido', null, {noLegend: true})}</section></div><section class="block"><h2>Evolução das vendas</h2>${barChart(d.soldRows, 'Vendido')}</section>`;
 
     const selector = byId('dashboard-period'), custom = byId('dashboard-custom');
     selector.value = period;

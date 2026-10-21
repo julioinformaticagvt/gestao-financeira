@@ -40,7 +40,7 @@
     const after = App.documents.situation(client, date, [...new Set(entries.map(e => e.sale.id))]);
     const hasLate = lines.some(l => l.daysLate > 0);
     const receipt = {
-      number: nextNumber(), version: 2, date, client, method: first.payment.method,
+      number: nextNumber(), version: 2, date, createdAt: today(), client, method: first.payment.method,   // createdAt: dia em que o recibo foi emitido (para a 2ª via)
       amount: round2(entries.reduce((total, e) => total + Number(e.payment.amount), 0)),
       saleId: first.sale.id, lines,
       after: {purchases: after.purchases, late: after.late, upcoming: after.upcoming},
@@ -111,7 +111,8 @@
     if (!receipt) return;
     App.documents.openDocument({
       title: `Recibo nº ${pad(receipt.number)}`, fileName: `Recibo-${pad(receipt.number)}`, client: receipt.client,
-      build: eco => App.documents.receiptDocument(receipt, eco),
+      modes: true,   // Resumido / Detalhado (SPECS 41)
+      build: (eco, mode) => App.documents.receiptDocument(receipt, eco, {mode, copy: (receipt.createdAt || receipt.date) < today()}),   // reaberto depois do dia da emissão = 2ª via
       message: () => App.documents.receiptMessage(receipt),
       extra: `<div class="field"><label>Garantia (você pode mudar para este recibo)</label><textarea id="receipt-warranty" rows="2">${esc(receipt.warranty || '')}</textarea></div>`,
       onExtra: ({redraw}) => { App.ui.byId('receipt-warranty').oninput = event => { receipt.warranty = event.target.value; save(); redraw(); }; }

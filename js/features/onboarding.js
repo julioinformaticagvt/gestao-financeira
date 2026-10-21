@@ -27,7 +27,7 @@
   function stepMarkup(n) {
     const s = cfg(), b = s.business, m = s.machine, rate = key => { const r = m.rates.now; return key.startsWith('credit-') ? r.credit[key.slice(7)] : r[key]; };
     if (n === 1) {
-      return `${progress(1)}<h2>Seu negócio</h2><p class="muted">Esses dados aparecem nos seus recibos. Tudo pode ser feito depois, em Configurações.</p><form id="fr-form" class="form-grid">
+      return `${progress(1)}<h2>Seu negócio</h2><p class="muted">Aparecem nos recibos. Dá para mudar depois.</p><form id="fr-form" class="form-grid">
         <div class="field full"><label>Nome do negócio</label><input name="name" value="${esc(b.name)}" placeholder="Nome do seu negócio"></div>
         <div class="field"><label>CNPJ ou CPF</label><input name="cnpj" value="${esc(b.cnpj)}"></div>
         <div class="field"><label>Telefone / WhatsApp</label><input name="phone" value="${esc(b.phone)}"></div>
@@ -35,7 +35,7 @@
         <div class="field"><label>Logo <small>opcional</small></label><input type="file" name="logo" accept="image/*"></div>${buttons(1)}</form>`;
     }
     if (n === 2) {
-      return `${progress(2)}<h2>MEI</h2><p class="muted">Se você é MEI, o sistema mostra o quanto do limite anual já foi usado e lembra do DAS. Não calcula imposto.</p><form id="fr-form" class="form-grid">
+      return `${progress(2)}<h2>MEI</h2><p class="muted">Mostra quanto do limite do MEI você já usou e lembra do DAS.</p><form id="fr-form" class="form-grid">
         <div class="field full"><label class="inline-check"><input type="checkbox" name="isMei" ${s.isMei ? 'checked' : ''}> <b>Sou MEI</b></label></div>
         <div class="field"><label>Limite anual (R$)</label><input name="meiLimit" type="number" min="1" step="0.01" value="${s.meiLimit}"></div>
         <div class="field"><label>Mês de abertura <small>opcional</small></label><input name="meiOpenMonth" type="month" value="${esc(s.meiOpenMonth || '')}"></div>
@@ -44,7 +44,7 @@
     if (n === 3) {
       const credit = Array.from({length: 12}, (_, i) => `<div class="field"><label>Crédito ${i + 1}x (%)</label><input name="credit-${i + 1}" type="number" min="0" step="0.01" value="${rate('credit-' + (i + 1))}"></div>`).join('');
       return `${progress(3)}<h2>Maquininha e cobrança</h2><form id="fr-form" class="form-grid">
-        <div class="field full"><label class="inline-check"><input type="checkbox" name="hasMachine" ${m.configured ? 'checked' : ''}> <b>Recebo por maquininha</b></label><small>Confira as taxas no aplicativo da sua maquininha.</small></div>
+        <div class="field full"><label class="inline-check"><input type="checkbox" name="hasMachine" ${m.configured ? 'checked' : ''}> <b>Recebo por maquininha</b></label><small>veja no app da maquininha</small></div>
         <div class="field"><label>Pix (%)</label><input name="pix" type="number" min="0" step="0.01" value="${rate('pix')}"></div>
         <div class="field"><label>Débito (%)</label><input name="debit" type="number" min="0" step="0.01" value="${rate('debit')}"></div>${credit}
         <div class="field"><label>Dia padrão de vencimento</label><input name="dueDay" type="number" min="1" max="28" value="${s.dueDay || 12}"></div>
@@ -55,7 +55,7 @@
     const picker = !!window.showDirectoryPicker;
     return `${progress(4)}<h2>Backup</h2><p><b>Seus dados ficam só neste navegador e neste computador.</b> Se o navegador for limpo ou o computador estragar, eles se perdem.</p><p>Por isso, faça backup: o sistema avisa quando passar de 7 dias sem backup. Para usar em outro aparelho, exporte e importe um backup.</p>
       <div class="actions"><button type="button" class="primary" data-action="fr-auto" ${picker ? '' : 'disabled'}>Ativar backup automático</button><button type="button" class="secondary" data-action="fr-manual">Vou fazer backup manual</button></div>
-      ${picker ? '' : '<p class="muted">Este navegador não permite backup automático em pasta (use o Chrome ou o Edge para isso). Faça o backup manual.</p>'}
+      ${picker ? '' : '<p class="muted">Backup automático só no Chrome ou Edge. Use o backup manual.</p>'}
       <div class="actions wiz-actions"><button type="button" class="secondary" data-action="fr-back">Voltar</button><button type="button" class="primary" data-action="fr-finish">Concluir</button></div>`;
   }
 
@@ -240,7 +240,7 @@
     const v = window.APP_VERSION || {}, sp = spaceInfo(), demo = App.store.isDemo;
     const demoPanel = demo
       ? '<p class="negative"><b>Você está no modo demonstração.</b> Use "Sair" na faixa do topo para voltar aos seus dados.</p>'
-      : '<p class="muted">Abre o sistema com clientes, vendas e contas de exemplo, para conhecer as telas. <b>Seus dados reais não são tocados</b> e voltam quando você sair.</p><div class="actions"><button type="button" class="secondary" data-action="demo-enter">Ver com dados de exemplo</button></div>';
+      : '<p class="muted">Dados de exemplo, para conhecer as telas. <b>Seus dados reais não são tocados</b> e voltam quando você sair.</p><div class="actions"><button type="button" class="secondary" data-action="demo-enter">Ver com dados de exemplo</button></div>';
     return `<section class="panel g-other"><h2>Ajuda e primeiros passos</h2><p class="muted">O guia "Como usar" também abre pelo botão <b>?</b> no topo.</p><div class="actions"><button type="button" class="secondary" data-action="open-help">Abrir o guia "Como usar"</button><button type="button" class="secondary" data-action="fr-redo">Refazer o assistente</button></div><p class="muted">Refazer o assistente não apaga nenhum dado.</p></section>
       <section class="panel g-other"><h2>Modo demonstração</h2>${demoPanel}</section>
       <section class="panel g-other"><h2>Dados do sistema</h2><p>Espaço usado: <b>${mb(sp.used)}</b> de cerca de <b>${mb(sp.limit)}</b> (${Math.round(sp.pct)}%).</p><div class="meter-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(sp.pct)}" aria-label="Espaço usado"><div class="meter-fill" style="width:${sp.pct.toFixed(1)}%;background:${sp.pct >= 80 ? '#b4412b' : '#2a5db0'}"></div></div><p class="muted">Logos grandes ocupam espaço: use imagens menores.</p><p class="muted"><b>Seus dados ficam só neste aparelho e neste navegador.</b> O computador e o celular têm dados separados. Para usar em outro aparelho, exporte e importe um backup.</p></section>

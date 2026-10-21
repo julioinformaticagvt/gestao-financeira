@@ -1,5 +1,17 @@
 # Novidades
 
+## Versão 0.18.0 · Novo visual · 20/10/2026
+
+- Visual novo "Bancada": letra nova (Bricolage Grotesque), botões grandes e redondos, cantos arredondados e o menu numa faixa só dele.
+- Visão geral: os 4 números em blocos de cor (verde, azul, coral e âmbar), a rosca "Produtos e serviços" com vendido e lucro de cada tipo, avisos com ícones coloridos e próximos vencimentos em cartões.
+- Contas a receber: cada parcela num cartão, com filtros Todas, Vencidas e A vencer.
+- Limite do MEI também no topo de Financeiro > Relatórios, com marcas nos avisos (70% e 90%) e quanto falta.
+- Recibo e extrato com duas versões: Resumido (este mês e o próximo em destaque, o resto numa linha) e Detalhado (todas as parcelas), com data e valor bem grandes.
+- Segunda via de qualquer recibo, a qualquer momento: a tela do cliente lista todos os recibos dele.
+- Ordenar listas: clique no título de qualquer coluna (Vendas, Clientes, Produtos, Compras...) para ordenar; clique de novo para inverter. No celular, Contas a receber e Orçamentos, use "Ordenar por".
+- Configurações: botão "Apagar movimentações" para começar de verdade mantendo clientes e produtos (exige backup).
+- Venda e orçamento: o custo de cada compra aparece separado (ex.: R$ 1.000 e R$ 1.100); vem o maior, e você escolhe outro com um toque. A peça sai da compra escolhida.
+
 ## Versão 0.17.0 · Catálogo online · 20/10/2026
 
 - Catálogo online: o botão "Mandar para o catálogo" (em Produtos) atualiza o seu catálogo na internet com um clique. Preço, custo, quantidade e clientes nunca vão para o site.

@@ -109,3 +109,15 @@
 .doc-contact { display: inline-block; margin-right: 14px; white-space: nowrap; }
 .doc-contact:last-child { margin-right: 0; }
 .doc.eco .doc-ico { filter: grayscale(1); }
+
+/* Próximos vencimentos (SPECS 41): data e valor grandes, para bater o olho; a compra e a parcela embaixo, menores. */
+.doc-due { display: grid; grid-template-columns: auto 1fr; align-items: baseline; gap: 4px 16px; padding: 14px 0; border-bottom: 1px solid #e1e5e3; }
+.doc-due-date { font-size: 20px; font-weight: 600; }
+.doc-due-value { font-size: 20px; font-weight: 600; text-align: right; }
+.doc-due-ref { grid-column: 1 / -1; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 13px; color: #6b7570; }
+.doc-due-more { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; padding: 14px 0; border-bottom: 1px solid #e1e5e3; color: #3c4541; }
+.doc-due-more .doc-due-ref { grid-column: auto; }
+.doc-due-more strong { margin-left: auto; font-size: 17px; }
+.doc-due-total { display: flex; justify-content: space-between; align-items: baseline; padding: 16px 0 0; font-weight: 600; }
+.doc-due-total strong { font-size: 22px; }
+@media print { body.printing-doc .doc-due, body.printing-doc .doc-due-more { break-inside: avoid; } }

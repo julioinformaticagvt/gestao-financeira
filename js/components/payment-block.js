@@ -20,7 +20,7 @@
 
   // ---------- HTML ----------
   // Um item: produto + quantidade + valor de VENDA (cada) + valor de COMPRA (cada).
-  const itemBlock = (n, listId) => `<div class="item-block" data-item="${n}" ${n > 1 ? 'hidden' : ''}><div class="field item-name"><label>${n === 1 ? 'Produto ou serviço' : `Item ${n}`}</label><input name="${productField(n)}" list="${listId}" placeholder="Buscar produto..." autocomplete="off"><small class="stock-hint" data-stock-hint="${n}"></small></div><div class="field"><label>Quantidade</label><input name="itemQty${n}" type="number" min="1" step="1" value="1"></div><div class="field"><label>VENDA (R$) <small>cada · o cliente paga</small></label><input name="itemAmount${n}" type="number" min="0" step="0.01" ${n === 1 ? 'required' : ''}></div><div class="field"><label>COMPRA (R$) <small>cada · eu pago</small></label><input name="itemCost${n}" type="number" min="0" step="0.01" ${n === 1 ? 'required' : ''}></div>${n > 1 ? `<button type="button" class="secondary item-remove" data-remove-item="${n}">Remover item ${n}</button>` : ''}</div>`;
+  const itemBlock = (n, listId) => `<div class="item-block" data-item="${n}" ${n > 1 ? 'hidden' : ''}><div class="field item-name"><label>${n === 1 ? 'Produto ou serviço' : `Item ${n}`}</label><input name="${productField(n)}" list="${listId}" placeholder="Buscar produto..." autocomplete="off"><small class="stock-hint" data-stock-hint="${n}"></small></div><div class="field"><label>Quantidade</label><input name="itemQty${n}" type="number" min="1" step="1" value="1"></div><div class="field"><label>VENDA (R$) <small>cada · o cliente paga</small></label><input name="itemAmount${n}" type="number" min="0" step="0.01" ${n === 1 ? 'required' : ''}></div><div class="field"><label>COMPRA (R$) <small>cada · eu pago</small></label><input name="itemCost${n}" type="number" min="0" step="0.01" ${n === 1 ? 'required' : ''}></div><input type="hidden" name="itemLot${n}" value=""><div class="lot-chips" data-lots="${n}" hidden></div>${n > 1 ? `<button type="button" class="secondary item-remove" data-remove-item="${n}">Remover item ${n}</button>` : ''}</div>`;
 
   const markup = {
     // listId = id do <datalist> de produtos que já existe no formulário.
@@ -35,14 +35,14 @@
         <div class="field" data-show="credit,carne"><label>Parcelas</label><input name="installments" type="number" min="1" max="12" value="1"></div>
         <div class="field" data-show="pix"><label>Conta que recebeu</label><select name="account"><option value="PJ">Conta PJ (da empresa)</option><option value="PF">Conta PF (pessoal)</option></select></div>
         <div class="field" data-show="carne"><label>Entrada (R$)</label><input name="entry" type="number" min="0" step="0.01" value="0"></div>
-        <div class="field" data-show="carne"><label>Vence a 1ª parcela <small>vazio = dia ${Number(data.settings.dueDay) || 12} do mês seguinte</small></label><input name="firstDue" type="date"></div>
+        <div class="field" data-show="carne"><label>Vence a 1ª parcela <small>vazio = dia ${Number(data.settings.dueDay) || 12}</small></label><input name="firstDue" type="date"></div>
         ${options.dues ? '<div class="field full" data-show="carne" id="extra-dues-box"><input type="hidden" name="extraDues" value=""><div id="extra-dues"></div></div>' : ''}
         <div class="field" data-show="debit,credit"><label>Taxa da maquininha (%)</label><input name="feeRate" type="number" min="0" step="0.01"></div>
         <div class="field"><label>Juros base (%) <small>padrão = taxa da maquininha</small></label><input name="baseRate" type="number" min="0" step="0.01" value="0"></div>
         <div class="field"><label>Cobrar extra (%) <small>acréscimo meu, só desta venda</small></label><input name="extraRate" type="number" min="0" step="0.01" value="0"></div>
         <div class="field full"><div class="pay-compare" id="pay-compare"></div></div>
         <div class="field full" data-show="carne"><div class="muted" id="pay-schedule"></div></div>
-        <div class="field full"><label class="inline-check"><input type="checkbox" name="invoiceIssued"> Esta venda teve nota fiscal</label><small class="muted">Só para controle nos relatórios. O sistema não emite nota; se você não emite, deixe desmarcado.</small></div>
+        <div class="field full"><label class="inline-check"><input type="checkbox" name="invoiceIssued"> Esta venda teve nota fiscal</label><small class="muted">Só para controle. O sistema não emite nota.</small></div>
         <div class="field" id="invoice-number-field" hidden><label>Número da nota <small>opcional</small></label><input name="invoiceNumber" autocomplete="off"></div>`;
     }
   };
@@ -55,6 +55,7 @@
       form.elements[`itemQty${n}`].value = qty;
       form.elements[`itemAmount${n}`].value = item.unit ?? P.round2(Number(item.amount) / qty);
       form.elements[`itemCost${n}`].value = item.unitCost ?? (item.cost === undefined ? '' : P.round2(Number(item.cost) / qty));
+      form.elements[`itemLot${n}`].value = item.lotId || '';   // compra escolhida (SPECS 44)
     });
   }
 
@@ -87,6 +88,8 @@
         const name = known ? known.name : typed, qty = Math.max(1, Math.round(num(f.get(`itemQty${n}`)) || 1));   // nome do cadastro (mesmo se digitado com outras maiúsculas/acentos)
         const unit = num(f.get(`itemAmount${n}`)), unitCost = num(f.get(`itemCost${n}`));
         const line = {name, type: itemType(name), qty, unit, unitCost, amount: P.round2(qty * unit), cost: P.round2(qty * unitCost)};
+        const lotId = String(f.get(`itemLot${n}`) || '');
+        if (lotId) line.lotId = lotId;   // compra de onde a peça sai (escolhida nos botões de custo)
         const product = known;
         if (product && product.activityId) line.activityId = product.activityId;   // atividade do produto no momento da venda (cópia gravada)
         if (n === 1 ? (name || unit > 0) : (name && unit > 0)) items.push(line);
@@ -115,7 +118,7 @@
       const needsFee = r.modality === 'debit' || r.modality === 'credit';
       const missingFee = needsFee && el('feeRate').value === '';
       const row = (label, x, y, strong) => `<tr class="${strong ? 'strong' : ''}"><td>${label}</td><td>${x}</td><td>${y}</td></tr>`;
-      document.getElementById('pay-compare').innerHTML = `${missingFee ? '<p class="negative">Falta a taxa da maquininha desta forma. Digite em "Taxa da maquininha (%)" (ou preencha a tabela em Configurações).</p>' : ''}<table><thead><tr><th></th><th>Só a taxa da maquininha</th><th>Com cobrança extra</th></tr></thead><tbody>${row('Juros total', pct(a.totalRate), pct(b.totalRate))}${row('Total cobrado do cliente', money(a.total), money(b.total), true)}${n > 1 ? row(`Parcela (${n}x)`, money(a.installment), money(b.installment)) : ''}${row('Taxa paga à maquininha', money(a.fee), money(b.fee))}${row('Você recebe', money(a.net), money(b.net))}${row('Custo (compra)', money(r.cost), money(r.cost))}${row('Lucro líquido', money(a.profit), money(b.profit), true)}</tbody></table><p class="muted formula">Preço = ${money(r.price)} (soma das vendas − desconto). Total cobrado = Preço × (1 + juros base% + cobrança extra%). Taxa da maquininha = Total cobrado × taxa%. Você recebe = Total − Taxa. Lucro líquido = Você recebe − Compra.${r.modality === 'carne' ? ' No carnê não há taxa de maquininha; o juros base sugerido é a taxa do crédito com o mesmo número de parcelas.' : ''}</p>`;
+      document.getElementById('pay-compare').innerHTML = `${missingFee ? '<p class="negative">Falta a taxa da maquininha desta forma. Digite em "Taxa da maquininha (%)" (ou preencha a tabela em Configurações).</p>' : ''}<table><thead><tr><th></th><th>Só a taxa da maquininha</th><th>Com cobrança extra</th></tr></thead><tbody>${row('Juros total', pct(a.totalRate), pct(b.totalRate))}${row('Total cobrado do cliente', money(a.total), money(b.total), true)}${n > 1 ? row(`Parcela (${n}x)`, money(a.installment), money(b.installment)) : ''}${row('Taxa paga à maquininha', money(a.fee), money(b.fee))}${row('Você recebe', money(a.net), money(b.net))}${row('Custo (compra)', money(r.cost), money(r.cost))}${row('Lucro líquido', money(a.profit), money(b.profit), true)}</tbody></table><p class="muted formula">Você recebe = total − taxa. Lucro = você recebe − compra.</p>`;
 
       // Carnê: prévia das parcelas e das datas de vencimento.
       const box = document.getElementById('pay-schedule');
@@ -229,9 +232,32 @@
     // Escolheu um produto cadastrado: preenche VENDA (preço padrão) e COMPRA (custo) se o usuário ainda não mexeu.
     function fillFromProduct(n) {
       const product = App.store.findByName('products', el(productField(n)).value);
+      renderLots(n);
       if (!product) return;
       if (!touched[`itemAmount${n}`] && Number(product.price) > 0) set(`itemAmount${n}`, product.price, true);
-      if (!touched[`itemCost${n}`] && Number(product.cost) > 0) set(`itemCost${n}`, product.cost, true);
+      if (touched[`itemCost${n}`]) return;
+      // Com compras disponíveis, já vem o MAIOR custo (SPECS 44); sem compras, o custo do cadastro, como antes.
+      const lots = App.stock.availableLots(product.name);
+      if (lots.length) {
+        const top = lots.reduce((best, lot) => lot.unitCost > best.unitCost ? lot : best, lots[0]);
+        set(`itemCost${n}`, top.unitCost, true); el(`itemLot${n}`).value = top.purchaseId;
+      } else if (Number(product.cost) > 0) { set(`itemCost${n}`, product.cost, true); el(`itemLot${n}`).value = ''; }
+      renderLots(n);
+    }
+
+    // Botões com o custo de cada compra (e a média) logo abaixo do item: tocar preenche COMPRA (SPECS 44).
+    function renderLots(n) {
+      const box = form.querySelector(`[data-lots="${n}"]`);
+      if (!box) return;
+      const product = App.store.findByName('products', el(productField(n)).value);
+      const lots = product ? App.stock.availableLots(product.name) : [];
+      if (!lots.length) { box.hidden = true; box.innerHTML = ''; return; }
+      const chosen = el(`itemLot${n}`).value, cost = num(el(`itemCost${n}`).value);
+      const totalQty = lots.reduce((t, l) => t + l.remaining, 0);
+      const average = P.round2(lots.reduce((t, l) => t + l.remaining * l.unitCost, 0) / totalQty);
+      const chip = (label, value, lotId) => `<button type="button" class="lot-chip${(lotId ? chosen === lotId : !chosen && Math.abs(cost - value) < 0.005) ? ' active' : ''}" data-lot-n="${n}" data-lot-id="${lotId}" data-lot-cost="${value}">${label}</button>`;
+      box.hidden = false;
+      box.innerHTML = `<span class="lot-label">Custo das compras:</span>${lots.map(l => chip(`Compra ${esc(l.purchaseId)} · ${dateLabel(l.date).slice(0, 5)} · ${money(l.unitCost)} (${l.remaining} un.)`, l.unitCost, l.purchaseId)).join('')}${lots.length > 1 ? chip(`Média ${money(average)}`, average, '') : ''}`;
     }
 
     // Escolheu um cliente que já comprou: sugere a forma de pagamento que ele mais usa.
@@ -255,6 +281,8 @@
       if (name === 'invoiceIssued') syncInvoice();
       event.target.classList.remove('auto');               // digitou por cima: deixa de ser "automático"
       if (['baseRate', 'extraRate'].includes(name) || /^item(Amount|Cost)\d+$/.test(name)) touched[name] = true;
+      const typedCost = /^itemCost(\d+)$/.exec(name);
+      if (typedCost) { el(`itemLot${typedCost[1]}`).value = ''; renderLots(Number(typedCost[1])); }   // digitou o custo: a peça sai da compra mais antiga
       if (name === 'modality') { applyVisibility(); applyDefaults(); }
       else if (name === 'installments') applyDefaults();
       else if (name === 'feeRate' && !touched.baseRate && el('modality').value !== 'carne') set('baseRate', el('feeRate').value === '' ? 0 : el('feeRate').value, true);
@@ -271,10 +299,19 @@
     if (el('client')) el('client').addEventListener('change', fillFromClient);
 
     form.addEventListener('click', event => {
+      const lotChip = event.target.closest('[data-lot-n]');
+      if (lotChip) {
+        const n = Number(lotChip.dataset.lotN);
+        set(`itemCost${n}`, lotChip.dataset.lotCost); touched[`itemCost${n}`] = true;
+        el(`itemLot${n}`).value = lotChip.dataset.lotId;
+        renderLots(n); renderCompare();
+        return;
+      }
       const add = event.target.closest('#add-item'), remove = event.target.closest('[data-remove-item]');
       if (add) showItems(Math.min(MAX_ITEMS, visible().length + 1));
       if (remove) {
         const n = Number(remove.dataset.removeItem);
+        el(`itemLot${n}`).value = ''; renderLots(n);
         for (const name of [productField(n), `itemQty${n}`, `itemAmount${n}`, `itemCost${n}`]) { el(name).value = name.startsWith('itemQty') ? 1 : ''; el(name).classList.remove('auto'); touched[name] = false; }
         showItems(n - 1);
         renderStock(); renderCompare();
@@ -292,6 +329,7 @@
     let shown = 1;
     blocks().forEach((block, i) => { const n = i + 1; if (el(productField(n)).value || el(`itemAmount${n}`).value) shown = n; });
     showItems(shown);
+    blocks().forEach((block, i) => renderLots(i + 1));
     renderStock();
     renderCompare();
     syncInvoice();

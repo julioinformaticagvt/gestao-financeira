@@ -1,7 +1,7 @@
 // Tela "Produtos e serviços": lista com busca, cadastro, edição completa (inclusive estoque) e exclusão.
 (() => {
   const App = (window.App = window.App || {});
-  const {money, esc, normalize} = App.format;
+  const {money, esc, normalize, dateLabel} = App.format;
   const {data, save} = App.store;
   const {openModal, closeModal, byId, go} = App.ui;
 
@@ -28,7 +28,7 @@
       }).join('');
       byId('item-table').innerHTML = items.length
         ? `<div class="table-wrap"><table><thead><tr><th>Nome</th><th>Tipo</th><th>Custo</th><th>Preço</th><th>Estoque</th><th>Mínimo</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`
-        : (data.products.length ? '<div class="empty">Nenhum item encontrado.</div>' : App.firstRun.emptyState({title: 'Você ainda não tem produtos ou serviços.', hint: 'Cadastre o que você vende, com o preço de venda e quanto você paga.', action: 'new-product', label: '+ Novo produto ou serviço'}));
+        : (data.products.length ? '<div class="empty">Nenhum item encontrado.</div>' : App.firstRun.emptyState({title: 'Você ainda não tem produtos ou serviços.', hint: 'Cadastre o que você vende.', action: 'new-product', label: '+ Novo produto ou serviço'}));
     };
     byId('item-search').oninput = draw;
     draw();
@@ -49,7 +49,7 @@
   function baseFormMarkup(product) {
     const v = product || {type: 'Produto', stock: 0};
     const margin = v.margin ?? (Number(v.cost) > 0 && Number(v.price) > 0 ? round2((v.price / v.cost - 1) * 100) : defaultMargin());
-    return `<div class="field full"><label>Nome *</label><input name="name" value="${esc(v.name || '')}" required></div><div class="field"><label>SKU</label><input name="sku" value="${esc(v.sku || '')}"></div><div class="field"><label>Tipo do item</label><select name="type"><option ${v.type === 'Produto' ? 'selected' : ''}>Produto</option><option ${v.type === 'Serviço' ? 'selected' : ''}>Serviço</option></select></div><div class="field"><label>Estoque atual</label><input name="stock" type="number" step="1" value="${v.stock ?? 0}"></div><div class="field"><label>Estoque mínimo <small>avisa para comprar quando ficar abaixo dele · em branco = padrão (${App.stock.defaultMin()})</small></label><input name="minStock" type="number" min="0" step="1" value="${App.stock.hasOwnMin(v) ? v.minStock : ''}" placeholder="padrão: ${App.stock.defaultMin()}"></div><div class="field"><label>Custo (R$) <small>quanto eu pago</small></label><input name="cost" type="number" min="0" step="0.01" value="${v.cost ?? ''}"></div><div class="field"><label>Margem de ganho (%) <small>em cima do custo</small></label><input name="margin" type="number" min="0" step="0.01" value="${margin}"></div><div class="field"><label>Preço de venda (R$)</label><input name="price" type="number" min="0" step="0.01" value="${v.price ?? ''}"></div><div class="field"><label>Preço sugerido</label><output id="price-suggest" class="price-suggest"></output></div><p class="muted field full">Serviço não tem estoque. Preço sugerido = custo + margem. O custo é sugerido como valor de COMPRA nas vendas e se atualiza sozinho a cada compra de peças (custo médio).</p>`;
+    return `<div class="field full"><label>Nome *</label><input name="name" value="${esc(v.name || '')}" required></div><div class="field"><label>SKU</label><input name="sku" value="${esc(v.sku || '')}"></div><div class="field"><label>Tipo do item</label><select name="type"><option ${v.type === 'Produto' ? 'selected' : ''}>Produto</option><option ${v.type === 'Serviço' ? 'selected' : ''}>Serviço</option></select></div><div class="field"><label>Estoque atual</label><input name="stock" type="number" step="1" value="${v.stock ?? 0}"></div><div class="field"><label>Estoque mínimo <small>em branco = ${App.stock.defaultMin()}</small></label><input name="minStock" type="number" min="0" step="1" value="${App.stock.hasOwnMin(v) ? v.minStock : ''}" placeholder="padrão: ${App.stock.defaultMin()}"></div><div class="field"><label>Custo (R$) <small>quanto eu pago</small></label><input name="cost" type="number" min="0" step="0.01" value="${v.cost ?? ''}"></div><div class="field"><label>Margem de ganho (%) <small>em cima do custo</small></label><input name="margin" type="number" min="0" step="0.01" value="${margin}"></div><div class="field"><label>Preço de venda (R$)</label><input name="price" type="number" min="0" step="0.01" value="${v.price ?? ''}"></div><div class="field"><label>Preço sugerido</label><output id="price-suggest" class="price-suggest"></output></div><p class="muted field full">Serviço não tem estoque. Preço sugerido = custo + margem.</p>`;
   }
 
   // Liga custo + margem = preço sugerido. O preço vem preenchido (em azul) até o usuário digitar nele.
@@ -88,6 +88,15 @@
     {kind: 'pay', title: 'Custo, margem e preço', items: ['cost', 'margin', 'price', '#price-suggest']}
   ]);
 
+  // Compras deste produto que ainda têm peças, com o custo de cada uma (SPECS 44). Só para consulta: na venda e no orçamento dá para
+  // escolher com qual custo trabalhar.
+  function lotsHtml(product) {
+    const lots = App.stock.availableLots(product.name);
+    if (!lots.length) return '';
+    const rows = lots.map(l => `<tr><td>${esc(l.purchaseId)}</td><td>${dateLabel(l.date)}</td><td>${money(l.unitCost)}</td><td>${l.remaining} un.</td></tr>`).join('');
+    return `<div class="field full"><label>Compras com peças disponíveis</label><div class="table-wrap"><table><thead><tr><th>Compra</th><th>Data</th><th>Custo (cada)</th><th>Disponível</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  }
+
   function productForm() {
     openModal(`<h2>Novo produto</h2><form id="product-form" class="form-grid">${formMarkup(null)}<p class="negative field full" id="product-error" hidden></p><div class="actions field full"><button type="button" class="secondary" data-action="close-modal">Cancelar</button><button class="primary">Salvar produto</button></div></form>`);
     groupProduct(byId('product-form')); bindMargin(byId('product-form'), false);
@@ -119,7 +128,7 @@
     const product = find(name);
     if (!product) return;
     const canDelete = !usedBy(product);
-    openModal(`<h2>Editar item</h2><form id="edit-item-form" class="form-grid">${formMarkup(product)}<p class="negative field full" id="product-error" hidden></p><p class="muted field full">${canDelete ? '' : 'Este item já foi usado em vendas, orçamentos ou compras, por isso não pode ser excluído. Se mudar o nome, ele muda em todos eles.'}</p><div class="actions field full">${canDelete ? `<button type="button" class="danger" data-action="product-delete" data-name="${esc(name)}">Excluir</button>` : ''}<button type="button" class="secondary" data-action="close-modal">Cancelar</button><button class="primary">Salvar</button></div></form>`);
+    openModal(`<h2>Editar item</h2><form id="edit-item-form" class="form-grid">${formMarkup(product)}${lotsHtml(product)}<p class="negative field full" id="product-error" hidden></p><p class="muted field full">${canDelete ? '' : 'Já usado em vendas: não pode ser excluído.'}</p><div class="actions field full">${canDelete ? `<button type="button" class="danger" data-action="product-delete" data-name="${esc(name)}">Excluir</button>` : ''}<button type="button" class="secondary" data-action="close-modal">Cancelar</button><button class="primary">Salvar</button></div></form>`);
     groupProduct(byId('edit-item-form')); bindMargin(byId('edit-item-form'), Number(product.price) > 0);
     const catalog = App.catalog.bindForm(byId('edit-item-form'), product);
     byId('edit-item-form').onsubmit = async event => {

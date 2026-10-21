@@ -92,3 +92,75 @@ td.num { text-align: right; }
 .block > h2 + .muted, .block > .panel-head { margin-bottom: 18px; }
 .mei-block + .trays { margin-top: 40px; padding-top: 28px; border-top: 1px solid var(--line); }
 @media (max-width: 900px) { .block { padding-top: 22px; } }
+
+/* ==================== Visual "Bancada" (SPECS 40.4): Visão geral ==================== */
+/* Os 4 números viram blocos de cor cheia, com texto escuro (verde, azul, coral, âmbar). A tela do cliente usa os mesmos blocos. */
+.kpi-strip { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; border: 0; }
+.kpi { background: var(--kc); color: var(--ink); border: 0 !important; border-radius: var(--r-block); padding: 22px 24px !important; min-height: 158px; gap: 6px; justify-content: space-between; }
+.kpi::before { display: none; }
+.kpi .kpi-label { font-size: 16px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--ink); }
+.kpi .kpi-value, .kpi .kpi-value.negative, .kpi:nth-child(n) .kpi-value { color: var(--ink) !important; font-size: 42px; font-weight: 700; letter-spacing: -1px; line-height: 1.05; }
+.kpi .kpi-note { color: rgba(14, 19, 17, .8); font-size: 13px; font-weight: 600; }
+.kpi-more { margin-top: 20px; }
+@media (max-width: 1150px) { .kpi-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 900px) { .kpi .kpi-value, .kpi .kpi-value.negative, .kpi:nth-child(n) .kpi-value { font-size: 32px; } }
+@media (max-width: 620px) {
+  .kpi { min-height: 112px; padding: 14px 14px !important; border-radius: var(--r-card); }
+  .kpi .kpi-label { font-size: 14px; }
+  .kpi .kpi-value, .kpi .kpi-value.negative, .kpi:nth-child(n) .kpi-value { font-size: 22px; letter-spacing: -.4px; }
+  .kpi .kpi-note { font-size: 12px; }
+}
+
+/* Títulos dos blocos maiores; Avisos de hoje num painel sem borda */
+.block h2, .avisos-panel h2 { font-size: 22px; font-weight: 700; }
+.avisos-panel { border: 0; border-radius: var(--r-block); padding: 24px; }
+/* Cada aviso: quadradinho de ícone colorido pelo tipo + título em negrito + linha de apoio em cinza + "Ver" */
+.aviso { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 12px; align-items: center; justify-content: stretch; }
+.aviso-icon { width: 44px; height: 44px; border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; background: var(--tone, var(--blue)); color: var(--ink); }
+.aviso.tone-bad { --tone: var(--danger); }
+.aviso.tone-warn { --tone: var(--accent); }
+.aviso.tone-info { --tone: var(--blue); }
+.aviso-text { display: grid; gap: 2px; min-width: 0; }
+.avisos-panel .aviso-text b, .aviso-text b { font-weight: 700; }
+.aviso-text small { color: var(--text-2); font-size: 13px; }
+
+/* Próximos vencimentos em cartões */
+.due-list { display: grid; gap: 10px; }
+.due-card { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 12px 16px; background: var(--panel); border-radius: var(--r-card); }
+.due-card-end { display: grid; gap: 2px; text-align: right; }
+.due-card-end b { font-size: 17px; }
+.due-card-end small { color: var(--blue); font-size: 13px; }
+
+/* Produtos e serviços: rosca (conic-gradient) com o total no centro e, ao lado, vendido e lucro de cada tipo */
+.donut-wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 22px 36px; padding: 6px 0; }
+.donut { flex: none; width: 190px; height: 190px; border-radius: 50%; display: grid; place-items: center; background: conic-gradient(var(--blue) 0 var(--p), var(--accent) var(--p) 100%); }
+.donut-hole { width: 64%; height: 64%; border-radius: 50%; background: var(--bg); display: grid; place-content: center; gap: 2px; text-align: center; }
+.donut-hole small { color: var(--text-2); font-size: 12px; }
+.donut-hole b { font-size: 17px; font-weight: 700; }
+.donut-legend { flex: 1 1 260px; display: grid; gap: 18px; }
+.donut-row { display: flex; align-items: flex-start; gap: 12px; }
+.donut-row p { margin: 3px 0 0; }
+.donut-dot { flex: none; width: 14px; height: 14px; margin-top: 5px; border-radius: 5px; background: var(--dc); }
+.donut-row.is-product { --dc: var(--blue); }
+.donut-row.is-service { --dc: var(--accent); }
+@media (max-width: 620px) { .donut { width: 150px; height: 150px; } }
+
+/* Gráficos de barras: barras mais largas, cantos bem arredondados */
+.finance-chart { height: 240px; border-bottom: 0; }
+.finance-column { min-width: 70px; }
+.bar-pair { height: 170px; gap: 5px; }
+.finance-bar { width: 26px; border-radius: 12px 12px 4px 4px; }
+.mtrack, .mfill { border-radius: var(--r-pill); }
+
+/* Limite do MEI (Resumo do Financeiro e topo de Relatórios): trilho grosso e redondo, com traços nos avisos (SPECS 40.7) */
+.meter { border: 0; border-radius: var(--r-block); padding: 24px 26px; }
+.meter-main { border: 0; box-shadow: inset 0 0 0 2px rgba(29, 122, 70, .55); }
+.meter-value { font-size: 30px; font-weight: 700; }
+.meter-track { position: relative; height: 22px; background: #0b0f0d; border-radius: var(--r-pill); }
+.meter-main .meter-track { height: 34px; }
+.meter-fill { border-radius: var(--r-pill); }
+.meter-tick { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--text-2); }
+.meter-tick.mk-alert { background: var(--danger); }
+.meter-marks { position: relative; height: 16px; margin-top: -2px; font-size: 12px; color: var(--text-2); }
+.meter-marks span { position: absolute; top: 0; transform: translateX(-50%); }
+.meter-marks .mk-alert { color: var(--danger); }

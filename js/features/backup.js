@@ -181,7 +181,7 @@
     const folder = auto.handle ? esc(auto.handle.name) : '';
     if (auto.status === 'carregando') return '<p class="muted">Verificando o backup automático...</p>';
     if (auto.status === 'demo') return '<p class="muted">Backup automático desligado no modo demonstração.</p>';
-    if (auto.status === 'indisponivel') return '<p class="muted">Este sistema funciona melhor no Chrome ou Edge. Neste navegador o backup automático não está disponível: use o backup manual.</p><div class="actions"><button type="button" class="primary" disabled>Ativar backup automático (indisponível neste navegador)</button></div>';
+    if (auto.status === 'indisponivel') return '<p class="muted">Backup automático só no Chrome ou Edge. Use o backup manual.</p><div class="actions"><button type="button" class="primary" disabled>Ativar backup automático (indisponível neste navegador)</button></div>';
     if (auto.status === 'off') return '<p>Backup automático <b>desativado</b>.</p><div class="actions"><button type="button" class="primary" id="auto-activate">Ativar backup automático</button></div>';
     if (auto.status === 'ativo') return `<p class="positive"><b>Backup automático ativo</b> · pasta <b>${folder}</b> · última gravação ${esc(whenText(last))}.</p><div class="actions"><button type="button" class="secondary" id="auto-deactivate">Desativar backup automático</button></div>`;
     if (auto.status === 'permissao') return `<p class="negative"><b>Backup automático parado:</b> o Chrome precisa da sua permissão para gravar na pasta <b>${folder}</b>.</p><div class="actions"><button type="button" class="primary" id="auto-reactivate">Reativar</button><button type="button" class="secondary" id="auto-deactivate">Desativar</button></div>`;
@@ -238,7 +238,7 @@
     let exists = false;
     try { exists = !!key && localStorage.getItem(key) !== null; } catch { /* sem acesso */ }
     if (!exists) return '';
-    return '<p class="muted">Existe uma cópia dos dados de antes da atualização para ids internos. Ela ocupa espaço no navegador: baixe e guarde o arquivo, depois apague.</p><div class="actions"><button type="button" class="secondary" data-action="download-pre-v2">Baixar a cópia anterior</button><button type="button" class="danger" data-action="drop-pre-v2">Apagar a cópia anterior</button></div>';
+    return '<p class="muted">Há uma cópia dos dados antigos ocupando espaço. Baixe e depois apague.</p><div class="actions"><button type="button" class="secondary" data-action="download-pre-v2">Baixar a cópia anterior</button><button type="button" class="danger" data-action="drop-pre-v2">Apagar a cópia anterior</button></div>';
   }
 
   // Dia do último backup, manual ou automático (o mais recente dos dois). '' = nunca fez.
@@ -286,7 +286,7 @@
     const when = parsed.exportedAt ? new Date(parsed.exportedAt).toLocaleString('pt-BR') : 'data desconhecida';
     const n = list => (d[list] || []).length;
     const rows = [['Clientes', n('clients')], ['Produtos e serviços', n('products')], ['Vendas', n('sales')], ['Orçamentos', n('quotes')], ['Compras', n('purchases')], ['Fornecedores', n('suppliers')], ['Recibos', n('receipts')], ['Contas a pagar', n('payables')]];
-    openModal(`<h2>Verificar backup</h2><p class="positive"><b>O arquivo abre e é um backup válido.</b></p><p>Arquivo: <b>${esc(name || 'escolhido por você')}</b><br>Feito em: <b>${esc(when)}</b></p><div class="table-wrap"><table><thead><tr><th>O que tem dentro</th><th>Quantidade</th></tr></thead><tbody>${rows.map(([label, value]) => `<tr><td>${label}</td><td>${value}</td></tr>`).join('')}</tbody></table></div><p class="muted">Nada foi alterado nos seus dados: isto só leu o arquivo.</p><div class="actions"><button type="button" class="secondary" data-action="close-modal">Fechar</button></div>`);
+    openModal(`<h2>Verificar backup</h2><p class="positive"><b>O arquivo abre e é um backup válido.</b></p><p>Arquivo: <b>${esc(name || 'escolhido por você')}</b><br>Feito em: <b>${esc(when)}</b></p><div class="table-wrap"><table><thead><tr><th>O que tem dentro</th><th>Quantidade</th></tr></thead><tbody>${rows.map(([label, value]) => `<tr><td>${label}</td><td>${value}</td></tr>`).join('')}</tbody></table></div><p class="muted">Nada foi alterado.</p><div class="actions"><button type="button" class="secondary" data-action="close-modal">Fechar</button></div>`);
   }
 
   async function verifyLast() {

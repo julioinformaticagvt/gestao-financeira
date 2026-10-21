@@ -59,6 +59,8 @@
     current = view;
     const icon = App.icons ? App.icons.svg(App.icons.forView(view), 28) : '';   // o desenho não tem texto: o texto do título continua o mesmo
     byId('page-title').innerHTML = `${icon ? `<span class="title-icon">${icon}</span>` : ''}<span class="title-text">${String(titles[view]).replace(/&/g, '&amp;').replace(/</g, '&lt;')}</span>`;
+    const sub = byId('page-sub');   // linha de apoio embaixo do título: a data de hoje (ex.: "quinta-feira, 15 de outubro de 2026")
+    if (sub) sub.textContent = new Intl.DateTimeFormat('pt-BR', {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'}).format(new Date(`${App.format.today()}T12:00:00`));
     renderSubtabs(group, view);
     screens[view]();
     (showHooks[view] || []).forEach(fn => fn());

@@ -388,3 +388,100 @@ details > summary { cursor: pointer; margin: 12px 0 6px; color: var(--text-2); }
 .cat-spec-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
 .cat-paste { display: grid; gap: 6px; margin-top: 8px; padding: 10px; border: 1px dashed var(--line); border-radius: 8px; }
 .cat-paste .actions { margin-top: 4px; }
+
+/* ==================== Visual "Bancada" (SPECS 40): fonte, cantos e botões novos ====================
+   Só aparência. Os documentos (recibo, extrato...) NÃO mudam: eles têm o próprio estilo em documents.css. */
+.doc { font-variant-numeric: normal; }   /* documentos continuam como antes (sem os números alinhados do sistema) */
+
+/* Botões: bem redondos, altos (46 px) e em negrito. Principal âmbar e "dinheiro entrando" verde, os dois com texto escuro. */
+.primary, .secondary, .danger, .receive { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: var(--btn-h); padding: 0 22px; border-radius: var(--r-pill); font-weight: 700; line-height: 1.2; text-align: center; }
+.primary { color: var(--ink); }
+.receive { color: var(--ink); }
+.secondary { background: var(--panel-2); border-color: transparent; }
+.secondary:hover { background: var(--panel-3); }
+.danger { background: transparent; }
+.button-like { border-radius: var(--r-pill); }
+/* Ações pequenas dentro de tabelas, listas e cartões continuam pequenas (texto âmbar, sem caixa) */
+td .secondary, .month-details .secondary, .quote-actions .secondary, .tray-body .secondary, .aviso .secondary, .rcv-actions .secondary { min-height: 34px; padding: 4px 12px; background: none; color: var(--accent); }
+td .secondary:hover, .tray-body .secondary:hover, .aviso .secondary:hover, .rcv-actions .secondary:hover { background: var(--panel-3); }
+td .receive, .rcv-actions .receive { min-height: 38px; padding: 0 16px; }
+/* Foco do teclado sempre visível: contorno âmbar */
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* Painéis sem borda, cantos 26 px; cartões e janelas arredondados */
+.panel { border: 0; border-radius: var(--r-block); padding: 28px; }
+.card { border: 0; border-radius: var(--r-card); }
+.modal-card { border: 0; border-radius: var(--r-block); padding: 30px; }
+.panel > h2:first-child, .panel-head h2 { font-size: 20px; font-weight: 700; }
+
+/* Campos */
+.field input, .field select, .field textarea, .toolbar input, .message-box, .month-nav select,
+#dashboard-period, #dashboard-custom, #report-month { border-radius: var(--r-field); padding: 11px 14px; }
+.field input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), .field select, .toolbar input, #dashboard-period, #dashboard-custom, #report-month { min-height: 46px; }
+
+/* Tabelas (fora dos documentos): mais espaço, títulos em cinza; no computador ficam num quadro com cantos 20 px */
+th:not(.doc th) { padding: 14px 16px; font-size: 12px; letter-spacing: .06em; }
+td:not(.doc td) { padding: 14px 16px; font-size: 14px; }
+@media (min-width: 621px) {
+  .table-wrap { border: 1px solid var(--line); border-radius: var(--r-card); }
+  .table-wrap tbody tr:last-child td { border-bottom: 0; }
+}
+
+/* Outras peças com os cantos novos */
+.tray { border-top: 0; border-right: 0; border-bottom: 0; border-radius: var(--r-card); }
+.sync-card, .type-btn, .update-bar, .start-card, .logo-row { border-radius: var(--r-card); }
+.suggest-box, .simulator-result, .motive-box, .cat-paste, .price-suggest, .catalog-file { border-radius: var(--r-field); }
+.item-block { border-radius: 16px; }
+.fgroup { border-radius: 0 16px 16px 0; }
+
+/* Filtros em pílulas com contagem (Contas a receber): a ativa fica clara, com texto escuro */
+.pill-filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 18px; }
+.filter-pill { min-height: 42px; padding: 0 18px; border: 0; border-radius: var(--r-pill); background: var(--panel-2); color: var(--text); font-weight: 700; cursor: pointer; }
+.filter-pill:hover { background: var(--panel-3); }
+.filter-pill.active { background: var(--text); color: var(--ink); }
+
+/* Contas a receber em cartões (js/components/receivable-table.js): inicial, quem, vencimento, valores, situação e botões */
+.rcv-list { display: grid; gap: 10px; margin: 6px 0 4px; }
+.rcv-card { display: grid; grid-template-columns: 44px minmax(150px, 1.3fr) minmax(130px, 1fr) minmax(170px, 1.1fr) auto auto; align-items: center; gap: 12px 18px; padding: 14px 18px; background: var(--panel-2); border: 1px solid transparent; border-radius: var(--r-card); }
+.rcv-card:focus-within { border-color: var(--accent); }   /* parcela "selecionada" (em foco) */
+.rcv-avatar { width: 44px; height: 44px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; flex: none; background: var(--blue); color: var(--ink); font-weight: 800; font-size: 18px; }
+.rcv-card.is-late .rcv-avatar { background: var(--danger); }
+.rcv-who, .rcv-due, .rcv-money { display: grid; gap: 2px; min-width: 0; }
+.rcv-who b { font-size: 16px; overflow-wrap: anywhere; }
+.rcv-who small, .rcv-due small, .rcv-money small { color: var(--text-2); font-size: 13px; }
+.rcv-due small.soon { color: var(--blue); }
+.rcv-due small.negative, .rcv-money small.negative { color: var(--danger); }
+.rcv-money b { font-size: 17px; }
+.rcv-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+@media (max-width: 1150px) {
+  .rcv-card { grid-template-columns: 44px minmax(0, 1fr) auto; }
+  .rcv-due, .rcv-money { grid-column: 2 / -1; }
+  .rcv-actions { grid-column: 1 / -1; justify-content: flex-start; }
+}
+@media (max-width: 620px) { .rcv-card { padding: 12px 14px; gap: 8px 12px; } }
+@media (max-width: 620px) { .panel { padding: 18px; border-radius: var(--r-card); } }
+/* Recibo e extrato: escolha Resumido / Detalhado (SPECS 41) */
+.doc-mode { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+
+/* Ordenar listas (SPECS 42): título clicável com setinha; "Ordenar por" (celular e listas em cartões) */
+th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+th.sortable:hover { color: var(--text); }
+th.sortable::after { content: "\2195"; margin-left: 6px; opacity: .35; font-size: 11px; }
+th.sortable[aria-sort="ascending"]::after { content: "\25B2"; opacity: 1; color: var(--accent); }
+th.sortable[aria-sort="descending"]::after { content: "\25BC"; opacity: 1; color: var(--accent); }
+th.sortable[aria-sort="ascending"], th.sortable[aria-sort="descending"] { color: var(--text); }
+.sort-select { align-items: center; gap: 8px; margin: 0 0 12px; font-size: 13px; color: var(--text-2); }
+.sort-select.mobile-only { display: none; }
+@media (max-width: 620px) { .sort-select.mobile-only { display: flex; } }
+.sort-select select, .card-sort select { border: 1px solid var(--line); border-radius: var(--r-field); padding: 8px 12px; background: var(--panel-2); color: var(--text); min-height: 42px; }
+.card-sort { display: inline-flex; align-items: center; gap: 8px; margin: 0 0 14px; font-size: 13px; color: var(--text-2); }
+/* Custo de cada compra na venda e no orçamento (SPECS 44): botõezinhos abaixo do item */
+.lot-chips { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.lot-chips[hidden] { display: none; }
+.lot-label { font-size: 12px; color: var(--text-2); margin-right: 2px; }
+.lot-chip { border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: var(--r-pill); padding: 6px 12px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.lot-chip:hover { border-color: var(--c-product); }
+.lot-chip.active { background: var(--blue-bg); border-color: var(--c-product); color: var(--blue); }
+/* Comparação "Só a taxa x Com cobrança extra" na venda e no orçamento: espaço menor nas células para caber na janela */
+.pay-compare table th, .pay-compare table td { padding: 11px 10px; }

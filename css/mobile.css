@@ -118,3 +118,8 @@
   .sync-band { padding: 10px 16px; }
   .sync-band .sync-band-actions button { min-height: 40px; }
 }
+
+/* Visual "Bancada" (SPECS 40) no celular: cartões das tabelas com os cantos novos. */
+@media (max-width: 620px) {
+  .cards-table tr { border: 0; border-radius: var(--r-card); padding: 12px 16px; }
+}

@@ -25,7 +25,7 @@
     const buttons = withOs
       ? '<span><button class="secondary" data-action="new-quote">+ Orçamento</button> <button class="primary" data-action="new-os">+ Ordem de serviço</button></span>'
       : '<button class="primary" data-action="new-quote">+ Simular venda</button>';
-    byId('app').innerHTML = `<section class="panel"><div class="panel-head"><h2>${withOs ? 'Orçamentos e OS' : 'Orçamentos'}</h2>${buttons}</div><div class="toolbar"><input id="quote-search" placeholder="Buscar cliente..."></div><div id="quote-list"></div></section>`;
+    byId('app').innerHTML = `<section class="panel"><div class="panel-head"><h2>${withOs ? 'Orçamentos e OS' : 'Orçamentos'}</h2>${buttons}</div><div class="toolbar"><input id="quote-search" placeholder="Buscar cliente..."></div><label class="card-sort">Ordenar por <select id="quote-sort"></select></label><div id="quote-list"></div></section>`;
 
     // Orçamentos novos mostram forma de pagamento, venda, compra e lucro; os antigos mostram parcelas e juros ao mês.
     const detail = quote => quote.pricing
@@ -40,9 +40,27 @@
       return `<div class="card os-card" style="margin-bottom:10px"><div class="panel-head"><div><b>${esc(quote.id)}</b> · ${esc(SO().equipmentText(quote))} · entrada ${dateLabel(o.entryDate)}${o.dueDate ? ` · previsão ${dateLabel(o.dueDate)}` : ''}<br><label class="os-status">Andamento <select data-os-status="${esc(quote.id)}">${options}</select></label></div><strong>${money(SO().valueOf(quote))}</strong></div><p class="muted">${esc(o.defect || 'Sem defeito relatado')}${last ? ` · último andamento: ${SO().stampLabel(last.at)}` : ''}${sale ? ` · venda ${esc(sale.id)}` : ''}</p><div class="quote-actions"><button class="secondary" data-action="edit-quote" data-id="${esc(quote.id)}">Editar</button>${next ? `<button class="secondary" data-action="os-advance" data-id="${esc(quote.id)}">Avançar ▸ ${esc(next)}</button>` : ''}<button class="secondary" data-action="os-entry" data-id="${esc(quote.id)}">Comprovante de entrada</button><button class="secondary" data-action="os-quote" data-id="${esc(quote.id)}">Orçamento</button><button class="secondary" data-action="os-message" data-id="${esc(quote.id)}">Avisar o cliente</button>${sale ? `<button class="secondary" data-action="os-warranty" data-id="${esc(quote.id)}">Termo de garantia</button>` : ''}<button class="primary" data-action="convert-quote" data-id="${esc(quote.id)}" ${sale ? 'disabled' : ''}>Fechar venda</button></div></div>`;
     };
     const card = quote => isOs(quote) ? osCard(quote) : quoteCard(quote);
+    // "Ordenar por" (SPECS 42): por cliente (agrupado, como sempre foi) ou numa lista só, por data, valor ou situação.
+    const valueOf = quote => quote.pricing ? quote.pricing.total : Math.max(0, Number(quote.total) - Number(quote.discount || 0));
+    const SORTS = {
+      client: ['Cliente (A a Z)', null],
+      'date-desc': ['Data (mais nova primeiro)', (a, b) => (b.date || '').localeCompare(a.date || '') || String(b.id).localeCompare(String(a.id), 'pt-BR', {numeric: true})],
+      'date-asc': ['Data (mais antiga primeiro)', (a, b) => (a.date || '').localeCompare(b.date || '') || String(a.id).localeCompare(String(b.id), 'pt-BR', {numeric: true})],
+      'value-desc': ['Valor (maior primeiro)', (a, b) => valueOf(b) - valueOf(a)],
+      status: ['Situação', (a, b) => String(a.status || '').localeCompare(String(b.status || ''), 'pt-BR')]
+    };
+    const order = App.sortable.cardSort('quotes', 'client');
+    const sortBox = byId('quote-sort');
+    if (sortBox) { sortBox.innerHTML = Object.entries(SORTS).map(([key, [label]]) => `<option value="${key}"${order.value() === key ? ' selected' : ''}>${label}</option>`).join(''); sortBox.onchange = event => { order.set(event.target.value); draw(); }; }
     const draw = () => {
       const search = normalize(byId('quote-search').value);
-      byId('quote-list').innerHTML = Object.entries(byClient).map(([client, items]) => {
+      const how = SORTS[order.value()] || SORTS.client;
+      if (how[1]) {   // lista única, sem separar por cliente
+        const list = visible.filter(q => normalize(q.client || 'Sem cliente').includes(search)).sort(how[1]);
+        byId('quote-list').innerHTML = list.length ? list.map(card).join('') : (visible.length ? '<div class="empty">Nenhum resultado para a busca.</div>' : '');
+        if (list.length || visible.length) return;
+      }
+      byId('quote-list').innerHTML = Object.entries(byClient).sort(([a], [b]) => a.localeCompare(b, 'pt-BR', {sensitivity: 'base'})).map(([client, items]) => {
         const list = items.filter(() => normalize(client).includes(search));
         if (!list.length) return '';
         return `<div><h3>${esc(client)}</h3>${list.map(card).join('')}</div>`;
@@ -61,7 +79,7 @@
       ? [...new Set([quote.status, ...SO().allStatuses()])].map(s => `<option ${s === quote.status ? 'selected' : ''}>${esc(s)}</option>`).join('')
       : `${STATUSES.map(s => `<option>${s}</option>`).join('')}<option ${quote.status === 'Convertido em venda' ? 'selected' : ''}>Convertido em venda</option>`;
     const title = os ? (quote.existing ? `Editar ordem de serviço ${esc(quote.id)}` : 'Nova ordem de serviço') : (quote.existing ? 'Editar orçamento' : 'Simular venda / criar orçamento');
-    return `<h2>${title}</h2><form id="quote-form" data-quote-id="${esc(quote.id)}" class="form-grid"><div class="field full"><label>Cliente *</label><input name="client" list="q-clients" value="${esc(quote.client)}" required><datalist id="q-clients">${clientOptions}</datalist><button type="button" class="secondary" data-action="new-client-quick">+ Adicionar novo cliente</button></div>${os ? SO().fieldsMarkup(quote) : ''}${paymentBlock.markup.items('q-products')}<datalist id="q-products">${productOptions}</datalist><div class="field full"><button type="button" class="secondary" data-action="new-product-quick">+ Adicionar novo produto ou serviço</button></div><div class="field"><label>Data do orçamento</label><input name="date" type="date" value="${quote.date}" required></div><div class="field"><label>Válido até</label><input name="validUntil" type="date" value="${quote.validUntil || ''}"></div>${paymentBlock.markup.discount()}${paymentBlock.markup.payment()}<p class="muted help late-note">Em caso de atraso, valem multa de ${data.settings.collection.fine}% e juros de ${data.settings.collection.interest}% ao mês (Financeiro &gt; Regras de cobrança).</p><div class="field"><label>${os ? 'Andamento' : 'Status'}</label><select name="status">${statusOptions}</select></div><div class="field full"><label>Observações</label><textarea name="notes">${esc(quote.notes || '')}</textarea></div><div class="actions field full"><button type="button" class="secondary" data-action="close-modal">Cancelar</button><button type="button" class="secondary" data-action="save-quote">${os ? 'Salvar ordem de serviço' : 'Salvar orçamento'}</button><button type="submit" class="primary">Fechar venda</button></div></form>`;
+    return `<h2>${title}</h2><form id="quote-form" data-quote-id="${esc(quote.id)}" class="form-grid"><div class="field full"><label>Cliente *</label><input name="client" list="q-clients" value="${esc(quote.client)}" required><datalist id="q-clients">${clientOptions}</datalist><button type="button" class="secondary" data-action="new-client-quick">+ Adicionar novo cliente</button></div>${os ? SO().fieldsMarkup(quote) : ''}${paymentBlock.markup.items('q-products')}<datalist id="q-products">${productOptions}</datalist><div class="field full"><button type="button" class="secondary" data-action="new-product-quick">+ Adicionar novo produto ou serviço</button></div><div class="field"><label>Data do orçamento</label><input name="date" type="date" value="${quote.date}" required></div><div class="field"><label>Válido até</label><input name="validUntil" type="date" value="${quote.validUntil || ''}"></div>${paymentBlock.markup.discount()}${paymentBlock.markup.payment()}<p class="muted help late-note">Atraso: multa de ${data.settings.collection.fine}% + juros de ${data.settings.collection.interest}% ao mês.</p><div class="field"><label>${os ? 'Andamento' : 'Status'}</label><select name="status">${statusOptions}</select></div><div class="field full"><label>Observações</label><textarea name="notes">${esc(quote.notes || '')}</textarea></div><div class="actions field full"><button type="button" class="secondary" data-action="close-modal">Cancelar</button><button type="button" class="secondary" data-action="save-quote">${os ? 'Salvar ordem de serviço' : 'Salvar orçamento'}</button><button type="submit" class="primary">Fechar venda</button></div></form>`;
   }
 
   // Preenche os campos de itens e desconto de um orçamento que já existe.

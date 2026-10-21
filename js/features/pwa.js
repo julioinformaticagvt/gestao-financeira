@@ -59,8 +59,8 @@
   function settingsPanel() {
     const can = supported();
     return `<section class="panel g-other"><h2>Instalar como aplicativo</h2>${can
-      ? `<p class="muted">Instalado, o sistema abre em tela cheia e funciona mesmo sem internet. Os dados continuam só neste aparelho.</p><div class="actions"><button type="button" class="secondary" id="pwa-install" data-action="pwa-install" ${deferredInstall ? '' : 'disabled'}>Instalar como aplicativo</button></div><p class="muted">Se o botão estiver apagado, o navegador ainda não liberou a instalação (ou o aplicativo já está instalado).</p>`
-      : '<p class="muted">A instalação só fica disponível quando o sistema é aberto por um endereço da internet (https). Abrindo o arquivo direto no computador, ele continua funcionando normalmente.</p>'}
+      ? `<p class="muted">Abre em tela cheia e funciona sem internet.</p><div class="actions"><button type="button" class="secondary" id="pwa-install" data-action="pwa-install" ${deferredInstall ? '' : 'disabled'}>Instalar como aplicativo</button></div><p class="muted">Botão apagado: já instalado ou ainda não liberado.</p>`
+      : '<p class="muted">Só pelo endereço da internet (https).</p>'}
       <p><b>Android (Chrome):</b> menu ⋮ → "Instalar aplicativo" ou "Adicionar à tela inicial".<br><b>iPhone (Safari):</b> botão Compartilhar → "Adicionar à Tela de Início".</p></section>`;
   }
 

@@ -9,30 +9,8 @@
   const {receivableRows, monthTray, meter} = App.components;
   const {byId} = App.ui;
 
-  // ---------- Limite do MEI: dois medidores lado a lado ----------
-  // A RECEITA (o que realmente entrou) é o que decide o enquadramento; as VENDAS (mesmo a receber) mostram o que ainda vai
-  // virar receita. Só aparece com "Sou MEI" ligado.
-  function meiSection() {
-    const s = data.settings;
-    if (!s.isMei) return '';
-    const m = App.finance.meiYear(), warn = Number(s.meiWarnPct) || 70, alert = Number(s.meiAlertPct) || 90;
-    const limitNote = m.months < 12 ? ` (limite proporcional: ${m.months} ${m.months === 1 ? 'mês' : 'meses'} de atividade no ano)` : '';
-    const projection = m.received > 0
-      ? `Se o ritmo continuar, o ano termina com: <b>${money(m.projected)}</b>${m.projected > m.limit ? ' <span class="negative">(acima do limite)</span>' : ''}`
-      : '';
-    const received = meter({
-      title: 'Receita do ano', value: m.received, limit: m.limit, color: '#1d7a46', warnPct: warn, alertPct: alert, main: true,
-      note: 'Este é o que conta para o limite do MEI. É o dinheiro que realmente entrou no ano (bruto, sem descontar a taxa da maquininha).',
-      overText: 'Você passou do limite. Procure seu contador.',
-      lines: [`Ainda pode receber no ano: <b>${money(m.remaining)}</b>`, `Média por mês: <b>${money(m.average)}</b>`, projection].filter(Boolean)
-    });
-    const sold = meter({
-      title: 'Vendas do ano', value: m.sold, limit: m.limit, color: '#2a5db0', warnPct: warn, alertPct: alert,
-      note: 'Parte disso ainda vai entrar como receita.',
-      lines: [`A receber de vendas já feitas: <b>${money(m.toReceive)}</b>`]
-    });
-    return `<section class="block mei-block"><h2>Limite do MEI em ${m.year}</h2><p class="muted">Limite de ${money(m.limit)}${esc(limitNote)}. Avisos a partir de ${warn}% e ${alert}%.</p><div class="meters">${received}${sold}</div></section>`;
-  }
+  // ---------- Limite do MEI: o bloco com os dois medidores fica em components/meter.js (também usado no topo de Relatórios) ----------
+  const meiSection = () => App.components.meiBlock();
 
   // ---------- Números de um mês ----------
   function monthData(month) {
@@ -96,7 +74,7 @@
     const now = today().slice(0, 7), months = allMonths();
     const future = months.filter(m => m > now), past = months.filter(m => m < now).reverse();
     const section = (title, list) => list.length ? `<h2 class="tray-section">${title}</h2>${list.map(m => trayFor(m, now)).join('')}` : '';
-    byId('app').innerHTML = `${meiSection()}<section class="trays"><p class="muted">Cada mês é uma bandejinha: o mês atual fica sempre aberto e os outros abrem com um clique.</p>${trayFor(now, now)}${section('Próximos meses', future)}${section('Meses anteriores', past)}</section>`;
+    byId('app').innerHTML = `${meiSection()}<section class="trays"><p class="muted">Clique num mês para abrir.</p>${trayFor(now, now)}${section('Próximos meses', future)}${section('Meses anteriores', past)}</section>`;
   }
 
   App.ui.registerScreen('finance', render);

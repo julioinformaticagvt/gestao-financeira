@@ -34,7 +34,7 @@
   .page-head { padding-top: 28px; }
 }
 @media (max-width: 620px) {
-  h1 { font-size: 25px; }
+  h1 { font-size: 30px; letter-spacing: -.6px; }
 }
 .app-version { margin-left: 18px; padding-left: 18px; border-left: 1px solid var(--line); }
 
@@ -63,20 +63,55 @@
   #nav button::before { width: calc(18px * var(--bar-scale, 1)); height: calc(18px * var(--bar-scale, 1)); }
 }
 
-/* Barra de cima (PC): o menu tem 7 itens com ícone e negrito, então precisa de espaço. Sem espaço, ele se compacta (Configurações vira só a engrenagem, espaços menores); se mesmo assim não couber, o menu passa para uma segunda linha em vez de ficar escondido. Com espaço de sobra, nada muda. */
+/* ---------- Visual "Bancada" (SPECS 40.3): cabeçalho numa linha só no computador ----------
+   Nome/logo à esquerda, o menu numa faixa arredondada no meio (item ativo num bloco mais claro com o ícone âmbar) e, à direita,
+   sincronização, ajuda, "Registrar pagamento" e "Nova venda". Com menos espaço, tudo se compacta (Configurações vira só a
+   engrenagem, letras e espaços menores); só em janela bem estreita o menu desce para uma 2ª linha. O celular (≤ 620 px) não muda. */
 @media (min-width: 621px) {
-  .topbar { container-type: inline-size; height: auto; min-height: var(--topbar-h, 76px); flex-wrap: wrap; column-gap: 36px; row-gap: 0; }
-  .topbar nav { flex: 1 1 max-content; height: auto; min-height: var(--topbar-h, 76px); gap: 22px; }
-  #nav button { gap: 6px; }
+  header.topbar { container-type: inline-size; flex-wrap: wrap; align-items: center; height: auto; min-height: 0; gap: 12px; padding: 12px var(--gutter); }
+  header.topbar > .brand { flex: none; font-size: calc(20px * var(--bar-scale, 1)); font-weight: 800; letter-spacing: -.3px; margin-right: 6px; }
+  header.topbar > .sync-top, header.topbar > .help-btn, header.topbar > .receive, header.topbar > .primary { flex: none; margin: 0; }
+  #nav { flex: 1 1 0; min-width: 0; height: auto; min-height: 0; margin: 0; padding: 5px; gap: 2px; background: var(--panel-2); border-radius: var(--r-pill); }
+  #nav button { padding: 9px 14px; border: 0; border-radius: var(--r-pill); color: var(--text-2); gap: 7px; font-weight: 600; }
+  #nav button:hover { background: rgba(255, 255, 255, .05); color: var(--text); }
+  #nav button.active { background: var(--panel-3); color: var(--text); }
+  #nav button.active::before { background: var(--accent); }   /* ícone âmbar no item ativo */
 }
+/* Pouco espaço: Configurações vira só a engrenagem (o nome continua como dica e para leitores de tela) e tudo fica mais justo. */
 @container (max-width: 1500px) {
-  .topbar nav { gap: 10px; }
-  .topbar > .receive, .topbar > .primary { padding-left: 10px; padding-right: 10px; }
-  #nav [data-view="settings"] { font-size: 0; gap: 0; }   /* só a engrenagem (o nome fica como dica e para leitores de tela) */
+  #nav [data-view="settings"] { font-size: 0; gap: 0; padding-left: 12px; padding-right: 12px; }
+  #nav button { padding-left: 11px; padding-right: 11px; }
+  header.topbar > .receive, header.topbar > .primary { padding: 0 16px; }
 }
-/* Ainda sem espaço (zoom alto, janela estreita): como no tablet, a primeira linha tem o nome e os botões e o menu passa inteiro para a segunda linha. */
-@container (max-width: 1135px) {
-  .topbar > .brand { order: 1; margin: 12px auto 0 0; }
-  .topbar > .sync-top, .topbar > .help-btn, .topbar > .receive, .topbar > .primary { order: 2; margin-top: 12px; }
-  .topbar nav { order: 3; flex: 1 1 100%; min-height: 48px; }
+@container (max-width: 1260px) {
+  #nav button { font-size: 13px; padding-left: 9px; padding-right: 9px; gap: 5px; }
+  #nav button::before { width: 16px; height: 16px; }
+  header.topbar > .receive, header.topbar > .primary { padding: 0 13px; font-size: 13px; }
+  header.topbar > .brand { font-size: calc(18px * var(--bar-scale, 1)); }
 }
+/* (A barra de cima pode quebrar linha, mas o menu encolhe antes; quem decide a 2ª linha é a regra abaixo, que mexe só nos itens.) */
+/* Janela bem estreita (ou zoom alto): aí não cabe mesmo, e o menu passa inteiro para a 2ª linha em vez de ficar escondido. */
+@container (max-width: 1040px) {
+  header.topbar > .brand { order: 1; margin-right: auto; }
+  header.topbar > .sync-top, header.topbar > .help-btn, header.topbar > .receive, header.topbar > .primary { order: 2; }
+  #nav { order: 3; flex: 1 1 100%; }
+  #nav button { font-size: 14px; }
+}
+
+/* Título da tela (cerca de 48 px) e, embaixo, a data de hoje em cinza */
+.page-head { padding: 38px 0 6px; }
+.page-sub { margin: 8px 0 0; color: var(--text-2); font-size: 15px; }
+.page-sub:empty { display: none; }
+.page-sub::first-letter { text-transform: uppercase; }
+.title-icon { border-radius: 14px; border: 0; }
+@media (max-width: 620px) { .page-head { padding-top: 16px; } .page-sub { font-size: 13px; margin-top: 4px; } }
+
+/* Sub-abas (Financeiro, Produtos) em pílulas */
+.subtabs { border-bottom: 0; gap: 6px; flex-wrap: wrap; }
+.subtabs button { margin: 0; padding: 10px 18px; border: 0; border-radius: var(--r-pill); color: var(--text-2); font-weight: 600; }
+.subtabs button:hover { background: var(--panel-2); color: var(--text); }
+.subtabs button.active { background: var(--panel-2); color: var(--text); box-shadow: inset 0 0 0 1px var(--panel-3); }
+@media (max-width: 620px) { .subtabs { flex-wrap: nowrap; } }
+
+/* Telas de até ~1320 px: margem lateral menor só na barra de cima, para o menu caber inteiro na mesma linha. */
+@media (min-width: 621px) and (max-width: 1320px) { header.topbar { padding-left: 24px; padding-right: 24px; } }
