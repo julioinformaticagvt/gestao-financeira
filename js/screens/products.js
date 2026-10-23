@@ -124,11 +124,14 @@
     data.purchases.forEach(p => rename(p.items));
   }
 
+  // Link da página da loja de onde veio a última compra (Colar pedido, SPECS 45). Só https.
+  const buyLink = product => (product && /^https:\/\/[^\s<>"'`]+$/.test(product.buyLink || '') ? product.buyLink : '');
+
   function editItem(name) {
     const product = find(name);
     if (!product) return;
     const canDelete = !usedBy(product);
-    openModal(`<h2>Editar item</h2><form id="edit-item-form" class="form-grid">${formMarkup(product)}${lotsHtml(product)}<p class="negative field full" id="product-error" hidden></p><p class="muted field full">${canDelete ? '' : 'Já usado em vendas: não pode ser excluído.'}</p><div class="actions field full">${canDelete ? `<button type="button" class="danger" data-action="product-delete" data-name="${esc(name)}">Excluir</button>` : ''}<button type="button" class="secondary" data-action="close-modal">Cancelar</button><button class="primary">Salvar</button></div></form>`);
+    openModal(`<h2>Editar item</h2><form id="edit-item-form" class="form-grid">${formMarkup(product)}${lotsHtml(product)}<p class="negative field full" id="product-error" hidden></p><p class="muted field full">${canDelete ? '' : 'Já usado em vendas: não pode ser excluído.'}</p><div class="actions field full">${canDelete ? `<button type="button" class="danger" data-action="product-delete" data-name="${esc(name)}">Excluir</button>` : ''}${buyLink(product) ? `<button type="button" class="secondary" data-action="buy-again" data-name="${esc(name)}" title="Abre a página da loja da última compra">Comprar de novo</button>` : ''}<button type="button" class="secondary" data-action="close-modal">Cancelar</button><button class="primary">Salvar</button></div></form>`);
     groupProduct(byId('edit-item-form')); bindMargin(byId('edit-item-form'), Number(product.price) > 0);
     const catalog = App.catalog.bindForm(byId('edit-item-form'), product);
     byId('edit-item-form').onsubmit = async event => {
@@ -162,6 +165,7 @@
 
   App.ui.registerScreen('products', render);
   App.ui.registerAction('new-product', productForm);
+  App.ui.registerAction('buy-again', element => { const link = buyLink(find(element.dataset.name)); if (link) window.open(link, '_blank', 'noopener,noreferrer'); });
   App.ui.registerAction('edit-item', element => editItem(element.dataset.name));
   App.ui.registerAction('product-delete', element => deleteConfirm(element.dataset.name));
   App.ui.registerAction('product-delete-confirm', element => deleteProduct(element.dataset.name));

@@ -280,10 +280,10 @@
   // trata como "códigos" (ids, datas, estados). Esses campos só podem ter letras, números e . : - / espaço (estados e formas de pagamento
   // só não podem ter < > " ' `). Textos livres (nomes, observações) são sempre protegidos na hora de mostrar. Devolve o caminho do primeiro
   // campo suspeito ('' = tudo certo).
-  const STRICT_KEYS = new Set(['id', 'uid', 'clientId', 'productId', 'supplierId', 'saleId', 'quoteId', 'osId', 'purchaseId', 'lotId', 'payableId', 'fixedId', 'month', 'startMonth', 'date', 'dueDate', 'paidAt', 'createdAt', 'updatedAt', 'entryDate', 'deliveredAt', 'validUntil', 'firstDue', 'voidedAt', 'at', 'number', 'installment', 'key', 'view', 'kind', 'discountType', 'plan', 'modality', 'account', 'lastSeenVersion', 'backupKey', 'repo', 'branch', 'lastSentAt']);
+  const STRICT_KEYS = new Set(['id', 'uid', 'clientId', 'productId', 'supplierId', 'saleId', 'quoteId', 'osId', 'purchaseId', 'lotId', 'orderNo', 'payableId', 'fixedId', 'month', 'startMonth', 'date', 'dueDate', 'paidAt', 'createdAt', 'updatedAt', 'entryDate', 'deliveredAt', 'validUntil', 'firstDue', 'voidedAt', 'at', 'number', 'installment', 'key', 'view', 'kind', 'discountType', 'plan', 'modality', 'account', 'lastSeenVersion', 'backupKey', 'repo', 'branch', 'lastSentAt']);
   const LOOSE_KEYS = new Set(['status', 'method', 'type', 'label']);
   const NUMERIC_KEYS = new Set(['stock', 'qty', 'quantity', 'dueDay', 'amount', 'unit', 'unitCost', 'receipt', 'cost', 'price', 'total', 'paid', 'balance', 'entry', 'minStock', 'installments', 'discount', 'fee', 'charges', 'prevStock', 'prevCost', 'fine', 'interest']);
-  const STRICT_TEXT = /^[\w.:\-\/ ]{0,60}$/, LOOSE_TEXT = /^[^<>"'`]*$/, NUMBER_TEXT = /^\s*-?[\d.,]*\s*$/;
+  const STRICT_TEXT = /^[\w.:\-\/ ]{0,60}$/, LOOSE_TEXT = /^[^<>"'`]*$/, NUMBER_TEXT = /^\s*-?[\d.,]*\s*$/, LINK_TEXT = /^https:\/\/[^\s<>"'`]{1,500}$/;
   function suspicious(root) {
     const stack = [['dados', root]];
     while (stack.length) {
@@ -296,8 +296,11 @@
           if (STRICT_KEYS.has(key) && !STRICT_TEXT.test(value)) return here;
           if (LOOSE_KEYS.has(key) && !LOOSE_TEXT.test(value)) return here;
           if (NUMERIC_KEYS.has(key) && !NUMBER_TEXT.test(value)) return here;   // número escrito como texto: só dígitos, ponto e vírgula
-        } else if ((key === 'dueDates' || key === 'dasCreated' || key === 'extraDues' || key === 'photos') && Array.isArray(value)) {
+          if ((key === 'buyLink' || key === 'link') && value && !LINK_TEXT.test(value)) return here;   // link de loja: só https, sem aspas nem < >
+        } else if ((key === 'dueDates' || key === 'dasCreated' || key === 'extraDues' || key === 'photos' || key === 'ignoredOrders') && Array.isArray(value)) {
           if (value.some(item => typeof item !== 'string' || !STRICT_TEXT.test(item))) return here;
+        } else if (key === 'aliases' && Array.isArray(value)) {
+          if (value.some(item => typeof item !== 'string' || item.length > 200 || !LOOSE_TEXT.test(item))) return here;
         } else stack.push([here, value]);
       }
     }

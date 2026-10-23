@@ -1,5 +1,13 @@
 # Novidades
 
+## Versão 0.19.0 · Compras pelo pedido · 22/10/2026
+
+- Compras: botão "Colar pedido". Copie a página do pedido da loja e cole: o sistema monta a compra com os itens, as quantidades e o custo de cada peça (frete e desconto já divididos).
+- Vários pedidos numa colagem só: cada um vira uma compra. Pedido já lançado não entra de novo; antigos, cancelados e não pagos vêm desmarcados.
+- O sistema reconhece os produtos que você já tem e sugere um nome simples para os novos (ex.: "SSD 240GB 530MB/s"). Com o catálogo ligado, já preenche marca, categoria e especificações.
+- Na ficha do produto: "Comprar de novo" abre a página da loja da última compra.
+- Só itens, valores, data e número do pedido são lidos: nome, endereço e CPF que vierem junto são descartados.
+
 ## Versão 0.18.0 · Novo visual · 20/10/2026
 
 - Visual novo "Bancada": letra nova (Bricolage Grotesque), botões grandes e redondos, cantos arredondados e o menu numa faixa só dele.

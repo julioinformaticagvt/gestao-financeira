@@ -51,7 +51,7 @@
 
   // ---------- zerar dados ----------
   // Apaga TUDO que o usuário cadastrou (as configurações ficam). Usado pelo botão "Zerar dados de teste".
-  const CLEARED_LISTS = ['clients', 'products', 'sales', 'quotes', 'expenses', 'receipts', 'suppliers', 'purchases', 'reminders', 'payables', 'fixedExpenses'];
+  const CLEARED_LISTS = ['clients', 'products', 'sales', 'quotes', 'expenses', 'receipts', 'suppliers', 'purchases', 'reminders', 'payables', 'fixedExpenses', 'ignoredOrders'];
   function clearAllData() {
     CLEARED_LISTS.forEach(key => { (data[key] || []).length = 0; });
     data.counters = {};                 // a numeração (V0001, recibo nº 1...) começa de novo

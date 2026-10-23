@@ -485,3 +485,27 @@ th.sortable[aria-sort="ascending"], th.sortable[aria-sort="descending"] { color:
 .lot-chip.active { background: var(--blue-bg); border-color: var(--c-product); color: var(--blue); }
 /* Comparação "Só a taxa x Com cobrança extra" na venda e no orçamento: espaço menor nas células para caber na janela */
 .pay-compare table th, .pay-compare table td { padding: 11px 10px; }
+/* Colar pedido da loja (SPECS 45): um cartão por pedido, uma linha por item */
+.order-list { display: grid; gap: 12px; }
+.order-card { border: 1px solid var(--line); border-radius: var(--r-card); background: var(--panel-2); padding: 14px 16px; display: grid; gap: 10px; }
+.order-card.is-locked { opacity: .65; }
+.order-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.order-head small { color: var(--text-2); }
+.order-pick { font-size: 15px; color: var(--text); }
+.order-pick input { width: 18px; height: 18px; }
+.order-date { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-2); }
+.order-date input { width: auto; }
+.order-warn { margin: 0; font-size: 13px; }
+.order-items { display: grid; gap: 10px; }
+.order-item { border-top: 1px solid var(--line); padding-top: 10px; display: grid; gap: 6px; }
+.oi-title { font-size: 13px; color: var(--text-2); overflow-wrap: anywhere; }
+.oi-title b { color: var(--text); }
+.oi-fields { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.oi-fields select { flex: 1 1 220px; min-width: 0; }
+.oi-fields [data-oi-name] { flex: 1 1 200px; min-width: 0; }
+.oi-fields [hidden] { display: none; }
+.oi-cost { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-2); }
+.oi-cost input { width: 110px; }
+.oi-ok { color: var(--ok); }
+.oi-new { color: var(--blue); }
+.oi-ask { color: var(--accent); }
