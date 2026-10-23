@@ -12,18 +12,34 @@
   const usedBy = product => data.sales.some(s => (s.items || []).some(i => itemOf(i, product)))
     || data.quotes.some(q => (q.items || []).some(i => itemOf(i, product)))
     || data.purchases.some(p => p.items.some(i => itemOf(i, product)));
+  // ---------- "A completar" (SPECS 48) ----------
+  // Produto criado pelo "Colar pedido" fica "a completar" (toComplete) até ter preço de venda e 1 foto, ou até "Marcar como completo".
+  const toComplete = () => data.products.filter(p => p.toComplete);
+  const missingOf = p => {
+    const c = p.catalog || {};
+    const catalogOn = App.catalog.enabled();   // sem o catálogo ligado, só o preço conta
+    return [!(Number(p.price) > 0) && 'preço de venda', catalogOn && !(c.photos || []).length && 'foto', catalogOn && !c.category && 'categoria', catalogOn && !c.description && 'descrição'].filter(Boolean);
+  };
+  let view = 'all';   // 'all' = todos | 'todo' = a completar
+
   // ---------- lista ----------
   function render() {
+    if (view === 'todo' && !toComplete().length) view = 'all';
     const catalogButton = App.catalog.enabled() ? '<button class="secondary" data-action="catalog-send">Mandar para o catálogo</button>' : '';
-    byId('app').innerHTML = `<section class="panel"><div class="panel-head"><h2>Produtos e serviços</h2>${catalogButton ? `<div class="head-buttons">${catalogButton}<button class="primary" data-action="new-product">+ Novo item</button></div>` : '<button class="primary" data-action="new-product">+ Novo item</button>'}</div><div class="toolbar"><input id="item-search" placeholder="Buscar produto ou serviço..."></div><div id="item-table"></div></section>`;
+    byId('app').innerHTML = `<section class="panel"><div class="panel-head"><h2>Produtos e serviços</h2>${catalogButton ? `<div class="head-buttons">${catalogButton}<button class="primary" data-action="new-product">+ Novo item</button></div>` : '<button class="primary" data-action="new-product">+ Novo item</button>'}</div><div class="toolbar"><input id="item-search" placeholder="Buscar produto ou serviço..."></div>${toComplete().length ? `<div class="pill-filters" id="item-views" role="group" aria-label="Mostrar">${[['all', 'Todos'], ['todo', `A completar, ${toComplete().length}`]].map(([key, label]) => `<button type="button" class="filter-pill${view === key ? ' active' : ''}" data-item-view="${key}" aria-pressed="${view === key}">${label}</button>`).join('')}</div>` : ''}<div id="item-table"></div></section>`;
+    if (byId('item-views')) byId('item-views').onclick = event => { const pill = event.target.closest('[data-item-view]'); if (pill) { view = pill.dataset.itemView; render(); } };
 
     const draw = () => {
       const query = normalize(byId('item-search').value);
-      const items = data.products.filter(p => normalize(p.name).includes(query));
+      const items = data.products.filter(p => normalize(p.name).includes(query) && (view === 'all' || p.toComplete));
+      if (view === 'todo') {   // a completar: o que falta em cada um
+        byId('item-table').innerHTML = items.length ? `<div class="table-wrap"><table><thead><tr><th>Nome</th><th>Custo</th><th>Falta</th><th></th></tr></thead><tbody>${items.map(p => `<tr><td>${esc(p.name)}</td><td>${money(p.cost)}</td><td><span class="todo-missing">${esc(missingOf(p).join(', ') || 'nada: marque como completo')}</span></td><td><button class="secondary" data-action="edit-item" data-name="${esc(p.name)}">Completar</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">Nenhum item encontrado.</div>';
+        return;
+      }
       const rows = items.map(p => {
         const low = App.stock.lowStock().includes(p);
         const stockCell = p.type === 'Serviço' ? 'Não se aplica' : `${p.stock}${low ? ' <span class="badge warn">baixo</span>' : ''}`;
-        const inCatalog = App.catalog.enabled() && App.catalog.isShown(p) ? ' <span class="badge info">no catálogo</span>' : '';
+        const inCatalog = p.toComplete ? ' <span class="badge warn">a completar</span>' : App.catalog.enabled() && App.catalog.isShown(p) ? ' <span class="badge info">no catálogo</span>' : '';
         return `<tr><td>${esc(p.name)}${inCatalog}</td><td>${typeBadge(p.type)}</td><td>${money(p.cost)}</td><td>${money(p.price)}</td><td>${stockCell}</td><td>${p.type === 'Serviço' ? '-' : App.stock.minOf(p) + (App.stock.hasOwnMin(p) ? '' : ' <small class="muted">padrão</small>')}</td><td><button class="secondary" data-action="edit-item" data-name="${esc(p.name)}">Editar</button></td></tr>`;
       }).join('');
       byId('item-table').innerHTML = items.length
@@ -131,7 +147,10 @@
     const product = find(name);
     if (!product) return;
     const canDelete = !usedBy(product);
-    openModal(`<h2>Editar item</h2><form id="edit-item-form" class="form-grid">${formMarkup(product)}${lotsHtml(product)}<p class="negative field full" id="product-error" hidden></p><p class="muted field full">${canDelete ? '' : 'Já usado em vendas: não pode ser excluído.'}</p><div class="actions field full">${canDelete ? `<button type="button" class="danger" data-action="product-delete" data-name="${esc(name)}">Excluir</button>` : ''}${buyLink(product) ? `<button type="button" class="secondary" data-action="buy-again" data-name="${esc(name)}" title="Abre a página da loja da última compra">Comprar de novo</button>` : ''}<button type="button" class="secondary" data-action="close-modal">Cancelar</button><button class="primary">Salvar</button></div></form>`);
+    const todo = product.toComplete ? `<p class="field full todo-note">A completar. Falta: <b>${esc(missingOf(product).join(', ') || 'nada')}</b>. Sai desta lista sozinho quando tiver preço de venda e 1 foto.</p>` : '';
+    let markDone = false;
+    openModal(`<h2>Editar item</h2><form id="edit-item-form" class="form-grid">${todo}${formMarkup(product)}${lotsHtml(product)}<p class="negative field full" id="product-error" hidden></p><p class="muted field full">${canDelete ? '' : 'Já usado em vendas: não pode ser excluído.'}</p><div class="actions field full">${canDelete ? `<button type="button" class="danger" data-action="product-delete" data-name="${esc(name)}">Excluir</button>` : ''}${buyLink(product) ? `<button type="button" class="secondary" data-action="buy-again" data-name="${esc(name)}" title="Abre a página da loja da última compra">Comprar de novo</button>` : ''}<button type="button" class="secondary" data-action="close-modal">Cancelar</button>${product.toComplete ? '<button type="button" class="secondary" id="mark-complete">Marcar como completo</button>' : ''}<button class="primary">Salvar</button></div></form>`);
+    if (byId('mark-complete')) byId('mark-complete').onclick = () => { markDone = true; byId('edit-item-form').requestSubmit(); };
     groupProduct(byId('edit-item-form')); bindMargin(byId('edit-item-form'), Number(product.price) > 0);
     const catalog = App.catalog.bindForm(byId('edit-item-form'), product);
     byId('edit-item-form').onsubmit = async event => {
@@ -143,6 +162,7 @@
       if (event.target.elements.activityId && !values.activityId) delete product.activityId;   // escolheu "Sem atividade"
       Object.assign(product, values);
       await catalog.apply(product);
+      if (product.toComplete && (markDone || (Number(product.price) > 0 && (!App.catalog.enabled() || ((product.catalog || {}).photos || []).length)))) delete product.toComplete;
       save();
       closeModal();
       go('products');

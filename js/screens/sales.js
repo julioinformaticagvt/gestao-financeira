@@ -15,7 +15,7 @@
       const status = (canceled ? '<span class="badge neutral">Cancelada</span>' : `<span class="badge ${sale.balance ? 'warn' : ''}">${sale.balance ? 'Em aberto' : 'Pago'}</span>`)
         + (sale.editedAt ? ` <span class="badge neutral" title="Editada em ${dateLabel(sale.editedAt)}">editada</span>` : '');
       const actions = canceled ? '' : `<button class="secondary" data-action="edit-sale" data-sale="${esc(sale.id)}">Editar</button> <button class="secondary" data-action="cancel-sale" data-sale="${esc(sale.id)}">Cancelar</button>`;
-      return `<tr class="${canceled ? 'voided' : ''}"><td>${esc(sale.id)}${sale.osId ? `<br><small class="muted">Origem: ${esc(sale.osId)}</small>` : ""}</td><td>${esc(sale.client)}</td><td>${dateLabel(sale.date)}</td><td>${esc(sale.method || '-')}</td><td>${money(sale.total)}</td><td class="positive">${money(sale.paid)}</td><td class="negative">${money(sale.balance)}</td><td>${status}</td><td>${actions}</td></tr>`;
+      return `<tr class="${canceled ? 'voided' : ''}"><td>${esc(sale.id)}${sale.osId ? `<br><small class="muted">Origem: ${esc(sale.osId)}</small>` : ""}</td><td>${esc(sale.client)}</td><td>${dateLabel(sale.date)}</td><td>${esc(sale.method || '-')}${sale.pricing && sale.pricing.noInterest && sale.pricing.installments > 1 ? '<br><small class="muted">sem juros</small>' : ''}</td><td>${money(sale.total)}</td><td class="positive">${money(sale.paid)}</td><td class="negative">${money(sale.balance)}</td><td>${status}</td><td>${actions}</td></tr>`;
     }).join('');
     byId('app').innerHTML = `<section class="panel"><div class="panel-head"><h2>Vendas realizadas</h2><button class="primary" data-action="new-sale">+ Nova venda</button></div>${data.sales.length ? `<div class="table-wrap"><table><thead><tr><th>ID</th><th>Cliente</th><th>Data</th><th>Forma</th><th>Total</th><th>Pago</th><th>Saldo</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>` : App.firstRun.emptyState({title: 'Você ainda não registrou vendas.', hint: 'Registre sua primeira venda.', action: 'new-sale', label: '+ Nova venda'})}</section>`;
   }
@@ -38,11 +38,11 @@
       form.elements.invoiceIssued.checked = !!(editing.invoice && editing.invoice.issued);
       form.elements.invoiceNumber.value = (editing.invoice && editing.invoice.number) || "";
       paymentBlock.fillItems(form, editing.items || []);
-      initial = {modality: p.modality, installments: p.installments, account: p.account, entry: editing.entry || 0, firstDue: editing.firstDue || '', extraDues: editing.extraDues || [], feeRate: p.feeRate, baseRate: p.baseRate, extraRate: p.extraRate};
+      initial = {modality: p.modality, installments: p.installments, account: p.account, entry: editing.entry || 0, firstDue: editing.firstDue || '', extraDues: editing.extraDues || [], feeRate: p.feeRate, baseRate: p.baseRate, extraRate: p.extraRate, noInterest: !!p.noInterest};
     }
     if (prefill) {   // volta do cadastro rápido: devolve o que já estava digitado
       App.ui.applyForm(form, prefill);
-      initial = {modality: prefill.modality, installments: prefill.installments, account: prefill.account, entry: prefill.entry, firstDue: prefill.firstDue, feeRate: prefill.feeRate, baseRate: prefill.baseRate, extraRate: prefill.extraRate};
+      initial = {modality: prefill.modality, installments: prefill.installments, account: prefill.account, entry: prefill.entry, firstDue: prefill.firstDue, feeRate: prefill.feeRate, baseRate: prefill.baseRate, extraRate: prefill.extraRate, noInterest: !!prefill.noInterest};
     }
     const block = paymentBlock.bind(form, initial);
     App.ui.groupFields(form, [

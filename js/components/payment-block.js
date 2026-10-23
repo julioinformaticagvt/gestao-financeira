@@ -38,6 +38,7 @@
         <div class="field" data-show="carne"><label>Vence a 1ª parcela <small>vazio = dia ${Number(data.settings.dueDay) || 12}</small></label><input name="firstDue" type="date"></div>
         ${options.dues ? '<div class="field full" data-show="carne" id="extra-dues-box"><input type="hidden" name="extraDues" value=""><div id="extra-dues"></div></div>' : ''}
         <div class="field" data-show="debit,credit"><label>Taxa da maquininha (%)</label><input name="feeRate" type="number" min="0" step="0.01"></div>
+        <div class="field full" data-show="pix,debit,credit,carne"><label class="inline-check no-interest"><input type="checkbox" name="passFee"> Repassar a taxa para o cliente (cobrar juros)</label></div>
         <div class="field"><label>Juros base (%) <small>padrão = taxa da maquininha</small></label><input name="baseRate" type="number" min="0" step="0.01" value="0"></div>
         <div class="field"><label>Cobrar extra (%) <small>acréscimo meu, só desta venda</small></label><input name="extraRate" type="number" min="0" step="0.01" value="0"></div>
         <div class="field full"><div class="pay-compare" id="pay-compare"></div></div>
@@ -105,12 +106,15 @@
       const installments = meta.installments ? Math.min(12, Math.max(1, Math.round(num(f.get('installments')) || 1))) : 1;
       const needsFee = modality === 'debit' || modality === 'credit';
       const feeRate = needsFee ? num(f.get('feeRate')) : modality === 'pix' ? (P.machineRate('pix', 1) ?? 0) : 0;
-      const result = P.compare({price, cost, base: num(f.get('baseRate')), extra: num(f.get('extraRate')), feeRate, installments});
+      // SPECS 47: por padrão EU pago a taxa (o cliente paga o preço; a taxa sai do meu lucro). Marcando "Repassar", o cliente paga os juros.
+      const noInterest = modality !== 'cash' && f.get('passFee') !== 'on';
+      const base = noInterest ? 0 : num(f.get('baseRate')), extra = noInterest ? 0 : num(f.get('extraRate'));
+      const result = P.compare({price, cost, base, extra, feeRate, installments});
       const entry = modality === 'carne' ? Math.min(Math.max(0, num(f.get('entry'))), result.withExtra.total) : 0;
       const firstDue = modality === 'carne' ? (f.get('firstDue') || '') : '';
       const extraDues = firstDue ? parseDues(f.get('extraDues')).slice(0, Math.max(0, installments - 1)) : [];   // datas escolhidas da 2ª parcela em diante ('' = dia padrão)
       const invoiceIssued = f.get('invoiceIssued') === 'on', invoiceNumber = String(f.get('invoiceNumber') || '').trim();
-      return {items, invoiceIssued, invoiceNumber, discount, discountType, discountValue, sold, price, cost, modality, account: f.get('account') || 'PJ', installments, base: num(f.get('baseRate')), extra: num(f.get('extraRate')), feeRate, entry, firstDue, extraDues, ...result};
+      return {items, invoiceIssued, invoiceNumber, discount, discountType, discountValue, sold, price, cost, modality, account: f.get('account') || 'PJ', installments, base, extra, noInterest, feeRate, entry, firstDue, extraDues, ...result};
     }
 
     function renderCompare() {
@@ -118,7 +122,7 @@
       const needsFee = r.modality === 'debit' || r.modality === 'credit';
       const missingFee = needsFee && el('feeRate').value === '';
       const row = (label, x, y, strong) => `<tr class="${strong ? 'strong' : ''}"><td>${label}</td><td>${x}</td><td>${y}</td></tr>`;
-      document.getElementById('pay-compare').innerHTML = `${missingFee ? '<p class="negative">Falta a taxa da maquininha desta forma. Digite em "Taxa da maquininha (%)" (ou preencha a tabela em Configurações).</p>' : ''}<table><thead><tr><th></th><th>Só a taxa da maquininha</th><th>Com cobrança extra</th></tr></thead><tbody>${row('Juros total', pct(a.totalRate), pct(b.totalRate))}${row('Total cobrado do cliente', money(a.total), money(b.total), true)}${n > 1 ? row(`Parcela (${n}x)`, money(a.installment), money(b.installment)) : ''}${row('Taxa paga à maquininha', money(a.fee), money(b.fee))}${row('Você recebe', money(a.net), money(b.net))}${row('Custo (compra)', money(r.cost), money(r.cost))}${row('Lucro líquido', money(a.profit), money(b.profit), true)}</tbody></table><p class="muted formula">Você recebe = total − taxa. Lucro = você recebe − compra.</p>`;
+      document.getElementById('pay-compare').innerHTML = `${missingFee ? '<p class="negative">Falta a taxa da maquininha desta forma. Digite em "Taxa da maquininha (%)" (ou preencha a tabela em Configurações).</p>' : ''}${r.noInterest ? `<p class="no-interest-note">Sem juros: o cliente paga ${money(b.total)}${n > 1 ? ` em ${n}x de ${money(b.installment)}` : ''}. Taxa que você paga: <b>${money(b.fee)}</b>.</p>` : ''}<table><thead><tr><th></th><th>Só a taxa da maquininha</th><th>Com cobrança extra</th></tr></thead><tbody>${row('Juros total', pct(a.totalRate), pct(b.totalRate))}${row('Total cobrado do cliente', money(a.total), money(b.total), true)}${n > 1 ? row(`Parcela (${n}x)`, money(a.installment), money(b.installment)) : ''}${row('Taxa paga à maquininha', money(a.fee), money(b.fee))}${row('Você recebe', money(a.net), money(b.net))}${row('Custo (compra)', money(r.cost), money(r.cost))}${row('Lucro líquido', money(a.profit), money(b.profit), true)}</tbody></table><p class="muted formula">Você recebe = total − taxa. Lucro = você recebe − compra.</p>`;
 
       // Carnê: prévia das parcelas e das datas de vencimento.
       const box = document.getElementById('pay-schedule');
@@ -220,13 +224,23 @@
     }
 
     // Preenche os valores padrão da forma/parcelas escolhidas (taxa, juros base e extra), em azul.
+    // "Repassar a taxa para o cliente" (SPECS 47): vem DESMARCADA (eu pago a taxa), menos no carnê (os juros do carnê são meus)
+    // e nas formas com cobrança extra padrão configurada. Depois que o usuário mexe nela, fica como ele deixou.
+    const current = () => { const modality = el('modality').value; return {modality, installments: P.modality(modality).installments ? Math.max(1, Math.round(num(el('installments').value) || 1)) : 1}; };
     function applyDefaults() {
-      const modality = el('modality').value, installments = P.modality(modality).installments ? Math.max(1, Math.round(num(el('installments').value) || 1)) : 1;
+      const {modality, installments} = current();
       const fee = P.machineRate(modality, installments);
       set('feeRate', fee === null ? '' : fee, true);
-      set('baseRate', P.defaultBase(modality, installments), true);
-      set('extraRate', P.defaultExtra(modality), true);
+      if (!touched.passFee) el('passFee').checked = modality === 'carne' || P.defaultExtra(modality) > 0;
+      applyRates();
+    }
+    // Juros base e extra: zerados e travados com "sem juros"; senão, os padrões (taxa da maquininha e extra padrão).
+    function applyRates() {
+      const {modality, installments} = current(), on = !el('passFee').checked && modality !== 'cash';
+      set('baseRate', on ? 0 : P.defaultBase(modality, installments), true);
+      set('extraRate', on ? 0 : P.defaultExtra(modality), true);
       touched.baseRate = touched.extraRate = false;
+      ['baseRate', 'extraRate'].forEach(name => { el(name).readOnly = on; el(name).closest('.field').classList.toggle('is-locked', on); });
     }
 
     // Escolheu um produto cadastrado: preenche VENDA (preço padrão) e COMPRA (custo) se o usuário ainda não mexeu.
@@ -283,9 +297,10 @@
       if (['baseRate', 'extraRate'].includes(name) || /^item(Amount|Cost)\d+$/.test(name)) touched[name] = true;
       const typedCost = /^itemCost(\d+)$/.exec(name);
       if (typedCost) { el(`itemLot${typedCost[1]}`).value = ''; renderLots(Number(typedCost[1])); }   // digitou o custo: a peça sai da compra mais antiga
-      if (name === 'modality') { applyVisibility(); applyDefaults(); }
+      if (name === 'passFee') { touched.passFee = true; applyRates(); }
+      else if (name === 'modality') { applyVisibility(); applyDefaults(); }
       else if (name === 'installments') applyDefaults();
-      else if (name === 'feeRate' && !touched.baseRate && el('modality').value !== 'carne') set('baseRate', el('feeRate').value === '' ? 0 : el('feeRate').value, true);
+      else if (name === 'feeRate' && !touched.baseRate && el('passFee').checked && el('modality').value !== 'carne') set('baseRate', el('feeRate').value === '' ? 0 : el('feeRate').value, true);
       if (['modality', 'installments', 'firstDue', 'date'].includes(name)) {      // datas da 2ª parcela em diante
         if (name === 'firstDue' && !event.target.value) { dues = []; dueRows = 0; saveDues(); }   // sem a 1ª data, volta tudo ao padrão
         renderDues();
@@ -323,6 +338,7 @@
     applyVisibility();
     applyDefaults();
     for (const key of ['installments', 'account', 'entry', 'firstDue']) if (initial[key] !== undefined) set(key, initial[key]);
+    if (initial.noInterest !== undefined) { el('passFee').checked = !initial.noInterest; touched.passFee = true; }   // venda/orçamento já salvo: a escolha dele
     if (initial.modality) applyDefaults();               // recalcula padrões com as parcelas iniciais
     if (duesBox) loadDues(initial.extraDues ? initial.extraDues : parseDues(el('extraDues').value));
     for (const key of ['feeRate', 'baseRate', 'extraRate']) if (initial[key] !== undefined && initial[key] !== null) { set(key, initial[key]); touched[key] = true; }

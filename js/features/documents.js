@@ -16,6 +16,13 @@
   // O cliente nunca vê "PIX PJ" / "PIX PF" (isso é só controle interno de qual conta recebeu): para ele é só "Pix".
   const customerMethod = method => /^pix/i.test(String(method || '')) ? 'Pix' : String(method || '');
 
+  // Forma de pagamento no recibo; crédito parcelado "sem juros para o cliente" (SPECS 47) ganha "em 3x sem juros".
+  function receiptMethod(r) {
+    const sale = r.saleId && data.sales.find(s => s.id === r.saleId), p = sale && sale.pricing;
+    const label = customerMethod(r.method);
+    return p && p.noInterest && p.modality === 'credit' && p.installments > 1 ? `${label} em ${p.installments}x sem juros` : label;
+  }
+
   // ---------- etiquetas de compra (cada compra, uma cor; a cor sempre vem com o texto) ----------
   const COLORS = [['#2a5db0', '#e8eefa'], ['#7b3fa0', '#f1e9f7'], ['#a85a00', '#faf0e1'], ['#00798c', '#e1f3f6'], ['#b03a78', '#f8e8f0']];
   const pill = (n, date) => { const [fg, bg] = COLORS[(n - 1) % COLORS.length]; return `<span class="pill" style="color:${fg};background:${bg}"><i style="background:${fg}"></i>Compra ${n} · ${dm(date)}</span>`; };
@@ -164,7 +171,7 @@
       const first = lines[0];
       const note = first.kind === 'entrada' ? '<p class="doc-note">Este recibo é da entrada da venda.</p>' : '';
       const body = section('Itens', `<table class="doc-table"><thead><tr><th>Item</th><th class="num">Qtd.</th><th class="num">Valor</th></tr></thead><tbody>${items}</tbody></table>${note}`)
-        + section('Pagamento', `<div class="doc-row"><span>Forma de pagamento</span><span class="doc-amount">${esc(customerMethod(r.method))}</span></div><div class="doc-row"><span>Pago em</span><span class="doc-amount">${dateLabel(r.date)}</span></div>${r.discount > 0 ? `<div class="doc-row"><span>Desconto</span><span class="doc-amount doc-ok">− ${money(r.discount)}</span></div>` : ''}${warranty ? `<div class="doc-row"><span>Garantia</span><span class="doc-amount">${esc(warranty)}</span></div>` : ''}`);
+        + section('Pagamento', `<div class="doc-row"><span>Forma de pagamento</span><span class="doc-amount">${esc(receiptMethod(r))}</span></div><div class="doc-row"><span>Pago em</span><span class="doc-amount">${dateLabel(r.date)}</span></div>${r.discount > 0 ? `<div class="doc-row"><span>Desconto</span><span class="doc-amount doc-ok">− ${money(r.discount)}</span></div>` : ''}${warranty ? `<div class="doc-row"><span>Garantia</span><span class="doc-amount">${esc(warranty)}</span></div>` : ''}`);
       return frame(header(kind, `nº ${pad(r.number)}`, r.date, eco), main, lead + body + foot, eco);
     }
 
@@ -328,8 +335,9 @@
     const n = Number(p ? p.installments : quote.installments) || 1;
     if (n <= 1) return label;
     const entry = Number(quote.entry) || 0;
-    if (p && p.modality === 'carne' || (!p && entry)) return `${label}: ${entry > 0 ? `entrada de ${money(entry)} + ` : ''}${n}x de ${money(round2((total - entry) / n))}`;
-    return `${label} em ${n}x de ${money(round2(total / n))}`;
+    const free = p && p.noInterest ? ' sem juros' : '';   // "sem juros para o cliente" (SPECS 47)
+    if (p && p.modality === 'carne' || (!p && entry)) return `${label}: ${entry > 0 ? `entrada de ${money(entry)} + ` : ''}${n}x de ${money(round2((total - entry) / n))}${free}`;
+    return `${label} em ${n}x de ${money(round2(total / n))}${free}`;
   }
   function quoteDocument(quote, eco) {
     const items = quote.items || [], {sold, discount, total, extra} = quoteTotals(quote);
@@ -343,7 +351,7 @@
       + `<p class="doc-foot">${esc((data.settings.business.name || '').trim() || 'Meu negócio')} · orçamento ${esc(quote.id)}</p>`;
     return frame(header('Orçamento', quote.id, quote.date, eco), main, details, eco);
   }
-  const quoteMessage = quote => `Olá, ${quote.client || ''}! Segue o orçamento ${quote.id}: total de ${money(quoteTotals(quote).total)}${quote.validUntil ? `, válido até ${dateLabel(quote.validUntil)}` : ''}. Qualquer dúvida, estou à disposição.`.replace('Olá, !', 'Olá!');
+  const quoteMessage = quote => `Olá, ${quote.client || ''}! Segue o orçamento ${quote.id}: total de ${money(quoteTotals(quote).total)}${quote.pricing && quote.pricing.noInterest && quote.pricing.installments > 1 ? ` (${quotePayment(quote)})` : ''}${quote.validUntil ? `, válido até ${dateLabel(quote.validUntil)}` : ''}. Qualquer dúvida, estou à disposição.`.replace('Olá, !', 'Olá!');
   const showQuote = quote => openDocument({title: `Orçamento · ${esc(quote.id)}`, fileName: `Orcamento-${quote.id}`, client: quote.client, build: eco => quoteDocument(quote, eco), message: () => quoteMessage(quote)});
 
   function showExtract(client) {

@@ -110,7 +110,9 @@
       condicao: !isService(product) && CONDITIONS.includes(c.condition) ? c.condition : ''
     };
   }
-  const shownProducts = () => data.products.filter(isShown).sort((a, b) => normalize(a.name).localeCompare(normalize(b.name)) || String(a.uid).localeCompare(String(b.uid)));
+  // Produto "a completar" (SPECS 48) não vai para o site até ser completado.
+  const pendingNote = () => { const n = data.products.filter(p => isShown(p) && p.toComplete).length; return n ? `<p class="muted">${n} ${n === 1 ? 'produto a completar ficou' : 'produtos a completar ficaram'} de fora (falta foto ou preço).</p>` : ''; };
+  const shownProducts = () => data.products.filter(p => isShown(p) && !p.toComplete).sort((a, b) => normalize(a.name).localeCompare(normalize(b.name)) || String(a.uid).localeCompare(String(b.uid)));
   const entries = () => shownProducts().map(entryOf);
 
   // Problemas que impedem o envio (o site precisa de nome e de uma categoria que exista no catálogo).
@@ -222,10 +224,10 @@
     try { plan = await prepare(); }
     catch (error) { busy = false; openModal(`<h2>Não deu para conferir o catálogo</h2><p>${errorText(error)}</p>${closeButton}`); return; }
     busy = false;
-    if (!plan.changed) { openModal(`<h2>Mandar para o catálogo</h2><p>O catálogo já está igual ao sistema. Nada foi enviado.</p>${closeButton}`); return; }
+    if (!plan.changed) { openModal(`<h2>Mandar para o catálogo</h2><p>O catálogo já está igual ao sistema. Nada foi enviado.</p>${pendingNote()}${closeButton}`); return; }
     const total = plan.list.length, off = total - plan.available;
     const photoLine = [plan.uploads.length ? `${plan.uploads.length} foto(s) nova(s) ou trocada(s)` : '', plan.removals.length ? `${plan.removals.length} foto(s) que saem do site` : ''].filter(Boolean).join(' e ');
-    openModal(`<h2>Mandar para o catálogo?</h2><p><b>${total} produto(s)</b> no catálogo: ${plan.available} disponível(is) e ${off} indisponível(is) no momento.${photoLine ? ` ${photoLine}.` : ''}</p><p class="muted">Preço, custo, estoque e clientes <b>não são enviados</b>.</p><div class="actions"><button type="button" class="secondary" data-action="close-modal">Cancelar</button><button type="button" class="primary" id="catalog-confirm">Mandar agora</button></div>`);
+    openModal(`<h2>Mandar para o catálogo?</h2>${pendingNote()}<p><b>${total} produto(s)</b> no catálogo: ${plan.available} disponível(is) e ${off} indisponível(is) no momento.${photoLine ? ` ${photoLine}.` : ''}</p><p class="muted">Preço, custo, estoque e clientes <b>não são enviados</b>.</p><div class="actions"><button type="button" class="secondary" data-action="close-modal">Cancelar</button><button type="button" class="primary" id="catalog-confirm">Mandar agora</button></div>`);
     byId('catalog-confirm').onclick = async () => {
       if (busy) return;
       busy = true;

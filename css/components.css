@@ -509,3 +509,11 @@ th.sortable[aria-sort="ascending"], th.sortable[aria-sort="descending"] { color:
 .oi-ok { color: var(--ok); }
 .oi-new { color: var(--blue); }
 .oi-ask { color: var(--accent); }
+/* "Sem juros para o cliente" (SPECS 47): aviso acima da comparação e juros travados */
+.no-interest { font-size: 14px; color: var(--text); font-weight: 600; }
+.no-interest input { width: 18px; height: 18px; }
+.no-interest-note { margin: 0 0 10px; padding: 10px 14px; border-radius: var(--r-field); background: var(--blue-bg); color: var(--text); font-size: 14px; }
+.field.is-locked input { opacity: .55; }
+/* "A completar" (SPECS 48): o que falta em cada produto vindo do "Colar pedido" */
+.todo-missing { color: var(--accent); font-size: 13px; }
+.todo-note { margin: 0; padding: 10px 14px; border-radius: var(--r-field); background: var(--sync-warn-bg); color: var(--text); font-size: 14px; }

@@ -37,6 +37,8 @@
     // 3º ordem de serviço: aguardando aprovação há muito tempo e equipamentos prontos sem retirar
     App.serviceOrders.alerts().forEach(a => result.push(a));
     const lowMargin = App.revenue.belowMargin();
+    const todo = data.products.filter(p => p.toComplete);   // produtos do "Colar pedido" ainda sem preço ou foto (SPECS 48)
+    if (todo.length) result.push({urgent: false, kind: 'completar', view: 'products', text: `${todo.length} ${todo.length === 1 ? 'produto a completar' : 'produtos a completar'}: falta preço de venda ou foto`});
     if (lowMargin.length) result.push({urgent: false, kind: 'margem', view: 'products', text: `${lowMargin.length} ${lowMargin.length === 1 ? 'produto abaixo' : 'produtos abaixo'} da margem mínima`});
     // 4º MEI: a RECEITA decide (70%, 90% e acima de 100%); as vendas só avisam se já passaram do limite.
     if (data.settings.isMei) {
@@ -63,7 +65,7 @@
     if (/vencid|passou/i.test(a.text)) return 'bad';
     return a.urgent ? 'warn' : 'info';
   }
-  const ICON_OF = {receber: 'receivables', pagar: 'payables', lembrete: 'collection', estoque: 'products', mei: 'financial', margem: 'percent', das: 'payables', os: 'tool'};
+  const ICON_OF = {receber: 'receivables', pagar: 'payables', lembrete: 'collection', estoque: 'products', mei: 'financial', margem: 'percent', completar: 'products', das: 'payables', os: 'tool'};
   // Um aviso: quadradinho com ícone + título em negrito (até os dois-pontos) + linha de apoio em cinza (o resto) + botão "Ver".
   function avisoHtml(a) {
     const cut = a.text.indexOf(': '), title = cut > 0 ? a.text.slice(0, cut) : a.text, rest = cut > 0 ? a.text.slice(cut + 2) : '';

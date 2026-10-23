@@ -1,5 +1,13 @@
 # Novidades
 
+## Versão 0.19.2 · Taxa e produtos a completar · 23/10/2026
+
+- Venda e orçamento: agora, por padrão, VOCÊ paga a taxa da maquininha. O cliente paga o preço à vista (ex.: 3x de R$ 100,00) e a taxa sai do seu lucro.
+- Para o cliente pagar os juros, marque "Repassar a taxa para o cliente". No carnê ela já vem marcada (os juros do carnê são seus).
+- Recibo, PDF do orçamento e mensagem mostram "sem juros" para o cliente.
+- Produtos e serviços: aba "A completar" com os produtos que vieram do "Colar pedido", mostrando o que falta (preço, foto, categoria, descrição). Eles já entram no catálogo, mas só vão para o site depois de completos (preço + 1 foto, ou "Marcar como completo").
+- Aviso na Visão geral quando há produtos a completar.
+
 ## Versão 0.19.1 · Orçamento em PDF · 22/10/2026
 
 - Orçamentos: botão "PDF" em cada orçamento e "Salvar e gerar PDF" na janela do orçamento, para mandar ao cliente pelo WhatsApp.

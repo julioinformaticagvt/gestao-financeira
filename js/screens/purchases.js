@@ -150,6 +150,7 @@
       return `<span class="oi-ask">? parece ser: ${esc(it.found.product.name)}. Confirme</span>`;
     };
     const catalogBox = it => {
+      if (it.choice === 'new') return '<small class="muted oi-cat">vai para "A completar"</small>';   // todo produto novo entra no catálogo, a completar (SPECS 48)
       if (!catalogOn) return '';
       const product = byKey(it.choice);
       if (product && App.catalog.isShown(product)) return '<small class="muted oi-cat">já no catálogo</small>';
@@ -228,7 +229,8 @@
       for (const {order: o} of chosen) {
         const items = o.items.map(it => {
           let product = it.choice === 'new' ? App.stock.productByName(it.newName.trim()) : byKey(it.choice);
-          if (!product) { product = {name: it.newName.trim(), sku: '', type: 'Produto', stock: 0, cost: 0, price: 0}; data.products.push(product); }
+          // produto novo: já entra no catálogo com o que o título traz, mas "a completar" (preço e foto) e fora do site até lá (SPECS 48)
+          if (!product) { product = {name: it.newName.trim(), sku: '', type: 'Produto', stock: 0, cost: 0, price: 0, toComplete: true, catalog: App.orderPaste.catalogOf(it.title)}; data.products.push(product); }
           // apelido: da próxima vez, o mesmo código ou título é reconhecido sozinho
           product.aliases = [...new Set([...(product.aliases || []), ...App.orderPaste.aliasKeys(it)])].slice(-30);
           if (it.link) product.buyLink = it.link;

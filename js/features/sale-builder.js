@@ -23,7 +23,8 @@
       pricing: {
         modality: pay.modality, label, installments: pay.installments, plan: data.settings.machine.plan, account: pay.account,
         baseRate: pay.base, extraRate: pay.extra, feeRate: pay.feeRate, totalRate: calc.totalRate,
-        price: pay.price, total: calc.total, fee: calc.fee, net: calc.net, profit: calc.profit
+        price: pay.price, total: calc.total, fee: calc.fee, net: calc.net, profit: calc.profit,
+        ...(pay.noInterest ? {noInterest: true} : {})   // "sem juros para o cliente": eu paguei a taxa (SPECS 47)
       }
     };
     if (quoteId) sale.quoteId = quoteId;

@@ -29,7 +29,7 @@
 
     // Orçamentos novos mostram forma de pagamento, venda, compra e lucro; os antigos mostram parcelas e juros ao mês.
     const detail = quote => quote.pricing
-      ? `${esc(quote.pricing.label)}${quote.pricing.installments > 1 ? ` em ${quote.pricing.installments}x` : ''} · venda ${money(quote.pricing.price)} · compra ${money(quote.cost)} · <b>lucro líquido ${money(quote.pricing.profit)}</b>`
+      ? `${esc(quote.pricing.label)}${quote.pricing.installments > 1 ? ` em ${quote.pricing.installments}x` : ''}${quote.pricing.noInterest && quote.pricing.installments > 1 ? ' sem juros' : ''} · venda ${money(quote.pricing.price)} · compra ${money(quote.cost)} · <b>lucro líquido ${money(quote.pricing.profit)}</b>`
       : `${quote.installments} parcelas · juros ${Number(quote.monthlyInterest || 0).toFixed(2)}% ao mês`;
     const quoteCard = quote => `<div class="card" style="margin-bottom:10px"><div class="panel-head"><div><b>${esc(quote.id)}</b> · ${dateLabel(quote.date)}<br><span class="quote-status">${esc(quote.status || 'Rascunho')}</span></div><strong>${money(quote.pricing ? quote.pricing.total : netTotal(quote))}</strong></div><p class="muted">${detail(quote)} · atualizado ${dateLabel(quote.updatedAt)}${quote.validUntil ? ` · válido até ${dateLabel(quote.validUntil)}` : ''}</p><div class="quote-actions"><button class="secondary" data-action="quote-pdf" data-id="${esc(quote.id)}" title="Orçamento em PDF para mandar ao cliente">PDF</button><button class="secondary" data-action="edit-quote" data-id="${esc(quote.id)}">Editar</button><button class="primary" data-action="convert-quote" data-id="${esc(quote.id)}" ${quote.status === 'Convertido em venda' ? 'disabled' : ''}>Fechar venda</button></div></div>`;
     // Cartão da ordem de serviço: equipamento, andamento (lista de um clique), histórico e os papéis.
@@ -104,7 +104,7 @@
 
   // Valores iniciais do bloco de pagamento: do orçamento novo, ou uma conversão razoável de um orçamento antigo.
   function initialPayment(quote) {
-    if (quote.pricing) return {modality: quote.pricing.modality, installments: quote.pricing.installments, account: quote.pricing.account, entry: quote.entry || 0, firstDue: quote.firstDue || '', feeRate: quote.pricing.feeRate, baseRate: quote.pricing.baseRate, extraRate: quote.pricing.extraRate};
+    if (quote.pricing) return {modality: quote.pricing.modality, installments: quote.pricing.installments, account: quote.pricing.account, entry: quote.entry || 0, firstDue: quote.firstDue || '', feeRate: quote.pricing.feeRate, baseRate: quote.pricing.baseRate, extraRate: quote.pricing.extraRate, noInterest: !!quote.pricing.noInterest};
     if (quote.installments > 1) return {modality: 'carne', installments: quote.installments, entry: quote.entry || 0};
     return {modality: 'pix'};
   }
@@ -121,7 +121,7 @@
     let initial = initialPayment(quote);
     if (prefill) {
       App.ui.applyForm(form, prefill);
-      initial = {modality: prefill.modality, installments: prefill.installments, account: prefill.account, entry: prefill.entry, firstDue: prefill.firstDue, feeRate: prefill.feeRate, baseRate: prefill.baseRate, extraRate: prefill.extraRate};
+      initial = {modality: prefill.modality, installments: prefill.installments, account: prefill.account, entry: prefill.entry, firstDue: prefill.firstDue, feeRate: prefill.feeRate, baseRate: prefill.baseRate, extraRate: prefill.extraRate, noInterest: !!prefill.noInterest};
     }
     const block = paymentBlock.bind(form, initial);
     const N = SO().FIELD_NAMES;
@@ -150,7 +150,7 @@
         notes: f.notes.value, invoice: pay.invoiceIssued ? {issued: true, number: pay.invoiceNumber} : undefined, discount: pay.discount, discountType: pay.discountType, discountValue: pay.discountValue, items: pay.items, total: pay.sold, cost: pay.cost,
         productType: pay.items[0]?.type || 'Produto', installments: pay.modality === 'carne' ? pay.installments : 1, entry: pay.entry, firstDue: pay.firstDue,
         method: P.paymentLabel(pay.modality, pay.account), monthlyInterest: 0, updatedAt: today(),
-        pricing: {modality: pay.modality, label: P.paymentLabel(pay.modality, pay.account), installments: pay.installments, plan: data.settings.machine.plan, account: pay.account, baseRate: pay.base, extraRate: pay.extra, feeRate: pay.feeRate, totalRate: pay.withExtra.totalRate, price: pay.price, total: pay.withExtra.total, fee: pay.withExtra.fee, net: pay.withExtra.net, profit: pay.withExtra.profit}
+        pricing: {modality: pay.modality, label: P.paymentLabel(pay.modality, pay.account), installments: pay.installments, plan: data.settings.machine.plan, account: pay.account, baseRate: pay.base, extraRate: pay.extra, feeRate: pay.feeRate, totalRate: pay.withExtra.totalRate, price: pay.price, total: pay.withExtra.total, fee: pay.withExtra.fee, net: pay.withExtra.net, profit: pay.withExtra.profit, ...(pay.noInterest ? {noInterest: true} : {})}
       });
       if (!os) quote.status = wanted;
       const wasNew = !data.quotes.some(x => x.id === quote.id);

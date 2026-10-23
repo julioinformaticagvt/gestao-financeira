@@ -107,11 +107,18 @@
   // Guarda e devolve o que foi digitado num formulário (para o cadastro rápido de cliente/produto não perder o que já estava preenchido).
   function snapshotForm(form) {
     const state = {};
-    for (const element of form.elements) if (element.name && !['file', 'checkbox', 'radio', 'button', 'submit'].includes(element.type)) state[element.name] = element.value;
+    for (const element of form.elements) {
+      if (!element.name || ['file', 'radio', 'button', 'submit'].includes(element.type)) continue;
+      state[element.name] = element.type === 'checkbox' ? element.checked : element.value;   // caixinha: marcada (true) ou não (false)
+    }
     return state;
   }
   function applyForm(form, state) {
-    for (const [name, value] of Object.entries(state || {})) { const element = form.elements[name]; if (element && element.type !== 'file') element.value = value; }
+    for (const [name, value] of Object.entries(state || {})) {
+      const element = form.elements[name];
+      if (!element || element.type === 'file') continue;
+      if (element.type === 'checkbox') element.checked = !!value; else element.value = value;
+    }
   }
 
   registerAction('close-modal', closeModal);
