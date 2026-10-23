@@ -310,10 +310,46 @@
     if (onExtra) onExtra({redraw, refreshMessage: () => { if (message) App.ui.byId('doc-message').value = message(); }});
   }
 
+  // ---------- Orçamento para o cliente (SPECS 46) ----------
+  // Itens com o valor de venda, total em destaque, forma de pagamento com as parcelas, validade, observações e a garantia do negócio.
+  // Nunca mostra custo, compra, taxa da maquininha nem lucro.
+  const docRow = (label, value) => value ? `<div class="doc-row"><span>${label}</span><span class="doc-amount">${esc(value)}</span></div>` : '';
+  function quoteTotals(quote) {
+    const items = quote.items || [], p = quote.pricing;
+    const sold = items.length ? round2(sum(items, i => Number(i.amount) || 0)) : Number(quote.total) || 0;
+    const discount = Number(quote.discount) || 0;
+    const total = p ? Number(p.total) || 0 : Math.max(0, sold - discount);
+    return {sold, discount, total, extra: round2(total - Math.max(0, sold - discount))};
+  }
+  // "Crédito em 3x de R$ 120,00"; carnê: "Carnê: entrada de R$ 100,00 + 5x de R$ 80,00"; à vista: só a forma.
+  function quotePayment(quote) {
+    const {total} = quoteTotals(quote), p = quote.pricing;
+    const label = customerMethod(p ? p.label : quote.method) || 'A combinar';
+    const n = Number(p ? p.installments : quote.installments) || 1;
+    if (n <= 1) return label;
+    const entry = Number(quote.entry) || 0;
+    if (p && p.modality === 'carne' || (!p && entry)) return `${label}: ${entry > 0 ? `entrada de ${money(entry)} + ` : ''}${n}x de ${money(round2((total - entry) / n))}`;
+    return `${label} em ${n}x de ${money(round2(total / n))}`;
+  }
+  function quoteDocument(quote, eco) {
+    const items = quote.items || [], {sold, discount, total, extra} = quoteTotals(quote);
+    const warranty = String(data.settings.business.warranty || '').trim();
+    const rows = items.map(i => `<tr><td>${esc(i.name || 'Item')}</td><td class="num">${Number(i.qty) || 1}</td><td class="num">${money(i.amount)}</td></tr>`).join('');
+    const main = `<p class="doc-label">ORÇAMENTO</p><p class="doc-lead-2">Valor total</p><p class="doc-value">${money(total)}</p><p class="doc-who">Para <b>${esc(quote.client || 'Cliente')}</b></p>${quote.validUntil ? `<p class="doc-muted">Válido até ${dateLabel(quote.validUntil)}</p>` : ''}`;
+    const details = (rows ? section('Itens', `<table class="doc-table"><thead><tr><th>Item</th><th class="num">Qtd.</th><th class="num">Valor</th></tr></thead><tbody>${rows}</tbody></table>`) : '')
+      + section('Valores', `${docRow('Soma dos itens', money(sold))}${discount > 0 ? `<div class="doc-row"><span>Desconto</span><span class="doc-amount doc-ok">− ${money(discount)}</span></div>` : ''}${extra > 0.005 ? docRow('Acréscimo do parcelamento', money(extra)) : ''}<div class="doc-row"><strong>Total</strong><span class="doc-amount"><b>${money(total)}</b></span></div>`)
+      + section('Condições', `${docRow('Forma de pagamento', quotePayment(quote))}${docRow('Validade', quote.validUntil ? `até ${dateLabel(quote.validUntil)}` : '')}${docRow('Garantia', warranty)}`)
+      + (String(quote.notes || '').trim() ? section('Observações', `<p class="doc-muted">${esc(quote.notes).replace(/\n/g, '<br>')}</p>`) : '')
+      + `<p class="doc-foot">${esc((data.settings.business.name || '').trim() || 'Meu negócio')} · orçamento ${esc(quote.id)}</p>`;
+    return frame(header('Orçamento', quote.id, quote.date, eco), main, details, eco);
+  }
+  const quoteMessage = quote => `Olá, ${quote.client || ''}! Segue o orçamento ${quote.id}: total de ${money(quoteTotals(quote).total)}${quote.validUntil ? `, válido até ${dateLabel(quote.validUntil)}` : ''}. Qualquer dúvida, estou à disposição.`.replace('Olá, !', 'Olá!');
+  const showQuote = quote => openDocument({title: `Orçamento · ${esc(quote.id)}`, fileName: `Orcamento-${quote.id}`, client: quote.client, build: eco => quoteDocument(quote, eco), message: () => quoteMessage(quote)});
+
   function showExtract(client) {
     const asOf = today();
     openDocument({title: `Extrato da conta · ${esc(client)}`, fileName: `Extrato-${client.replace(/\s+/g, '-')}-${asOf}`, client, modes: true, build: (eco, mode) => extractDocument(client, asOf, eco, mode), message: () => extractMessage(client, asOf)});
   }
 
-  App.documents = {ICONS, header, frame, section, customerMethod, settlement, LIMITS, COLORS, pill, itemsText, situation, receiptDocument, extractDocument, receiptMessage, extractMessage, collectionMessage, openDocument, showExtract, printDocument, linesOf, pad, dm};
+  App.documents = {ICONS, header, frame, section, customerMethod, quoteDocument, quotePayment, quoteMessage, showQuote, settlement, LIMITS, COLORS, pill, itemsText, situation, receiptDocument, extractDocument, receiptMessage, extractMessage, collectionMessage, openDocument, showExtract, printDocument, linesOf, pad, dm};
 })();

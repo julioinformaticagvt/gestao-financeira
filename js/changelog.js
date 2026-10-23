@@ -1,6 +1,10 @@
 // "O que há de novo": lista de versões em linguagem simples, da mais nova para a mais antiga.
 // A cada versão aprovada, acrescente uma entrada AQUI (e em version.js, na tabela do CLAUDE.md e na etiqueta do Git).
 window.CHANGELOG = [
+  {version: '0.19.1', name: 'Orçamento em PDF', date: '22/10/2026', items: [
+    'Orçamentos: botão "PDF" em cada orçamento e "Salvar e gerar PDF" na janela do orçamento, para mandar ao cliente pelo WhatsApp.',
+    'O PDF mostra os itens, o total, a forma de pagamento com as parcelas (ex.: "Crédito em 3x de R$ 106,12"), a validade, as observações e a sua garantia. Nunca mostra custo nem lucro.'
+  ]},
   {version: '0.19.0', name: 'Compras pelo pedido', date: '22/10/2026', items: [
     'Compras: botão "Colar pedido". Copie a página do pedido da loja e cole: o sistema monta a compra com os itens, as quantidades e o custo de cada peça (frete e desconto já divididos).',
     'Vários pedidos numa colagem só: cada um vira uma compra. Pedido já lançado não entra de novo; antigos, cancelados e não pagos vêm desmarcados.',

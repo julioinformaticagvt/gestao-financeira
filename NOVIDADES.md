@@ -1,5 +1,10 @@
 # Novidades
 
+## Versão 0.19.1 · Orçamento em PDF · 22/10/2026
+
+- Orçamentos: botão "PDF" em cada orçamento e "Salvar e gerar PDF" na janela do orçamento, para mandar ao cliente pelo WhatsApp.
+- O PDF mostra os itens, o total, a forma de pagamento com as parcelas (ex.: "Crédito em 3x de R$ 106,12"), a validade, as observações e a sua garantia. Nunca mostra custo nem lucro.
+
 ## Versão 0.19.0 · Compras pelo pedido · 22/10/2026
 
 - Compras: botão "Colar pedido". Copie a página do pedido da loja e cole: o sistema monta a compra com os itens, as quantidades e o custo de cada peça (frete e desconto já divididos).

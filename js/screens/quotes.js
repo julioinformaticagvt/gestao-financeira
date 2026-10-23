@@ -31,7 +31,7 @@
     const detail = quote => quote.pricing
       ? `${esc(quote.pricing.label)}${quote.pricing.installments > 1 ? ` em ${quote.pricing.installments}x` : ''} · venda ${money(quote.pricing.price)} · compra ${money(quote.cost)} · <b>lucro líquido ${money(quote.pricing.profit)}</b>`
       : `${quote.installments} parcelas · juros ${Number(quote.monthlyInterest || 0).toFixed(2)}% ao mês`;
-    const quoteCard = quote => `<div class="card" style="margin-bottom:10px"><div class="panel-head"><div><b>${esc(quote.id)}</b> · ${dateLabel(quote.date)}<br><span class="quote-status">${esc(quote.status || 'Rascunho')}</span></div><strong>${money(quote.pricing ? quote.pricing.total : netTotal(quote))}</strong></div><p class="muted">${detail(quote)} · atualizado ${dateLabel(quote.updatedAt)}${quote.validUntil ? ` · válido até ${dateLabel(quote.validUntil)}` : ''}</p><div class="quote-actions"><button class="secondary" data-action="edit-quote" data-id="${esc(quote.id)}">Editar</button><button class="primary" data-action="convert-quote" data-id="${esc(quote.id)}" ${quote.status === 'Convertido em venda' ? 'disabled' : ''}>Fechar venda</button></div></div>`;
+    const quoteCard = quote => `<div class="card" style="margin-bottom:10px"><div class="panel-head"><div><b>${esc(quote.id)}</b> · ${dateLabel(quote.date)}<br><span class="quote-status">${esc(quote.status || 'Rascunho')}</span></div><strong>${money(quote.pricing ? quote.pricing.total : netTotal(quote))}</strong></div><p class="muted">${detail(quote)} · atualizado ${dateLabel(quote.updatedAt)}${quote.validUntil ? ` · válido até ${dateLabel(quote.validUntil)}` : ''}</p><div class="quote-actions"><button class="secondary" data-action="quote-pdf" data-id="${esc(quote.id)}" title="Orçamento em PDF para mandar ao cliente">PDF</button><button class="secondary" data-action="edit-quote" data-id="${esc(quote.id)}">Editar</button><button class="primary" data-action="convert-quote" data-id="${esc(quote.id)}" ${quote.status === 'Convertido em venda' ? 'disabled' : ''}>Fechar venda</button></div></div>`;
     // Cartão da ordem de serviço: equipamento, andamento (lista de um clique), histórico e os papéis.
     const osCard = quote => {
       const o = quote.os, sale = SO().saleOf(quote), next = SO().nextStatus(quote);
@@ -79,7 +79,7 @@
       ? [...new Set([quote.status, ...SO().allStatuses()])].map(s => `<option ${s === quote.status ? 'selected' : ''}>${esc(s)}</option>`).join('')
       : `${STATUSES.map(s => `<option>${s}</option>`).join('')}<option ${quote.status === 'Convertido em venda' ? 'selected' : ''}>Convertido em venda</option>`;
     const title = os ? (quote.existing ? `Editar ordem de serviço ${esc(quote.id)}` : 'Nova ordem de serviço') : (quote.existing ? 'Editar orçamento' : 'Simular venda / criar orçamento');
-    return `<h2>${title}</h2><form id="quote-form" data-quote-id="${esc(quote.id)}" class="form-grid"><div class="field full"><label>Cliente *</label><input name="client" list="q-clients" value="${esc(quote.client)}" required><datalist id="q-clients">${clientOptions}</datalist><button type="button" class="secondary" data-action="new-client-quick">+ Adicionar novo cliente</button></div>${os ? SO().fieldsMarkup(quote) : ''}${paymentBlock.markup.items('q-products')}<datalist id="q-products">${productOptions}</datalist><div class="field full"><button type="button" class="secondary" data-action="new-product-quick">+ Adicionar novo produto ou serviço</button></div><div class="field"><label>Data do orçamento</label><input name="date" type="date" value="${quote.date}" required></div><div class="field"><label>Válido até</label><input name="validUntil" type="date" value="${quote.validUntil || ''}"></div>${paymentBlock.markup.discount()}${paymentBlock.markup.payment()}<p class="muted help late-note">Atraso: multa de ${data.settings.collection.fine}% + juros de ${data.settings.collection.interest}% ao mês.</p><div class="field"><label>${os ? 'Andamento' : 'Status'}</label><select name="status">${statusOptions}</select></div><div class="field full"><label>Observações</label><textarea name="notes">${esc(quote.notes || '')}</textarea></div><div class="actions field full"><button type="button" class="secondary" data-action="close-modal">Cancelar</button><button type="button" class="secondary" data-action="save-quote">${os ? 'Salvar ordem de serviço' : 'Salvar orçamento'}</button><button type="submit" class="primary">Fechar venda</button></div></form>`;
+    return `<h2>${title}</h2><form id="quote-form" data-quote-id="${esc(quote.id)}" class="form-grid"><div class="field full"><label>Cliente *</label><input name="client" list="q-clients" value="${esc(quote.client)}" required><datalist id="q-clients">${clientOptions}</datalist><button type="button" class="secondary" data-action="new-client-quick">+ Adicionar novo cliente</button></div>${os ? SO().fieldsMarkup(quote) : ''}${paymentBlock.markup.items('q-products')}<datalist id="q-products">${productOptions}</datalist><div class="field full"><button type="button" class="secondary" data-action="new-product-quick">+ Adicionar novo produto ou serviço</button></div><div class="field"><label>Data do orçamento</label><input name="date" type="date" value="${quote.date}" required></div><div class="field"><label>Válido até</label><input name="validUntil" type="date" value="${quote.validUntil || ''}"></div>${paymentBlock.markup.discount()}${paymentBlock.markup.payment()}<p class="muted help late-note">Atraso: multa de ${data.settings.collection.fine}% + juros de ${data.settings.collection.interest}% ao mês.</p><div class="field"><label>${os ? 'Andamento' : 'Status'}</label><select name="status">${statusOptions}</select></div><div class="field full"><label>Observações</label><textarea name="notes">${esc(quote.notes || '')}</textarea></div><div class="actions field full"><button type="button" class="secondary" data-action="close-modal">Cancelar</button><button type="button" class="secondary" data-action="save-quote">${os ? 'Salvar ordem de serviço' : 'Salvar orçamento'}</button>${os ? '' : '<button type="button" class="secondary" data-quote-pdf>Salvar e gerar PDF</button>'}<button type="submit" class="primary">Fechar venda</button></div></form>`;
   }
 
   // Preenche os campos de itens e desconto de um orçamento que já existe.
@@ -166,18 +166,28 @@
       return {pay, wasNew, status: wanted};
     };
 
-    form.querySelector('[data-action="save-quote"]').onclick = () => {
-      if (!form.reportValidity()) return;
+    const saveAndClose = () => {
+      if (!form.reportValidity()) return null;
       const before = quote.status;
       const result = capture();
-      if (!result) return;
+      if (!result) return null;
       quote.status = quote.status || (os ? 'Recebido' : 'Rascunho');
       save();
       closeModal();
       render();
+      return {before, result};
+    };
+    form.querySelector('[data-action="save-quote"]').onclick = () => {
+      const done = saveAndClose();
+      if (!done) return;
+      const {before, result} = done;
       if (os && result.wasNew) SO().showEntry(quote);                       // comprovante de entrada (sem a senha)
       else if (os && quote.status !== before) SO().afterChange(quote, quote.status);
     };
+
+    // "Salvar e gerar PDF" (SPECS 46): grava o orçamento e já abre o documento para mandar ao cliente.
+    const pdfButton = form.querySelector('[data-quote-pdf]');
+    if (pdfButton) pdfButton.onclick = () => { if (saveAndClose()) App.documents.showQuote(quote); };
 
     // Enter numa caixa de texto não envia o formulário: o único "enviar" daqui é Fechar venda, que deve ser escolhido de propósito.
     form.addEventListener('keydown', event => {
@@ -216,6 +226,7 @@
 
   App.quotes = {reopen: prefill => current && openQuote(current.quote, current.convert, prefill)};   // usado pelo cadastro rápido
   App.ui.registerScreen('quotes', render);
+  App.ui.registerAction('quote-pdf', element => { const quote = findQuote(element); if (quote) App.documents.showQuote(quote); });
   App.ui.registerAction('new-quote', () => openQuote(newQuote()));
   App.ui.registerAction('new-os', () => openQuote(SO().newOs()));
   App.ui.registerAction('edit-quote', element => { const quote = findQuote(element); if (quote) { quote.existing = true; openQuote(quote, false); } });
