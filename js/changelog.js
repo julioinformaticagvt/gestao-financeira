@@ -1,6 +1,11 @@
 // "O que há de novo": lista de versões em linguagem simples, da mais nova para a mais antiga.
 // A cada versão aprovada, acrescente uma entrada AQUI (e em version.js, na tabela do CLAUDE.md e na etiqueta do Git).
 window.CHANGELOG = [
+  {version: '0.19.4', name: 'Categorias do catálogo', date: '24/10/2026', items: [
+    'Catálogo online: 3 categorias novas, iguais às do site: PC (computador montado), Console e Acessórios (itens não essenciais, como suportes e teclas diferentes).',
+    'Quem já tinha a lista de categorias salva ganha as 3 sozinha, sem perder as próprias.',
+    'No "Colar pedido", cabos, suportes, carregadores e parecidos já entram na categoria Acessórios.'
+  ]},
   {version: '0.19.3', name: 'Parcela com entrada e mensagem do recibo', date: '23/10/2026', items: [
     'Venda no carnê com entrada: a linha "Parcela" da comparação desconta a entrada (ex.: R$ 4.860 com entrada de R$ 405 em 11x mostra R$ 405,00).',
     'Mensagem do recibo: mostra quanto ainda falta em cada compra (ex.: "ainda falta pagar R$ 4.455,00, em 11 parcelas de R$ 405,00"), as parcelas vencidas e o total que falta. Sem dívida: "Sem valores em aberto. Obrigado!".'

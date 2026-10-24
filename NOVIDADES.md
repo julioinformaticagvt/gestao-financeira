@@ -1,5 +1,11 @@
 # Novidades
 
+## Versão 0.19.4 · Categorias do catálogo · 24/10/2026
+
+- Catálogo online: 3 categorias novas, iguais às do site: PC (computador montado), Console e Acessórios (itens não essenciais, como suportes e teclas diferentes).
+- Quem já tinha a lista de categorias salva ganha as 3 sozinha, sem perder as próprias.
+- No "Colar pedido", cabos, suportes, carregadores e parecidos já entram na categoria Acessórios.
+
 ## Versão 0.19.3 · Parcela com entrada e mensagem do recibo · 23/10/2026
 
 - Venda no carnê com entrada: a linha "Parcela" da comparação desconta a entrada (ex.: R$ 4.860 com entrada de R$ 405 em 11x mostra R$ 405,00).

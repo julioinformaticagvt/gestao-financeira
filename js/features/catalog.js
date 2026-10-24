@@ -15,11 +15,32 @@
   const MAX_PHOTOS = 3, MAX_SPECS = 12, PHOTO_SIDE = 1000;
   const CONDITIONS = ['Seminovo', 'Usado'];   // '' = novo de fábrica (sem etiqueta no site)
   // As categorias do js/config.js do catálogo, na mesma ordem (dá para mudar em Configurações).
-  const DEFAULT_CATEGORIES = ['Placas de vídeo', 'Processadores', 'Placas-mãe', 'Memória RAM', 'SSD e HD', 'Fontes', 'Gabinetes', 'Monitores', 'Periféricos'];
+  // PC = computador montado; Periféricos = mouse, teclado, headset; Acessórios = itens não essenciais (suportes, teclas diferentes).
+  const DEFAULT_CATEGORIES = ['PC', 'Placas de vídeo', 'Processadores', 'Placas-mãe', 'Memória RAM', 'SSD e HD', 'Fontes', 'Gabinetes', 'Monitores', 'Periféricos', 'Console', 'Acessórios'];
   const DEFAULTS = {enabled: false, repo: '', branch: 'main', siteUrl: '', categories: DEFAULT_CATEGORIES, lastSentAt: ''};
 
   // Configuração: só é gravada nos dados quando o dono salva o painel (até lá valem os padrões).
   const cfg = () => ({...DEFAULTS, ...(data.settings.catalog || {})});
+
+  // Categorias que entraram depois (SPECS 50). Quem já tinha a lista salva ganha cada uma UMA vez, no lugar certo, sem perder
+  // as categorias próprias; o nome fica anotado em addedCategories, então se o dono apagar depois, ela não volta.
+  const ADDED_LATER = [{name: 'PC', after: null}, {name: 'Console', after: 'Periféricos'}, {name: 'Acessórios', after: 'Console'}];
+  function addNewCategories() {
+    const saved = data.settings.catalog;
+    if (!saved || !Array.isArray(saved.categories)) return;   // lista nunca salva: já vale a lista nova (DEFAULT_CATEGORIES)
+    const done = Array.isArray(saved.addedCategories) ? saved.addedCategories : [];
+    let changed = false;
+    for (const {name, after} of ADDED_LATER) {
+      if (done.includes(name)) continue;
+      done.push(name); changed = true;
+      if (saved.categories.includes(name)) continue;
+      // logo depois da vizinha (ou no começo, para PC); se a vizinha não existir, vai para o fim
+      const at = after === null ? 0 : (saved.categories.indexOf(after) + 1 || saved.categories.length);
+      saved.categories.splice(at, 0, name);
+    }
+    if (changed) { saved.addedCategories = done; save(); }
+  }
+  addNewCategories();
   const enabled = () => !!cfg().enabled;
   const categories = () => (Array.isArray(cfg().categories) ? cfg().categories : []).map(c => String(c).trim()).filter(Boolean);
   const siteLink = () => { const url = String(cfg().siteUrl || ''); return /^https:\/\/[\w.\-\/~%]+$/.test(url) ? url : ''; };
@@ -468,7 +489,7 @@
   App.ui.registerAction('catalog-send', send);
 
   App.catalog = {
-    DATA_PATH, PHOTO_DIR, DEFAULT_CATEGORIES, cfg, enabled, isShown, entries, entryOf, problems, buildFile, gitSha, prepare, send, view,
+    DATA_PATH, PHOTO_DIR, DEFAULT_CATEGORIES, addNewCategories, cfg, enabled, isShown, entries, entryOf, problems, buildFile, gitSha, prepare, send, view,
     formFields, bindForm, parseSpecs, forgetProduct, settingsPanel, bindSettings, errorText,
     setPhotoStore(store) { photos = store || idbStore; }   // só para os testes automáticos (gaveta de fotos na memória)
   };
