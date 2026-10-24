@@ -241,12 +241,31 @@
     let text = b.receiptMessage.replaceAll('{cliente}', r.client).replaceAll('{negócio}', (r.business && r.business.name) || b.name || 'nossa empresa')
       .replaceAll('{valor}', value).replaceAll('{forma}', customerMethod(r.method)).replaceAll('{data}', dateLabel(r.date));
     const s = r.canceled ? {kind: 'vista'} : settlement(r);
-    const remaining = s.remaining ? `\nAinda falta pagar: ${money(s.remaining)}, em ${plural(s.openCount, 'compra', 'compras')}.` : '';
-    if (s.kind === 'all') text += `\n\nCom esse pagamento, todas as suas contas ficaram quitadas. Muito obrigado pela confiança e pela parceria! Estamos sempre à disposição.`;
-    else if (s.kind === 'purchase') text += `\n\nCom esse pagamento, ${closedText(s.closedNow)}. Muito obrigado!${remaining}`;
-    else if (s.kind === 'part') text += `\n\nMuito obrigado pelo pagamento!${remaining}`;
-    else text += `\n\nMuito obrigado pela compra!`;
+    const open = r.canceled ? '' : openText(r);
+    if (s.kind === 'all') text += `\n\n${NOTHING_OPEN}`;
+    else if (s.kind === 'purchase') text += `\n\nCom esse pagamento, ${closedText(s.closedNow)}. Muito obrigado!${open ? `\n\n${open}` : ''}`;
+    else if (s.kind === 'part') text += `\n\nMuito obrigado pelo pagamento!${open ? `\n\n${open}` : ''}`;
+    else text += `\n\nMuito obrigado pela compra!${r.canceled ? '' : open ? `\n\n${open}` : ' Sem valores em aberto.'}`;
     return `${text}\n\nQualquer dúvida é só me chamar.`;
+  }
+
+  // O que ainda falta pagar, compra por compra, na situação do dia do recibo (a mesma "foto" do recibo em PDF; SPECS 49).
+  // Parcelas iguais e nenhuma vencida: uma linha por compra. Senão, uma linha por parcela, com "(vencida)". No fim, o total.
+  const NOTHING_OPEN = 'Sem valores em aberto. Obrigado!';
+  function openText(r) {
+    const saleIds = [...new Set(linesOf(r).map(l => l.saleId))];
+    const after = r.after || situation(r.client, r.date, saleIds);
+    const stillOpen = (after.purchases || []).filter(p => !p.closed && p.remaining > 0.004);
+    if (!stillOpen.length) return '';
+    const rows = [...(after.late || []).map(l => ({...l, late: true})), ...(after.upcoming || [])];
+    const blocks = stillOpen.map(p => {
+      const mine = rows.filter(x => x.saleId === p.saleId).sort((a, b) => a.due.localeCompare(b.due) || a.installment - b.installment);
+      const head = `Compra ${numberOf(after.purchases, p.saleId)} (${dm(p.date)}): ainda falta pagar ${money(p.remaining)}`;
+      const same = mine.length && mine.every(x => !x.late && Math.abs(x.value - mine[0].value) < 0.005);
+      if (same) return `${head}, em ${plural(mine.length, 'parcela', 'parcelas')} de ${money(mine[0].value)}.`;
+      return `${head}:\n${mine.map(x => `parcela ${x.installment} de ${x.of}, ${dateLabel(x.due)}: ${money(x.value)}${x.late ? ' (vencida)' : ''}`).join('\n')}`;
+    });
+    return `${blocks.join('\n\n')}\n\nTotal que ainda falta pagar: ${money(round2(sum(stillOpen, p => p.remaining)))}.`;
   }
 
   function extractMessage(client, asOf = today()) {

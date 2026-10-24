@@ -1,6 +1,10 @@
 // "O que há de novo": lista de versões em linguagem simples, da mais nova para a mais antiga.
 // A cada versão aprovada, acrescente uma entrada AQUI (e em version.js, na tabela do CLAUDE.md e na etiqueta do Git).
 window.CHANGELOG = [
+  {version: '0.19.3', name: 'Parcela com entrada e mensagem do recibo', date: '23/10/2026', items: [
+    'Venda no carnê com entrada: a linha "Parcela" da comparação desconta a entrada (ex.: R$ 4.860 com entrada de R$ 405 em 11x mostra R$ 405,00).',
+    'Mensagem do recibo: mostra quanto ainda falta em cada compra (ex.: "ainda falta pagar R$ 4.455,00, em 11 parcelas de R$ 405,00"), as parcelas vencidas e o total que falta. Sem dívida: "Sem valores em aberto. Obrigado!".'
+  ]},
   {version: '0.19.2', name: 'Taxa e produtos a completar', date: '23/10/2026', items: [
     'Venda e orçamento: agora, por padrão, VOCÊ paga a taxa da maquininha. O cliente paga o preço à vista (ex.: 3x de R$ 100,00) e a taxa sai do seu lucro.',
     'Para o cliente pagar os juros, marque "Repassar a taxa para o cliente". No carnê ela já vem marcada (os juros do carnê são seus).',
