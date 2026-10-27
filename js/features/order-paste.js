@@ -64,7 +64,8 @@
     const at = title.lastIndexOf(sep);
     if (at < 0) return {title, code: ''};
     const code = title.slice(at + sep.length).trim();
-    const looks = code.length >= 3 && code.length <= 40 && /\d/.test(code) || /^[A-Z0-9][A-Z0-9\-_.\/ ]{2,39}$/.test(code);
+    // só o que tem jeito de código de loja (letras, números e - . _ /), com número ou tudo em maiúsculas; "27"" é medida, não código (SPECS 52)
+    const looks = /^[A-Za-z0-9][A-Za-z0-9\-_.\/ ]{2,39}$/.test(code) && (/\d/.test(code) || /^[A-Z0-9\-_.\/ ]+$/.test(code));
     return looks ? {title: title.slice(0, at).trim(), code} : {title, code: ''};
   }
   // Valor de um rótulo do resumo: na mesma linha ("Frete:R$ 33,64") ou na linha de baixo ("Frete" / "R$ 0,00"). "Grátis" = 0.
@@ -87,7 +88,7 @@
   const item = (title, url, qty, unit, sep) => {
     const {text, url: own} = unlink(title);
     const parts = sep ? splitCode(text, sep) : {title: text, code: ''};
-    const link = own || url || '';
+    const link = [own, url].find(u => /^https:\/\/[^\s<>"'`]{1,500}$/.test(u || '')) || '';   // só https sem aspas (senão o backup seria recusado)
     const listing = (link.match(/-i\.(\d+\.\d+)/) || [])[1];
     return {title: parts.title, code: parts.code || (listing ? `i.${listing}` : ''), link, qty: Math.max(1, Number(qty) || 1), unit: round2(unit)};
   };
@@ -231,7 +232,7 @@
     return [...new Set(s.split(/[^a-z0-9.]+/).map(w => w.replace(/^\.+|\.+$/g, '')).filter(w => w.length > 1 || /\d/.test(w)))];
   }
   // Chaves de apelido de um item: código na loja, número do anúncio e o título (palavras).
-  const aliasKeys = it => [it.code && `cod:${normalize(it.code).replace(/\s+/g, '')}`, `tit:${words(it.title).join(' ')}`.slice(0, 200)].filter(k => k && k.length > 4);
+  const aliasKeys = it => [it.code && `cod:${normalize(it.code).replace(/[^a-z0-9.\-\/]/g, '')}`, `tit:${words(it.title).join(' ')}`.slice(0, 200)].filter(k => k && k.length > 4 && /^[a-z0-9.:\-\/ ]+$/.test(k));
 
   // Procura o produto: (1) apelido = é ele; (2) nome parecido, com TODOS os números e medidas do produto no título
   // (240GB não é 480GB; DDR4 não é DDR5) = "parece ser", o dono confirma; (3) nada = produto novo.

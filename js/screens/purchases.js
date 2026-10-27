@@ -273,7 +273,8 @@
 
   function cancelPurchase(id) {
     const purchase = data.purchases.find(p => p.id === id);
-    for (const item of purchase.items) {
+    // de trás para frente: com o mesmo produto em 2 linhas, o custo termina no de ANTES da compra (SPECS 52)
+    for (const item of purchase.items.slice().reverse()) {
       const product = App.stock.productByName(item.name);
       if (!product) continue;
       product.stock = (Number(product.stock) || 0) - item.qty;

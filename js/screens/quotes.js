@@ -121,7 +121,7 @@
     let initial = initialPayment(quote);
     if (prefill) {
       App.ui.applyForm(form, prefill);
-      initial = {modality: prefill.modality, installments: prefill.installments, account: prefill.account, entry: prefill.entry, firstDue: prefill.firstDue, feeRate: prefill.feeRate, baseRate: prefill.baseRate, extraRate: prefill.extraRate, noInterest: !!prefill.noInterest};
+      initial = {modality: prefill.modality, installments: prefill.installments, account: prefill.account, entry: prefill.entry, firstDue: prefill.firstDue, feeRate: prefill.feeRate, baseRate: prefill.baseRate, extraRate: prefill.extraRate, noInterest: prefill.passFee === undefined ? undefined : !prefill.passFee};
     }
     const block = paymentBlock.bind(form, initial);
     const N = SO().FIELD_NAMES;

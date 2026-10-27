@@ -284,11 +284,25 @@
   }
 
   // ---------- janela do documento: prévia, versão econômica, PDF e mensagem ----------
+  // Nome do arquivo do PDF = título da página. Ele fica valendo enquanto a janela do documento estiver aberta (o Chrome pode ler o
+  // título só depois de fechar a impressão) e volta ao título normal quando a janela fecha. Nunca guarda o título de outro
+  // documento como "anterior" (antes, um "Recibo-..." podia ficar preso e dar nome ao PDF do orçamento).
+  const normalTitle = () => `${(data.settings.business.name || '').trim() || 'Meu negócio'} | Gestão financeira`;
+  let titleWatch = null;
+  function keepTitle(fileName) {
+    document.title = fileName;
+    if (titleWatch) titleWatch.disconnect();
+    const modal = document.getElementById('modal'), preview = document.getElementById('doc-preview');
+    titleWatch = new MutationObserver(() => {
+      if (modal.classList.contains('hidden') || !preview.isConnected) { titleWatch.disconnect(); titleWatch = null; document.title = normalTitle(); }
+    });
+    titleWatch.observe(modal, {attributes: true, attributeFilter: ['class'], childList: true, subtree: true});
+  }
+
   function printDocument(fileName) {
-    const previous = document.title;
     document.title = fileName;
     document.body.classList.add('printing-doc'); document.documentElement.classList.add('printing-doc');
-    const done = () => { document.body.classList.remove('printing-doc'); document.documentElement.classList.remove('printing-doc'); document.title = previous; window.removeEventListener('afterprint', done); };
+    const done = () => { document.body.classList.remove('printing-doc'); document.documentElement.classList.remove('printing-doc'); window.removeEventListener('afterprint', done); };
     window.addEventListener('afterprint', done);
     try { window.print(); } catch { done(); alert('Não consegui abrir a impressão. Use o menu do navegador e escolha Imprimir ou Salvar como PDF.'); }
     if (!/Chrome|Chromium/.test(navigator.userAgent)) setTimeout(done, 1000);
@@ -306,6 +320,7 @@
     const messageBox = message ? `<div class="field"><label>Mensagem para o WhatsApp (editável)</label><textarea id="doc-message" class="message-box">${esc(message())}</textarea></div>` : '';
     App.ui.openModal(`<h2>${title}</h2><div class="doc-wrap" id="doc-preview">${build(false, mode)}</div><div class="doc-controls">${modeHtml}${extra}<label class="doc-eco-toggle"><input type="checkbox" id="doc-eco"> Versão econômica (sem fundo escuro, para imprimir em papel)</label>${messageBox}<div class="actions"><button type="button" class="primary" id="doc-pdf">Baixar PDF</button>${message ? '<button type="button" class="secondary" id="doc-copy">Copiar mensagem</button>' : ''}${wa}</div><p class="muted mobile-only">Não abriu? Use o menu do navegador → Imprimir.</p><p id="doc-status" class="positive"></p></div>`);
     document.querySelector('#modal .modal-card').classList.add('wide');
+    keepTitle(fileName);
     // Cabe tudo na largura da tela (SPECS 33.3): se o documento passar da largura disponível (celular), ele é reduzido inteiro para caber em
     // uma tela só. Só na tela: no PDF e na impressão o tamanho não muda (css/documents.css).
     const fit = () => {

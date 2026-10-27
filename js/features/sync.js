@@ -190,6 +190,7 @@
   function validate(env) {
     if (!env || env.app !== 'julio-informatica' || !env.data || !Array.isArray(env.data.clients) || !Array.isArray(env.data.products) || !Array.isArray(env.data.sales)) throw Object.assign(new Error('O arquivo do Drive não parece ser dos dados deste sistema. Nada foi alterado.'), {code: 'invalid'});
     if (Number(env.data.schemaVersion) > SCHEMA || Number(env.schemaVersion) > SCHEMA || Number(env.formatVersion) > SCHEMA) throw Object.assign(new Error('newer'), {code: 'newer'});
+    App.store.cleanShopFields(env.data);   // apelidos e links de loja fora do padrão: descartados, não recusam o arquivo (SPECS 52)
     if (App.store.suspicious(env.data)) throw Object.assign(new Error('O arquivo do Drive tem conteúdo suspeito e não foi aberto. Nada foi alterado. Se você não criou esse arquivo, apague os dados do Drive (Configurações > Sincronizar > Mais opções).'), {code: 'invalid'});   // SEGURANÇA
     return env;
   }

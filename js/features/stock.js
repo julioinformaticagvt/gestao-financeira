@@ -110,6 +110,7 @@
   // Uma linha por produto (não serviço) da venda: de qual compra veio. lots = null quando não há registro.
   function originLines(sale) {
     const lines = [];
+    if (sale.legacy) return lines;   // conta antiga: o item é só um texto, sem produto nem compra (SPECS 53)
     for (const item of sale.items || []) {
       const product = productByName(item.name);
       if (product ? !hasStock(product) : item.type === 'Serviço') continue;

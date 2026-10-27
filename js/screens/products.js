@@ -155,6 +155,7 @@
     const catalog = App.catalog.bindForm(byId('edit-item-form'), product);
     byId('edit-item-form').onsubmit = async event => {
       event.preventDefault();
+      const done = markDone; markDone = false;   // "Marcar como completo" vale só para este toque (SPECS 52)
       const values = readForm(event.target);
       if (values.name !== product.name && data.products.some(p => p !== product && normalize(p.name) === normalize(values.name))) { const box = byId('product-error'); box.textContent = 'Já existe outro item com esse nome.'; box.hidden = false; return; }
       if (values.name !== product.name) renameEverywhere(product, values.name);
@@ -162,7 +163,7 @@
       if (event.target.elements.activityId && !values.activityId) delete product.activityId;   // escolheu "Sem atividade"
       Object.assign(product, values);
       await catalog.apply(product);
-      if (product.toComplete && (markDone || (Number(product.price) > 0 && (!App.catalog.enabled() || ((product.catalog || {}).photos || []).length)))) delete product.toComplete;
+      if (product.toComplete && (done || (Number(product.price) > 0 && (!App.catalog.enabled() || ((product.catalog || {}).photos || []).length)))) delete product.toComplete;
       save();
       closeModal();
       go('products');

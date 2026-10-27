@@ -22,7 +22,7 @@
       ref: {saleId: sale.id, index: sale.payments.indexOf(payment)},
       saleId: sale.id, saleDate: sale.date, itemsText: App.documents.itemsText(sale),
       items: (sale.items || []).map(i => ({name: i.name || 'Item', qty: i.qty || 1, amount: i.amount})),
-      kind: sale.installments > 1 ? (n === 0 ? 'entrada' : 'parcela') : 'vista',   // venda sem parcelas = recibo à vista
+      kind: sale.installments > 1 || sale.legacy ? (n === 0 ? 'entrada' : 'parcela') : 'vista',   // conta antiga de 1 parcela também é parcela   // venda sem parcelas = recibo à vista
       installment: n, of: sale.installments, due,
       value: round2(Number(payment.amount) - charges), charges,
       fine: whole ? ch.fine : 0, interest: whole ? ch.interest : 0, breakdown: !!whole, waived: !!info.waived,

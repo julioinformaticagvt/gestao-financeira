@@ -13,11 +13,12 @@
     const rows = data.sales.slice().reverse().map(sale => {
       const canceled = sale.status === 'Cancelada';
       const status = (canceled ? '<span class="badge neutral">Cancelada</span>' : `<span class="badge ${sale.balance ? 'warn' : ''}">${sale.balance ? 'Em aberto' : 'Pago'}</span>`)
-        + (sale.editedAt ? ` <span class="badge neutral" title="Editada em ${dateLabel(sale.editedAt)}">editada</span>` : '');
+        + (sale.editedAt ? ` <span class="badge neutral" title="Editada em ${dateLabel(sale.editedAt)}">editada</span>` : '')
+        + (sale.legacy ? ' <span class="badge info" title="Venda feita antes do sistema">conta antiga</span>' : '');
       const actions = canceled ? '' : `<button class="secondary" data-action="edit-sale" data-sale="${esc(sale.id)}">Editar</button> <button class="secondary" data-action="cancel-sale" data-sale="${esc(sale.id)}">Cancelar</button>`;
       return `<tr class="${canceled ? 'voided' : ''}"><td>${esc(sale.id)}${sale.osId ? `<br><small class="muted">Origem: ${esc(sale.osId)}</small>` : ""}</td><td>${esc(sale.client)}</td><td>${dateLabel(sale.date)}</td><td>${esc(sale.method || '-')}${sale.pricing && sale.pricing.noInterest && sale.pricing.installments > 1 ? '<br><small class="muted">sem juros</small>' : ''}</td><td>${money(sale.total)}</td><td class="positive">${money(sale.paid)}</td><td class="negative">${money(sale.balance)}</td><td>${status}</td><td>${actions}</td></tr>`;
     }).join('');
-    byId('app').innerHTML = `<section class="panel"><div class="panel-head"><h2>Vendas realizadas</h2><button class="primary" data-action="new-sale">+ Nova venda</button></div>${data.sales.length ? `<div class="table-wrap"><table><thead><tr><th>ID</th><th>Cliente</th><th>Data</th><th>Forma</th><th>Total</th><th>Pago</th><th>Saldo</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>` : App.firstRun.emptyState({title: 'Você ainda não registrou vendas.', hint: 'Registre sua primeira venda.', action: 'new-sale', label: '+ Nova venda'})}</section>`;
+    byId('app').innerHTML = `<section class="panel"><div class="panel-head"><h2>Vendas realizadas</h2><div class="head-buttons"><button class="secondary" data-action="new-legacy">+ Conta antiga</button><button class="primary" data-action="new-sale">+ Nova venda</button></div></div>${data.sales.length ? `<div class="table-wrap"><table><thead><tr><th>ID</th><th>Cliente</th><th>Data</th><th>Forma</th><th>Total</th><th>Pago</th><th>Saldo</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>` : App.firstRun.emptyState({title: 'Você ainda não registrou vendas.', hint: 'Registre sua primeira venda.', action: 'new-sale', label: '+ Nova venda'})}</section>`;
   }
 
   // ---------- registrar (ou editar) venda ----------
@@ -42,7 +43,7 @@
     }
     if (prefill) {   // volta do cadastro rápido: devolve o que já estava digitado
       App.ui.applyForm(form, prefill);
-      initial = {modality: prefill.modality, installments: prefill.installments, account: prefill.account, entry: prefill.entry, firstDue: prefill.firstDue, feeRate: prefill.feeRate, baseRate: prefill.baseRate, extraRate: prefill.extraRate, noInterest: !!prefill.noInterest};
+      initial = {modality: prefill.modality, installments: prefill.installments, account: prefill.account, entry: prefill.entry, firstDue: prefill.firstDue, feeRate: prefill.feeRate, baseRate: prefill.baseRate, extraRate: prefill.extraRate, noInterest: prefill.passFee === undefined ? undefined : !prefill.passFee};
     }
     const block = paymentBlock.bind(form, initial);
     App.ui.groupFields(form, [
@@ -127,7 +128,7 @@
       if (!client) { const box = byId('limited-error'); box.textContent = 'Escolha um cliente da lista ou cadastre o cliente novo.'; box.hidden = false; return; }
       const names = (sale.items || []).map((_, i) => f[`name${i}`].value.trim());
       if (names.some(name => !name)) { const box = byId('limited-error'); box.textContent = 'Todo item precisa de um nome.'; box.hidden = false; return; }
-      App.finance.ensureProducts(names.map(name => ({name})));
+      if (!sale.legacy) App.finance.ensureProducts(names.map(name => ({name})));   // conta antiga: o item é só texto, não vira produto
       const hadStockOut = !!(sale.stockOut && sale.stockOut.length);   // venda antiga sem baixa registrada: não dá baixa agora
       App.stock.restore(sale);
       sale.items.forEach((item, i) => {
@@ -176,6 +177,56 @@
     while (blocks[n - 1].hidden) form.querySelector('#add-item').click();
     field(n).value = name;
     field(n).dispatchEvent(new Event('input', {bubbles: true}));
+  }
+
+  // ---------- conta antiga (SPECS 53) ----------
+  // Venda feita ANTES do sistema que o cliente ainda está pagando: só o texto do que foi vendido (não cadastra produto nem mexe
+  // no estoque), a data original, o valor total, o que já foi pago antes (priorPaid: abate o saldo, mas não entra no caixa) e as
+  // parcelas que faltam, que vão para Contas a receber como as de um carnê.
+  function legacyForm(clientName) {
+    const clientOptions = data.clients.map(c => `<option value="${esc(c.name)}">`).join('');
+    const thisMonth = App.finance.monthDay(today().slice(0, 7), Number(data.settings.dueDay) || 12);
+    const next = thisMonth >= today() ? thisMonth : App.finance.monthDay(App.format.shiftMonth(today().slice(0, 7), 1), Number(data.settings.dueDay) || 12);   // próximo dia de vencimento padrão
+    openModal(`<h2>Conta antiga</h2><p class="muted">Venda feita antes do sistema que o cliente ainda paga. Não cadastra produto nem mexe no estoque.</p><form id="legacy-form" class="form-grid"><div class="field full"><label>Cliente *</label><input name="client" list="legacy-clients" value="${esc(clientName || '')}" autocomplete="off" required><datalist id="legacy-clients">${clientOptions}</datalist></div><div class="field full"><label>O que foi vendido *</label><input name="what" required autocomplete="off" placeholder="Ex.: Monitor 24 polegadas"></div><div class="field"><label>Tipo</label><select name="type"><option>Produto</option><option>Serviço</option></select></div><div class="field"><label>Data da venda *</label><input name="date" type="date" max="${today()}" required></div><div class="field"><label>Valor total da venda *</label><input name="total" type="number" min="0" step="0.01" required></div><div class="field"><label>Já recebeu antes <small>opcional</small></label><input name="prior" type="number" min="0" step="0.01" value="0"></div><div class="field"><label>Parcelas que faltam</label><input name="count" type="number" min="1" max="24" step="1" value="1"></div><div class="field"><label>Vence a próxima *</label><input name="firstDue" type="date" value="${next}" required></div><p class="muted field full" id="legacy-preview"></p><p class="negative field full" id="legacy-error" hidden></p><div class="actions field full"><button type="button" class="secondary" data-action="close-modal">Cancelar</button><button class="primary">Salvar conta antiga</button></div></form>`);
+    const form = byId('legacy-form'), f = form.elements;
+    App.ui.groupFields(form, [{kind: 'client', title: 'Cliente', items: ['client']}, {kind: 'product', title: 'O que foi vendido', items: ['what', 'type']}, {kind: 'pay', title: 'Valores e parcelas', items: ['date', 'total', 'prior', 'count', 'firstDue', '#legacy-preview']}]);
+    const values = () => {
+      const total = round2(Number(f.total.value) || 0), prior = round2(Number(f.prior.value) || 0);
+      const count = Math.min(24, Math.max(1, Math.round(Number(f.count.value) || 1)));
+      return {total, prior, count, remaining: round2(total - prior), firstDue: f.firstDue.value, date: f.date.value || today()};
+    };
+    const preview = () => {
+      const v = values();
+      if (!(v.total > 0) || !(v.remaining > 0) || !v.firstDue) { byId('legacy-preview').textContent = ''; return; }
+      const plan = App.finance.scheduleFor({date: v.date, total: v.remaining, installments: v.count, firstDue: v.firstDue});
+      byId('legacy-preview').innerHTML = `<b>Falta receber ${money(v.remaining)}:</b> ${plan.map(p => `${dateLabel(p.due)} · ${money(p.value)}`).join(' &nbsp;|&nbsp; ')}`;
+    };
+    form.addEventListener('input', preview);
+    preview();
+    form.onsubmit = event => {
+      event.preventDefault();
+      const v = values(), fail = message => { const box = byId('legacy-error'); box.textContent = message; box.hidden = false; };
+      const what = f.what.value.trim();
+      if (!what) return fail('Diga o que foi vendido (ex.: Monitor 24 polegadas).');
+      if (!(v.total > 0)) return fail('Informe o valor total da venda.');
+      if (v.prior < 0 || v.prior >= v.total) return fail('O que já foi recebido precisa ser menor que o valor total (se já pagou tudo, não há conta para lançar).');
+      if (!f.date.value || f.date.value > today()) return fail('A data da venda não pode ficar em branco nem ser no futuro.');
+      if (!v.firstDue) return fail('Escolha a data da próxima parcela.');
+      const client = App.clientApi.resolve(f.client.value);
+      if (!client) return fail('Escolha um cliente da lista ou digite o nome do cliente novo.');
+      const type = f.type.value === 'Serviço' ? 'Serviço' : 'Produto';
+      const sale = {id: App.store.nextCode('sale'), client, product: what, date: f.date.value, cost: 0, total: v.total, paid: 0, balance: v.total, installments: v.count, entry: 0,
+        quantity: 1, unitPrice: v.total, discount: 0, method: 'Conta antiga', monthlyInterest: 0, productType: type,
+        items: [{name: what, type, qty: 1, unit: v.total, amount: v.total}], productTotal: type === 'Produto' ? v.total : 0, serviceTotal: type === 'Serviço' ? v.total : 0,
+        payments: [], stockOut: [], legacy: true, priorPaid: v.prior, firstDue: v.firstDue};
+      if (v.count > 1) sale.dueDates = App.finance.dueDates({date: sale.date, count: v.count, firstDue: v.firstDue});   // datas congeladas, como no carnê
+      else sale.due = v.firstDue;
+      recalcSale(sale);
+      data.sales.push(sale);
+      save();
+      closeModal();
+      go('sales');
+    };
   }
 
   function quickClient() {
@@ -251,6 +302,8 @@
 
   App.ui.registerScreen('sales', render);
   App.ui.registerAction('new-sale', () => saleForm());
+  App.ui.registerAction('new-legacy', () => legacyForm());
+  App.ui.registerAction('new-legacy-for', element => legacyForm(element.dataset.client));
   App.ui.registerAction('new-sale-for', element => saleForm(element.dataset.client));
   App.ui.registerAction('edit-sale', element => editSale(element.dataset.sale));
   App.ui.registerAction('new-client-quick', quickClient);

@@ -19,8 +19,10 @@
   const principalOf = payment => Number(payment.amount) - Number(payment.charges || 0);
 
   // Refaz "pago" e "saldo" de uma venda a partir dos pagamentos que valem (só a parte da parcela).
+  // Conta antiga (SPECS 53): "priorPaid" = o que o cliente pagou ANTES do sistema; abate o saldo, mas não é um pagamento
+  // (não entra no caixa nem na receita do MEI, porque esse dinheiro entrou lá atrás).
   function recalcSale(sale) {
-    sale.paid = round2(activePayments(sale).reduce((total, payment) => total + principalOf(payment), 0));
+    sale.paid = round2((Number(sale.priorPaid) || 0) + activePayments(sale).reduce((total, payment) => total + principalOf(payment), 0));
     sale.balance = Math.max(0, round2(sale.total - sale.paid));
   }
 
@@ -60,8 +62,9 @@
   // As parcelas de uma venda. Elas NÃO ficam gravadas: são calculadas toda vez a partir da venda.
   // Venda sem parcelamento = uma parcela só, vencendo na data da venda.
   function installmentsFor(sale) {
-    if (sale.installments <= 1) return [{number: 1, due: sale.due || sale.date, value: sale.total, balance: sale.balance, paid: sale.paid}];
-    const financed = Math.max(0, sale.total - (Number(sale.entry) || 0));
+    const prior = Number(sale.priorPaid) || 0;   // conta antiga: o que já tinha sido pago antes do sistema
+    if (sale.installments <= 1) return [{number: 1, due: sale.due || sale.date, value: round2(sale.total - prior), balance: sale.balance, paid: round2(sale.paid - prior)}];
+    const financed = Math.max(0, sale.total - (Number(sale.entry) || 0) - prior);
     const value = round2(financed / sale.installments);   // cada parcela em centavos
     const frozen = sale.dueDates && sale.dueDates.length === sale.installments;   // datas congeladas na venda (não mudam se o dia padrão mudar)
     const dates = frozen ? sale.dueDates : dueDates({date: sale.date, count: sale.installments, firstDue: sale.firstDue, extraDues: sale.extraDues});

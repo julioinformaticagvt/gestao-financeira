@@ -284,6 +284,24 @@
   const LOOSE_KEYS = new Set(['status', 'method', 'type', 'label']);
   const NUMERIC_KEYS = new Set(['stock', 'qty', 'quantity', 'dueDay', 'amount', 'unit', 'unitCost', 'receipt', 'cost', 'price', 'total', 'paid', 'balance', 'entry', 'minStock', 'installments', 'discount', 'fee', 'charges', 'prevStock', 'prevCost', 'fine', 'interest']);
   const STRICT_TEXT = /^[\w.:\-\/ ]{0,60}$/, LOOSE_TEXT = /^[^<>"'`]*$/, NUMBER_TEXT = /^\s*-?[\d.,]*\s*$/, LINK_TEXT = /^https:\/\/[^\s<>"'`]{1,500}$/;
+  // Campos de loja (Colar pedido, SPECS 45/52): apelidos e links que não estejam no padrão são descartados (não são código; antes,
+  // um apelido com aspas ou um link com apóstrofo fazia o backup inteiro ser recusado). Devolve quantos itens saíram.
+  const ALIAS_TEXT = /^[a-z0-9.:\-\/ ]{1,200}$/, LINK_OK = /^https:\/\/[^\s<>"'`]{1,500}$/;
+  function cleanShopFields(root) {
+    let removed = 0;
+    for (const product of (root && Array.isArray(root.products) ? root.products : [])) {
+      if (!product || typeof product !== 'object') continue;
+      if (Array.isArray(product.aliases)) { const ok = product.aliases.filter(a => typeof a === 'string' && ALIAS_TEXT.test(a)); removed += product.aliases.length - ok.length; product.aliases = ok; }
+      if (product.buyLink !== undefined && !(typeof product.buyLink === 'string' && LINK_OK.test(product.buyLink))) { delete product.buyLink; removed++; }
+    }
+    for (const purchase of (root && Array.isArray(root.purchases) ? root.purchases : [])) {
+      for (const item of (purchase && Array.isArray(purchase.items) ? purchase.items : [])) {
+        if (item && item.link !== undefined && !(typeof item.link === 'string' && LINK_OK.test(item.link))) { delete item.link; removed++; }
+      }
+    }
+    return removed;
+  }
+
   function suspicious(root) {
     const stack = [['dados', root]];
     while (stack.length) {
@@ -307,6 +325,6 @@
     return '';
   }
 
-  if (!blocked) migrate();
-  App.store = {KEY, REAL_KEY, DEMO_KEY, DEMO_FLAG, isDemo, blocked, SCHEMA, data, save, hooks, afterSave, freeze, suspicious, newId, nextCode, peekCode, nextReceiptNumber, findByName, isExistingSystem, get loadProblem() { return loadProblem; }};
+  if (!blocked) { migrate(); if (cleanShopFields(data)) save(); }   // apelidos e links de loja fora do padrão já gravados (SPECS 52)
+  App.store = {KEY, REAL_KEY, DEMO_KEY, DEMO_FLAG, isDemo, blocked, SCHEMA, data, save, hooks, afterSave, freeze, suspicious, cleanShopFields, newId, nextCode, peekCode, nextReceiptNumber, findByName, isExistingSystem, get loadProblem() { return loadProblem; }};
 })();

@@ -1,5 +1,18 @@
 # Novidades
 
+## Versão 0.19.6 · Conta antiga · 27/10/2026
+
+- Vendas: botão "+ Conta antiga" para lançar uma venda feita antes do sistema que o cliente ainda paga (também na ficha do cliente).
+- É só dizer o que foi vendido (texto livre), a data, o valor total, quanto já recebeu antes e as parcelas que faltam. Não cadastra produto nem mexe no estoque.
+- As parcelas vão para Contas a receber, com recibo, mensagem, multa e juros. O que foi recebido antes do sistema não entra no caixa nem no limite do MEI.
+
+## Versão 0.19.5 · Nome do PDF e correções · 24/10/2026
+
+- Salvar PDF: o arquivo do orçamento agora sai com o nome certo ("Orcamento-O0003"), e não mais como "Recibo". Vale para todos os documentos.
+- Backup e Google Drive: um apelido ou link de loja vindo do "Colar pedido" com aspas não faz mais o arquivo ser recusado (esses itens são descartados, com aviso).
+- Venda e orçamento: cadastrar um cliente ou produto rápido não marca mais "Repassar a taxa" sozinho.
+- Estorno de compra com o mesmo produto em duas linhas volta o custo certo; "Marcar como completo" só vale para aquele toque; medida no fim do título (ex.: 27") não é mais confundida com código da loja.
+
 ## Versão 0.19.4 · Categorias do catálogo · 24/10/2026
 
 - Catálogo online: 3 categorias novas, iguais às do site: PC (computador montado), Console e Acessórios (itens não essenciais, como suportes e teclas diferentes).
