@@ -1,5 +1,12 @@
 # Novidades
 
+## Versão 0.19.7 · Venda avulsa · 27/10/2026
+
+- Vendas: "+ Conta antiga" virou "+ Venda avulsa": venda sem cadastrar produto (item usado, peça única) ou conta antiga.
+- Entrada paga agora, com a forma de pagamento: entra no caixa de hoje e sai o recibo na hora. Se pagar tudo, a venda já nasce paga.
+- "Já recebido antes do sistema" só aparece para vendas de antes de hoje. Para o que já foi lançado assim, o botão "Gerar recibo da entrada" transforma o valor numa entrada com recibo.
+- Os campos de valor da janela agora mostram R$ 1.234,56.
+
 ## Versão 0.19.6 · Conta antiga · 27/10/2026
 
 - Vendas: botão "+ Conta antiga" para lançar uma venda feita antes do sistema que o cliente ainda paga (também na ficha do cliente).

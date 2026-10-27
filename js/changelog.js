@@ -1,6 +1,12 @@
 // "O que há de novo": lista de versões em linguagem simples, da mais nova para a mais antiga.
 // A cada versão aprovada, acrescente uma entrada AQUI (e em version.js, na tabela do CLAUDE.md e na etiqueta do Git).
 window.CHANGELOG = [
+  {version: '0.19.7', name: 'Venda avulsa', date: '27/10/2026', items: [
+    'Vendas: "+ Conta antiga" virou "+ Venda avulsa": venda sem cadastrar produto (item usado, peça única) ou conta antiga.',
+    'Entrada paga agora, com a forma de pagamento: entra no caixa de hoje e sai o recibo na hora. Se pagar tudo, a venda já nasce paga.',
+    '"Já recebido antes do sistema" só aparece para vendas de antes de hoje. Para o que já foi lançado assim, o botão "Gerar recibo da entrada" transforma o valor numa entrada com recibo.',
+    'Os campos de valor da janela agora mostram R$ 1.234,56.'
+  ]},
   {version: '0.19.6', name: 'Conta antiga', date: '27/10/2026', items: [
     'Vendas: botão "+ Conta antiga" para lançar uma venda feita antes do sistema que o cliente ainda paga (também na ficha do cliente).',
     'É só dizer o que foi vendido (texto livre), a data, o valor total, quanto já recebeu antes e as parcelas que faltam. Não cadastra produto nem mexe no estoque.',

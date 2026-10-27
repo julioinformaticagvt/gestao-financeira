@@ -63,7 +63,9 @@
   // Venda sem parcelamento = uma parcela só, vencendo na data da venda.
   function installmentsFor(sale) {
     const prior = Number(sale.priorPaid) || 0;   // conta antiga: o que já tinha sido pago antes do sistema
-    if (sale.installments <= 1) return [{number: 1, due: sale.due || sale.date, value: round2(sale.total - prior), balance: sale.balance, paid: round2(sale.paid - prior)}];
+    // venda avulsa de 1 parcela (SPECS 54): a entrada paga na venda também sai da parcela
+    const upfront = sale.legacy ? round2(prior + activePayments(sale).filter(p => !p.installment).reduce((t, p) => t + principalOf(p), 0)) : prior;
+    if (sale.installments <= 1) return [{number: 1, due: sale.due || sale.date, value: round2(sale.total - upfront), balance: sale.balance, paid: round2(sale.paid - upfront)}];
     const financed = Math.max(0, sale.total - (Number(sale.entry) || 0) - prior);
     const value = round2(financed / sale.installments);   // cada parcela em centavos
     const frozen = sale.dueDates && sale.dueDates.length === sale.installments;   // datas congeladas na venda (não mudam se o dia padrão mudar)
@@ -99,7 +101,7 @@
     if (daysBetween(item.due, asOf) <= (Number(data.settings.collection.grace) || 0)) return none;   // dentro da tolerância: não cobra nada
     const rules = rulesOverride || chargeRules(sale, item.number), waiver = waiverOf(sale, item.number);
     const payments = activePayments(sale)
-      .filter(p => (sale.installments <= 1 || p.installment === item.number) && p.date <= asOf)
+      .filter(p => ((sale.installments <= 1 && !sale.legacy) || p.installment === item.number) && p.date <= asOf)   // venda avulsa: a entrada (parcela 0) não abate a parcela
       .sort((a, b) => a.date.localeCompare(b.date));
     let principal = item.value, cursor = item.due, interest = 0, collected = 0, principalAtDue = null;
     for (const payment of payments) {

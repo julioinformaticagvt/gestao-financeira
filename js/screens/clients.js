@@ -101,7 +101,7 @@
     const payRows = payments.map(({payment, sale, index}) => {
       const state = sale.status === 'Cancelada' ? 'Venda cancelada' : payment.voided ? `Desfeito em ${dateLabel(payment.voidedAt)}` : 'Valendo';
       const canEdit = !payment.voided && sale.status !== 'Cancelada';
-      const isEntry = payment.installment === 0 && sale.installments > 1;   // entrada do carnê: desfazer deixaria o valor fora das Contas a receber
+      const isEntry = payment.installment === 0 && (sale.installments > 1 || (sale.legacy && !sale.paidAtSale));   // entrada do carnê: desfazer deixaria o valor fora das Contas a receber
       return `<tr class="${canEdit ? '' : 'voided'}"><td>${dateLabel(payment.date)}</td><td>${money(payment.amount)}</td><td>${esc(payment.method)}</td><td>${sale.id}${payment.installment ? ` / ${payment.installment}` : ''}</td><td>${esc(payment.note || '-')}</td><td>${state}</td><td>${payment.receipt ? `<button class="secondary" data-action="view-receipt" data-number="${payment.receipt}">Recibo ${App.receipts.pad(payment.receipt)}</button>` : ''}${canEdit ? ` <button class="secondary" data-action="edit-payment" data-sale="${sale.id}" data-payment="${index}">Editar</button> ${isEntry ? '<small class="muted">entrada: para mudar, edite a venda</small>' : `<button class="secondary" data-action="undo-payment" data-sale="${esc(sale.id)}" data-payment-index="${index}" data-installment="${esc(payment.installment)}">Desfazer</button>`}` : ''}</td></tr>`;
     }).join('');
 
@@ -163,7 +163,7 @@
       // Mesmas regras de receber: valor positivo, não passar do que a parcela deve, data entre a venda e hoje.
       const charges = Number(payment.charges || 0), n = payment.installment;
       const item = n ? App.finance.installmentsFor(sale).find(i => i.number === n) : null;
-      const cap = n === 0 && sale.installments > 1 ? Number(sale.entry) || 0 : item ? item.value : sale.total;   // entrada do carnê, parcela, ou a venda inteira
+      const cap = n === 0 && (sale.installments > 1 || (sale.legacy && !sale.paidAtSale)) ? Number(sale.entry) || 0 : item ? item.value : sale.total;   // entrada do carnê, parcela, ou a venda inteira
       const others = App.finance.activePayments(sale).filter(p => p !== payment && p.installment === n).reduce((total, p) => total + App.finance.principalOf(p), 0);
       if (!(amount > 0)) return fail('Digite um valor maior que zero.');
       if (amount < charges - 0.004) return fail(`O valor não pode ser menor que a multa e os juros já cobrados neste pagamento (${money(charges)}).`);

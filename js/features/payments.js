@@ -102,7 +102,7 @@
   // ---------- histórico de pagamentos de uma parcela ----------
   function installmentHistory(saleId, number) {
     const sale = findSale(saleId);
-    const rows = (sale.payments || []).map((payment, index) => ({payment, index})).filter(({payment}) => sale.installments <= 1 || payment.installment === number);
+    const rows = (sale.payments || []).map((payment, index) => ({payment, index})).filter(({payment}) => (sale.installments <= 1 && !sale.legacy) || payment.installment === number);
     const body = rows.map(({payment, index}) => `<tr class="${payment.voided ? 'voided' : ''}"><td>${dateLabel(payment.date)}</td><td>${money(payment.amount)}${payment.charges ? ` <small class="muted">(inclui ${money(payment.charges)} de multa e juros)</small>` : ''}</td><td>${esc(payment.method)}</td><td>${payment.voided ? `Desfeito em ${dateLabel(payment.voidedAt)}` : 'Valendo'}</td><td>${payment.receipt ? `<button class="secondary" data-action="view-receipt" data-number="${payment.receipt}">Recibo ${App.receipts.pad(payment.receipt)}</button>` : ''}${payment.voided ? '' : ` <button class="secondary" data-action="undo-payment" data-sale="${sale.id}" data-payment-index="${index}" data-installment="${number}">Desfazer</button>`}</td></tr>`).join('');
     const waiver = (sale.waivers || {})[number];
     const waiverNote = waiver && waiver.fine && waiver.interest ? `<p class="muted">Multa e juros desta parcela foram dispensados em ${dateLabel(waiver.date)}${waiver.motive ? ` · motivo: ${esc(waiver.motive)}` : ''}.</p>` : '';

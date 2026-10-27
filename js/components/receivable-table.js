@@ -27,7 +27,7 @@
       const due = item.due || sale.due;
       const overdue = due < today();
       const s = situation(due);
-      const hasHistory = (sale.payments || []).some(payment => sale.installments <= 1 || payment.installment === item.number);
+      const hasHistory = (sale.payments || []).some(payment => (sale.installments <= 1 && !sale.legacy) || payment.installment === item.number);
       const buttons = `<button class="receive" data-pay="${esc(sale.id)}" data-installment="${item.number || 1}">Receber</button>${hasHistory ? ` <button class="secondary" data-action="installment-history" data-sale="${esc(sale.id)}" data-installment="${item.number || 1}">Histórico</button>` : ''}${overdue ? ` <button class="secondary" data-action="overdue-message" data-client="${esc(sale.client)}">Cobrar</button>` : (item.number ? ` <button class="secondary" data-action="remind-message" data-sale="${esc(sale.id)}" data-installment="${item.number}">Lembrar</button>` : '')}`;
       return `<article class="rcv-card${overdue ? ' is-late' : ''}">
         <span class="rcv-avatar" aria-hidden="true">${initial(sale.client)}</span>
