@@ -142,34 +142,41 @@
       it.found = found;
       it.choice = found.kind === 'sure' ? keyOf(found.product) : found.kind === 'new' ? 'new' : '';
       it.newName = App.orderPaste.simpleName(it.title);
+      it.use = true; it.origQty = it.qty;   // "Lançar este item" e a quantidade do pedido (SPECS 56)
     }));
+    // valor que vai ser lançado: o pedido inteiro, ou só os itens marcados (quantidade × custo) quando algum foi tirado ou mudou
+    const partial = o => o.items.some(it => !it.use || Number(it.qty) !== it.origQty);
+    const launched = o => (partial(o) ? round2(o.items.filter(it => it.use).reduce((s, it) => s + (Number(it.qty) || 0) * (Number(it.cost) || 0), 0)) : o.paid);
+    const paidText = o => (partial(o) ? `lançando ${money(launched(o))} de ${money(o.paid)}` : `pago ${money(o.paid)}`);
     const status = it => {
       const product = byKey(it.choice);
-      if (product) return `<span class="oi-ok">✔ ${it.found.kind === 'sure' && it.found.product === product ? 'já cadastrado' : 'no cadastro'}: ${esc(product.name)}</span>`;
-      if (it.choice === 'new') return '<span class="oi-new">+ produto novo</span>';
-      return `<span class="oi-ask">? parece ser: ${esc(it.found.product.name)}. Confirme</span>`;
+      if (product) return `<span class="oi-ok">✔ ${it.found.kind === 'sure' && it.found.product === product ? 'já cadastrado' : 'no cadastro'}</span>`;
+      if (it.choice === 'new') return '<span class="oi-new">+ novo</span>';
+      return '<span class="oi-ask">? confirme o produto</span>';
     };
+    // produto novo vai para "A completar" (aviso único no pé da janela); produto do cadastro já no catálogo: nada a mostrar
     const catalogBox = it => {
-      if (it.choice === 'new') return '<small class="muted oi-cat">vai para "A completar"</small>';   // todo produto novo entra no catálogo, a completar (SPECS 48)
-      if (!catalogOn) return '';
+      if (it.choice === 'new' || !catalogOn) return '<span class="oi-cat" hidden></span>';
       const product = byKey(it.choice);
-      if (product && App.catalog.isShown(product)) return '<small class="muted oi-cat">já no catálogo</small>';
+      if (product && App.catalog.isShown(product)) return '<span class="oi-cat" hidden></span>';
       return `<label class="inline-check oi-cat" ${it.choice ? '' : 'hidden'}><input type="checkbox" data-oi-cat ${it.catalog ? 'checked' : ''}> Pôr no catálogo</label>`;
     };
     const itemHtml = (it, j) => {
       const candidate = it.found.kind === 'maybe' ? it.found.product : null;
       const options = `${it.choice === '' ? '<option value="">Escolha o produto…</option>' : ''}<option value="new" ${it.choice === 'new' ? 'selected' : ''}>+ Produto novo</option>${candidate ? `<option value="${esc(keyOf(candidate))}">${esc(candidate.name)} (parece ser)</option>` : ''}${products.filter(p => p !== candidate).map(p => `<option value="${esc(keyOf(p))}" ${it.choice === keyOf(p) ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}`;
-      return `<div class="order-item" data-item="${j}"><div class="oi-title"><b>${it.qty}×</b> ${esc(shortTitle(it.title))}</div><div class="oi-fields"><select data-oi-product aria-label="Produto no cadastro">${options}</select><input data-oi-name value="${esc(it.newName)}" placeholder="Nome do produto novo" aria-label="Nome do produto novo" ${it.choice === 'new' ? '' : 'hidden'}><label class="oi-cost">Custo cada <input type="number" step="0.01" min="0" inputmode="decimal" data-oi-cost value="${it.cost}"></label>${catalogBox(it)}</div><small class="oi-status">${status(it)}</small></div>`;
+      // 2 linhas: [caixinha] [qtd] [produto] [nome do novo] [custo]  /  estado · título da loja (uma linha só, inteiro ao passar o mouse)
+      return `<div class="order-item${it.use ? '' : ' is-off'}" data-item="${j}"><div class="oi-fields"><input type="checkbox" data-oi-use ${it.use ? 'checked' : ''} aria-label="Lançar este item" title="Lançar este item"><input type="number" min="1" step="1" inputmode="numeric" data-oi-qty value="${esc(it.qty)}" aria-label="Quantidade" title="Quantidade"><select data-oi-product aria-label="Produto no cadastro">${options}</select><input data-oi-name value="${esc(it.newName)}" placeholder="Nome do produto novo" aria-label="Nome do produto novo" ${it.choice === 'new' ? '' : 'hidden'}><label class="oi-cost">Custo <input type="number" step="0.01" min="0" inputmode="decimal" data-oi-cost value="${it.cost}"></label></div><div class="oi-meta"><small class="oi-status">${status(it)}</small><small class="oi-title" title="${esc(it.title)}">${esc(it.title)}</small>${catalogBox(it)}</div></div>`;
     };
     const orderHtml = (entry, k) => {
       const o = entry.order, tone = entry.key === 'new' ? '' : entry.locked ? 'neutral' : 'warn';
-      return `<section class="order-card${entry.locked ? ' is-locked' : ''}" data-order="${k}"><div class="order-head"><label class="inline-check order-pick"><input type="checkbox" data-order-check ${entry.checked ? 'checked' : ''} ${entry.locked ? 'disabled' : ''}> <b>Pedido ${esc(o.number || 'sem número')}</b></label><small>${o.items.length} ${o.items.length === 1 ? 'item' : 'itens'} · pago ${money(o.paid)}</small>${entry.text ? `<span class="badge ${tone}">${esc(entry.text)}</span>` : ''}${entry.locked ? '' : `<label class="order-date">Data <input type="date" data-order-date value="${esc(o.date || today())}" max="${today()}"></label>`}</div>${entry.locked ? '' : `${o.warnings.map(w => `<p class="oi-ask order-warn">${esc(w)}</p>`).join('')}<div class="order-items">${o.items.map(itemHtml).join('')}</div>`}</section>`;
+      return `<section class="order-card${entry.locked ? ' is-locked' : ''}" data-order="${k}"><div class="order-head"><label class="inline-check order-pick"><input type="checkbox" data-order-check ${entry.checked ? 'checked' : ''} ${entry.locked ? 'disabled' : ''}> <b>Pedido ${esc(o.number || 'sem número')}</b></label><small>${o.items.length} ${o.items.length === 1 ? 'item' : 'itens'} · <span data-order-paid>${paidText(o)}</span></small>${entry.text ? `<span class="badge ${tone}">${esc(entry.text)}</span>` : ''}${entry.locked ? '' : `<label class="order-date">Data <input type="date" data-order-date value="${esc(o.date || today())}" max="${today()}"></label>`}</div>${entry.locked ? '' : `${o.warnings.map(w => `<p class="oi-ask order-warn">${esc(w)}</p>`).join('')}<div class="order-items">${o.items.map(itemHtml).join('')}</div>`}</section>`;
     };
     const count = () => list.filter(e => e.checked).length;
     const canIgnore = () => list.some(e => !e.checked && !e.locked && e.order.number && e.key !== 'ignored');
-    openModal(`<h2>Conferir ${list.length === 1 ? 'o pedido' : `${list.length} pedidos`}</h2><form id="order-review-form" class="form-grid"><div class="field"><label>Fornecedor</label><input name="supplier" list="order-suppliers" value="${esc(lastSupplier)}" placeholder="Opcional" autocomplete="off"><datalist id="order-suppliers">${data.suppliers.map(s => `<option value="${esc(s.name)}">`).join('')}</datalist></div><div class="field"><label>Forma de pagamento</label><select name="method">${App.finance.PAY_METHODS.map(m => `<option ${m === lastMethod ? 'selected' : ''}>${m}</option>`).join('')}</select></div><div class="field full order-list">${list.map(orderHtml).join('')}</div><p class="muted field full">Frete e desconto já estão divididos no custo de cada peça.</p><p class="negative field full" id="order-review-error" hidden></p><div class="actions field full"><button type="button" class="secondary" id="order-back">Voltar</button>${canIgnore() ? '<button type="button" class="secondary" id="order-ignore">Ignorar os desmarcados</button>' : ''}<button class="primary" id="order-save">${count() === 1 ? 'Lançar 1 compra' : `Lançar ${count()} compras`}</button></div></form>`);
+    openModal(`<h2>Conferir ${list.length === 1 ? 'o pedido' : `${list.length} pedidos`}</h2><form id="order-review-form" class="form-grid"><div class="field"><label>Fornecedor</label><input name="supplier" list="order-suppliers" value="${esc(lastSupplier)}" placeholder="Opcional" autocomplete="off"><datalist id="order-suppliers">${data.suppliers.map(s => `<option value="${esc(s.name)}">`).join('')}</datalist></div><div class="field"><label>Forma de pagamento</label><select name="method">${App.finance.PAY_METHODS.map(m => `<option ${m === lastMethod ? 'selected' : ''}>${m}</option>`).join('')}</select></div><div class="field full order-list">${list.map(orderHtml).join('')}</div><p class="muted field full">Desmarque o item que você já tinha posto no estoque. Frete e desconto já estão divididos no custo de cada peça; produto novo vai para "A completar".</p><p class="negative field full" id="order-review-error" hidden></p><div class="actions field full"><button type="button" class="secondary" id="order-back">Voltar</button>${canIgnore() ? '<button type="button" class="secondary" id="order-ignore">Ignorar os desmarcados</button>' : ''}<button class="primary" id="order-save">${count() === 1 ? 'Lançar 1 compra' : `Lançar ${count()} compras`}</button></div></form>`);
     const form = byId('order-review-form');
-    App.ui.groupFields(form, [{kind: 'client', title: 'Fornecedor', items: ['supplier']}, {kind: 'pay', title: 'Pagamento', items: ['method']}, {kind: 'product', title: 'Pedidos', items: ['.order-list']}]);
+    document.querySelector('#modal .modal-card').classList.add('wide');   // janela larga: cada item cabe em 2 linhas (SPECS 56)
+    App.ui.groupFields(form, [{kind: 'pay', title: 'Fornecedor e pagamento', items: ['supplier', 'method']}, {kind: 'product', title: 'Pedidos', items: ['.order-list']}]);
     const cardOf = el => el.closest('[data-order]'), itemOf = el => { const card = cardOf(el); return list[card.dataset.order].order.items[el.closest('[data-item]').dataset.item]; };
     // lê o que foi digitado de volta para a lista (para redesenhar sem perder nada)
     const collect = () => form.querySelectorAll('[data-order]').forEach(card => {
@@ -180,13 +187,18 @@
       card.querySelectorAll('[data-item]').forEach(row => {
         const it = entry.order.items[row.dataset.item];
         it.choice = row.querySelector('[data-oi-product]').value;
+        it.use = row.querySelector('[data-oi-use]').checked;
+        it.qty = row.querySelector('[data-oi-qty]').value;
         it.newName = row.querySelector('[data-oi-name]').value;
         it.cost = row.querySelector('[data-oi-cost]').value;
         const cat = row.querySelector('[data-oi-cat]');
         it.catalog = !!(cat && cat.checked);
       });
     });
+    const refreshPaid = el => { collect(); const card = cardOf(el); card.querySelector('[data-order-paid]').textContent = paidText(list[card.dataset.order].order); };
+    form.addEventListener('input', event => { if (event.target.matches('[data-oi-qty], [data-oi-cost]')) refreshPaid(event.target); });
     form.addEventListener('change', event => {
+      if (event.target.matches('[data-oi-use]')) { event.target.closest('[data-item]').classList.toggle('is-off', !event.target.checked); refreshPaid(event.target); }
       if (event.target.matches('[data-order-check]')) { const n = form.querySelectorAll('[data-order-check]:checked').length; byId('order-save').textContent = n === 1 ? 'Lançar 1 compra' : `Lançar ${n} compras`; }
       if (event.target.matches('[data-oi-product]')) {
         const row = event.target.closest('[data-item]'), it = itemOf(event.target);
@@ -215,7 +227,10 @@
       for (const {order: o} of chosen) {
         const label = `Pedido ${o.number || 'sem número'}`;
         if (!o.date || o.date > today()) return fail(`${label}: a data não pode ficar em branco nem ser no futuro.`);
-        for (const it of o.items) {
+        const used = o.items.filter(it => it.use);
+        if (!used.length) return fail(`${label}: marque pelo menos um item ou desmarque o pedido.`);
+        for (const it of used) {
+          if (!(Number(it.qty) >= 1) || !Number.isInteger(Number(it.qty))) return fail(`${label}: confira a quantidade de "${shortTitle(it.title)}".`);
           if (!it.choice) return fail(`${label}: escolha o produto de "${shortTitle(it.title)}".`);
           if (it.choice === 'new') {
             if (!it.newName.trim()) return fail(`${label}: dê um nome ao produto novo "${shortTitle(it.title)}".`);
@@ -227,7 +242,7 @@
       }
       const supplier = form.elements.supplier.value.trim(), method = form.elements.method.value;
       for (const {order: o} of chosen) {
-        const items = o.items.map(it => {
+        const items = o.items.filter(it => it.use).map(it => {
           let product = it.choice === 'new' ? App.stock.productByName(it.newName.trim()) : byKey(it.choice);
           // produto novo: já entra no catálogo com o que o título traz, mas "a completar" (preço e foto) e fora do site até lá (SPECS 48)
           if (!product) { product = {name: it.newName.trim(), sku: '', type: 'Produto', stock: 0, cost: 0, price: 0, toComplete: true, catalog: App.orderPaste.catalogOf(it.title)}; data.products.push(product); }
@@ -238,10 +253,10 @@
             const kept = Object.fromEntries(Object.entries(product.catalog || {}).filter(([, v]) => v !== '' && v !== false && !(Array.isArray(v) && !v.length)));
             product.catalog = {...App.orderPaste.catalogOf(it.title), ...kept, show: true};
           }
-          return {name: product.name, qty: it.qty, unitCost: round2(Number(it.cost)), ...(it.link ? {link: it.link} : {})};
+          return {name: product.name, qty: Number(it.qty), unitCost: round2(Number(it.cost)), ...(it.link ? {link: it.link} : {})};
         });
         const extra = {...(o.number ? {orderNo: o.number} : {}), ...(o.freight ? {freight: o.freight} : {}), ...(o.discount ? {discount: o.discount} : {})};
-        registerPurchase({date: o.date, supplier, later: false, method, items, total: o.paid, extra});
+        registerPurchase({date: o.date, supplier, later: false, method, items, total: launched(o), extra});
         if (o.number) data.ignoredOrders = (data.ignoredOrders || []).filter(n => n !== o.number);
       }
       data.settings.orderSuppliers = {...(data.settings.orderSuppliers || {}), [format]: supplier};

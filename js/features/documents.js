@@ -57,6 +57,15 @@
 
   // ---------- pedaços de HTML dos documentos ----------
   const numberOf = (purchases, saleId) => purchases.findIndex(p => p.saleId === saleId) + 1;
+  // O que foi comprado em cada compra (SPECS 57): vai embaixo da etiqueta "Compra N", menorzinho. Recibos antigos guardaram a
+  // situação sem esse texto: aí ele vem da própria venda.
+  function whatOf(purchases, saleId) {
+    const p = (purchases || []).find(x => x.saleId === saleId);
+    if (p && p.itemsText) return p.itemsText;
+    const sale = data.sales.find(x => x.id === saleId);
+    return sale ? itemsText(sale) : '';
+  }
+  const what = (purchases, saleId) => { const text = whatOf(purchases, saleId); return text ? `<small class="doc-what">${esc(text)}</small>` : ''; };
   const section = (title, body) => `<section class="doc-sec"><h4>${title}</h4>${body}</section>`;
 
   // Se a logo de arquivo (assets/logo.png) não existir, o documento mostra o nome do negócio em texto (sem atributo de evento dentro do HTML).
@@ -112,7 +121,7 @@
     if (!purchases.length) return '';
     const rows = purchases.map((p, i) => {
       const remaining = p.closed ? '<b class="doc-ok">Compra quitada</b>' : p.overdue > 0 ? `<b class="doc-bad">${money(p.remaining)}</b><small class="doc-bad">${money(p.overdue)} em atraso</small>` : `<b>${money(p.remaining)}</b>`;
-      return `<tr><td>${pill(i + 1, p.date)}</td><td class="num">${money(p.total)}</td><td class="num doc-ok">${money(p.paid)}</td><td class="num doc-rest">${remaining}</td></tr>`;
+      return `<tr><td>${pill(i + 1, p.date)}${what(purchases, p.saleId)}</td><td class="num">${money(p.total)}</td><td class="num doc-ok">${money(p.paid)}</td><td class="num doc-rest">${remaining}</td></tr>`;
     }).join('');
     return section('Situação de cada compra', `<table class="doc-table"><thead><tr><th>Compra</th><th class="num">Total</th><th class="num">Já pago</th><th class="num">Falta pagar</th></tr></thead><tbody>${rows}<tr class="doc-total"><td colspan="3">Total em aberto</td><td class="num"><strong>${money(sum(purchases, p => p.remaining))}</strong></td></tr></tbody></table>`);
   }
@@ -128,14 +137,14 @@
     let detailed = mode === 'full' ? upcoming : upcoming.filter(u => u.due.slice(0, 7) <= limit);
     if (!detailed.length) detailed = upcoming.slice(0, 1);   // a próxima parcela sempre aparece em destaque
     const rest = upcoming.filter(u => !detailed.includes(u));
-    const rows = detailed.map(u => `<div class="doc-due"><span class="doc-due-date">${dateLabel(u.due)}</span><span class="doc-due-value">${money(u.value)}</span><span class="doc-due-ref">${pill(numberOf(purchases, u.saleId), u.saleDate)} parcela ${u.installment} de ${u.of}</span></div>`).join('');
+    const rows = detailed.map(u => `<div class="doc-due"><span class="doc-due-date">${dateLabel(u.due)}</span><span class="doc-due-value">${money(u.value)}</span><span class="doc-due-ref">${pill(numberOf(purchases, u.saleId), u.saleDate)} parcela ${u.installment} de ${u.of}${what(purchases, u.saleId)}</span></div>`).join('');
     const bySale = {};
     rest.forEach(u => { (bySale[u.saleId] = bySale[u.saleId] || []).push(u); });
     const more = Object.entries(bySale).map(([id, items]) => {
       const same = items.every(u => Math.abs(u.value - items[0].value) < 0.005);
       const first = shortMonth(items[0].due), last = shortMonth(items[items.length - 1].due);
       const when = first === last ? `em ${first}` : `de ${first} a ${last}`;
-      return `<div class="doc-due-more"><span class="doc-due-ref">${pill(numberOf(purchases, id), items[0].saleDate)}</span><span>mais ${plural(items.length, 'parcela', 'parcelas')}${same ? ` de ${money(items[0].value)}` : ''}, ${when}</span><strong>${money(sum(items, u => u.value))}</strong></div>`;
+      return `<div class="doc-due-more"><span class="doc-due-ref">${pill(numberOf(purchases, id), items[0].saleDate)}${what(purchases, id)}</span><span>mais ${plural(items.length, 'parcela', 'parcelas')}${same ? ` de ${money(items[0].value)}` : ''}, ${when}</span><strong>${money(sum(items, u => u.value))}</strong></div>`;
     }).join('');
     const total = `<div class="doc-due-total"><span>Total a vencer</span><strong>${money(sum(upcoming, u => u.value))}</strong></div>`;
     return section('Próximos vencimentos', rows + more + total);
@@ -145,7 +154,7 @@
   function lateBox(late, purchases, withCalc) {
     if (!late.length) return '';
     const one = l => {
-      const head = `<div class="doc-row"><strong>Venceu em ${dateLabel(l.due)}</strong>${pill(numberOf(purchases, l.saleId), l.saleDate)}<span class="doc-muted">parcela ${l.installment} de ${l.of}${withCalc ? ` · ${plural(l.days, 'dia', 'dias')} de atraso` : ''}</span></div>`;
+      const head = `<div class="doc-row"><strong>Venceu em ${dateLabel(l.due)}</strong>${pill(numberOf(purchases, l.saleId), l.saleDate)}<span class="doc-muted">parcela ${l.installment} de ${l.of}${withCalc ? ` · ${plural(l.days, 'dia', 'dias')} de atraso` : ''}</span>${what(purchases, l.saleId)}</div>`;
       if (!withCalc) return `${head}<p class="doc-bad doc-strong">${money(l.value)} · ${plural(l.days, 'dia', 'dias')} de atraso</p>`;
       return `${head}<table class="doc-calc"><tr><td>Valor da parcela</td><td>${money(l.value)}</td></tr><tr><td>Multa de ${l.rule.fine}%</td><td>${money(l.fine)}</td></tr><tr><td>Juros de ${l.rule.interest}% ao mês (${plural(l.days, 'dia', 'dias')})</td><td>${money(l.interest)}</td></tr><tr class="doc-bad doc-strong"><td>Valor atualizado hoje</td><td>${money(l.updated)}</td></tr></table>`;
     };
@@ -260,7 +269,8 @@
     const rows = [...(after.late || []).map(l => ({...l, late: true})), ...(after.upcoming || [])];
     const blocks = stillOpen.map(p => {
       const mine = rows.filter(x => x.saleId === p.saleId).sort((a, b) => a.due.localeCompare(b.due) || a.installment - b.installment);
-      const head = `Compra ${numberOf(after.purchases, p.saleId)} (${dm(p.date)}): ainda falta pagar ${money(p.remaining)}`;
+      const items = whatOf(after.purchases, p.saleId);
+      const head = `Compra ${numberOf(after.purchases, p.saleId)} (${dm(p.date)})${items ? `\n_${items}_\nAinda` : ': ainda'} falta pagar ${money(p.remaining)}`;
       const same = mine.length && mine.every(x => !x.late && Math.abs(x.value - mine[0].value) < 0.005);
       if (same) return `${head}, em ${plural(mine.length, 'parcela', 'parcelas')} de ${money(mine[0].value)}.`;
       return `${head}:\n${mine.map(x => `parcela ${x.installment} de ${x.of}, ${dateLabel(x.due)}: ${money(x.value)}${x.late ? ' (vencida)' : ''}`).join('\n')}`;
@@ -278,7 +288,7 @@
   function collectionMessage(client, asOf = today()) {
     const late = situation(client, asOf).late;
     if (!late.length) return '';
-    const block = l => `Passando para lembrar da parcela ${l.installment} de ${l.of}, que venceu em ${dateLabel(l.due)}.\n\nValor da parcela: ${money(l.value)}\nMulta (${l.rule.fine}%): ${money(l.fine)}\nJuros (${plural(l.days, 'dia', 'dias')}): ${money(l.interest)}\n*Valor atualizado hoje (${dm(asOf)}): ${money(l.updated)}*`;
+    const block = l => { const items = whatOf([], l.saleId); return `Passando para lembrar da parcela ${l.installment} de ${l.of}${items ? ` (${items})` : ''}, que venceu em ${dateLabel(l.due)}.\n\nValor da parcela: ${money(l.value)}\nMulta (${l.rule.fine}%): ${money(l.fine)}\nJuros (${plural(l.days, 'dia', 'dias')}): ${money(l.interest)}\n*Valor atualizado hoje (${dm(asOf)}): ${money(l.updated)}*`; };
     const total = late.length > 1 ? `\n\n*Total atualizado hoje (${dm(asOf)}): ${money(sum(late, l => l.updated))}*` : '';
     return App.messages.fill(App.messages.template('collection'), {cliente: client, detalhe: late.map(block).join('\n\n'), total, valor: money(sum(late, l => l.updated)), vencimento: dateLabel(late[0].due)});
   }

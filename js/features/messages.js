@@ -37,7 +37,7 @@
     if (!sale) return;
     const item = installmentsFor(sale).find(i => i.number === Number(installment));
     if (!item) return;
-    const text = fill(template('reminder'), {cliente: sale.client, valor: money(item.balance), vencimento: dateLabel(item.due), parcela: `${item.number} de ${sale.installments}`, id: sale.id});
+    const text = fill(template('reminder'), {cliente: sale.client, valor: money(item.balance), vencimento: dateLabel(item.due), parcela: `${item.number} de ${sale.installments} (${App.documents.itemsText(sale)})`, item: App.documents.itemsText(sale), id: sale.id});   // o que foi comprado junto da parcela (SPECS 57)
     messageModal('Lembrete de vencimento', text, sale.client);
   }
 

@@ -1,6 +1,11 @@
 // "O que há de novo": lista de versões em linguagem simples, da mais nova para a mais antiga.
 // A cada versão aprovada, acrescente uma entrada AQUI (e em version.js, na tabela do CLAUDE.md e na etiqueta do Git).
 window.CHANGELOG = [
+  {version: '0.19.9', name: 'Escolher itens e o que foi comprado', date: '28/10/2026', items: [
+    'Colar pedido: caixinha "Lançar este item" e quantidade em cada item, para não lançar de novo o que já está no estoque. A compra fica só com os itens marcados ("lançando R$ X de R$ Y").',
+    'Tela "Conferir o pedido" mais simples: janela mais larga e cada item em 2 linhas.',
+    'Recibo, extrato e mensagens: embaixo de cada "Compra 1", "Compra 2"..., aparece o que foi comprado, para o cliente saber do que é a conta.'
+  ]},
   {version: '0.19.8', name: 'Colar pedido corrigido', date: '28/10/2026', items: [
     'Compras → Colar pedido: o pedido colado direto da página da loja volta a ser reconhecido, mesmo quando a quantidade e o preço vêm em linhas separadas.'
   ]},

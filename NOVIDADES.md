@@ -1,5 +1,11 @@
 # Novidades
 
+## Versão 0.19.9 · Escolher itens e o que foi comprado · 28/10/2026
+
+- Colar pedido: caixinha "Lançar este item" e quantidade em cada item, para não lançar de novo o que já está no estoque. A compra fica só com os itens marcados ("lançando R$ X de R$ Y").
+- Tela "Conferir o pedido" mais simples: janela mais larga e cada item em 2 linhas.
+- Recibo, extrato e mensagens: embaixo de cada "Compra 1", "Compra 2"..., aparece o que foi comprado, para o cliente saber do que é a conta.
+
 ## Versão 0.19.8 · Colar pedido corrigido · 28/10/2026
 
 - Compras → Colar pedido: o pedido colado direto da página da loja volta a ser reconhecido, mesmo quando a quantidade e o preço vêm em linhas separadas.
