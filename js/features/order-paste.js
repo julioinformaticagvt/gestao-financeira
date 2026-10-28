@@ -121,10 +121,12 @@
       });
     }},
     // Formato 1: "Quantidade: 2R$ 31,66" (preço de uma unidade) abaixo do nome; resumo "Total produto(s)".
+    // Colado direto da página, a quantidade e o preço podem vir em linhas separadas ("Quantidade: 2" / "R$ 31,66"): junta até 3 linhas.
     {id: 'f1', test: text => /Total produto\(s\)/i.test(text), read(L) {
       const o = order('f1', {number: firstMatch(L, /Pedido\s*#?\s*(\d{5,})/i), date: earliest(L.filter(l => /pedido/i.test(l)).flatMap(datesIn))});
       L.forEach((line, i) => {
-        const m = line.match(/^Quantidade:\s*(\d+)\s*R\$\s*(\d[\d.]*,\d{2})/i);
+        if (!/^Quantidade:/i.test(line)) return;
+        const m = L.slice(i, i + 3).join(' ').match(/^Quantidade:\s*(\d+)\s*R\$\s*(\d[\d.]*,\d{2})/i);
         if (m && i > 0) o.items.push(item(L[i - 1], '', m[1], brl(m[2]), ' - '));
       });
       Object.assign(o, {products: labelValue(L, /^Total produto\(s\):?/i), freight: labelValue(L, /^Frete:?/i) || 0, discount: labelValue(L, /^Desconto:?/i) || 0, total: labelValue(L, /^Total do pedido:?/i)});

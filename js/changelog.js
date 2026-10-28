@@ -1,6 +1,9 @@
 // "O que há de novo": lista de versões em linguagem simples, da mais nova para a mais antiga.
 // A cada versão aprovada, acrescente uma entrada AQUI (e em version.js, na tabela do CLAUDE.md e na etiqueta do Git).
 window.CHANGELOG = [
+  {version: '0.19.8', name: 'Colar pedido corrigido', date: '28/10/2026', items: [
+    'Compras → Colar pedido: o pedido colado direto da página da loja volta a ser reconhecido, mesmo quando a quantidade e o preço vêm em linhas separadas.'
+  ]},
   {version: '0.19.7', name: 'Venda avulsa', date: '27/10/2026', items: [
     'Vendas: "+ Conta antiga" virou "+ Venda avulsa": venda sem cadastrar produto (item usado, peça única) ou conta antiga.',
     'Entrada paga agora, com a forma de pagamento: entra no caixa de hoje e sai o recibo na hora. Se pagar tudo, a venda já nasce paga.',

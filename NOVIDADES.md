@@ -1,5 +1,9 @@
 # Novidades
 
+## Versão 0.19.8 · Colar pedido corrigido · 28/10/2026
+
+- Compras → Colar pedido: o pedido colado direto da página da loja volta a ser reconhecido, mesmo quando a quantidade e o preço vêm em linhas separadas.
+
 ## Versão 0.19.7 · Venda avulsa · 27/10/2026
 
 - Vendas: "+ Conta antiga" virou "+ Venda avulsa": venda sem cadastrar produto (item usado, peça única) ou conta antiga.
