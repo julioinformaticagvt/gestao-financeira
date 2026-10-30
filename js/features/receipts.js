@@ -21,7 +21,7 @@
     return {
       ref: {saleId: sale.id, index: sale.payments.indexOf(payment)},
       saleId: sale.id, saleDate: sale.date, itemsText: App.documents.itemsText(sale),
-      items: (sale.items || []).map(i => ({name: i.name || 'Item', qty: i.qty || 1, amount: i.amount})),
+      items: (sale.items || []).map(i => ({name: i.name || 'Item', qty: i.qty || 1, amount: i.amount, ...(i.note ? {note: i.note} : {})})),
       kind: sale.installments > 1 || (sale.legacy && !sale.paidAtSale) ? (n === 0 ? 'entrada' : 'parcela') : 'vista',   // conta antiga de 1 parcela também é parcela   // venda sem parcelas = recibo à vista
       installment: n, of: sale.installments, due,
       value: round2(Number(payment.amount) - charges), charges,

@@ -22,6 +22,7 @@
 
   /* ----- barra de baixo ----- */
   .bottom-nav { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; height: calc(60px + env(safe-area-inset-bottom, 0px)); padding-bottom: env(safe-area-inset-bottom, 0px); background: var(--topbar); border-top: 1px solid var(--line); }
+  .toast { left: 16px; right: 16px; max-width: none; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
   .bottom-nav button { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 6px 2px; background: none; border: 0; color: var(--text-2); font-size: 11px; cursor: pointer; }
   .bottom-nav button.active { color: var(--accent); }
   .page-foot { margin-top: 28px; }

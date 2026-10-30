@@ -147,7 +147,7 @@
       for (const r of data.receipts) {
         const mine = r.lines ? r.lines.some(l => l.saleId === sale.id) : r.saleId === sale.id;
         if (!mine) continue;
-        if (r.lines) r.lines.filter(l => l.saleId === sale.id).forEach(l => { l.itemsText = App.documents.itemsText(sale); l.saleDate = sale.date; l.items = sale.items.map(i => ({name: i.name, qty: i.qty || 1, amount: i.amount})); });
+        if (r.lines) r.lines.filter(l => l.saleId === sale.id).forEach(l => { l.itemsText = App.documents.itemsText(sale); l.saleDate = sale.date; l.items = sale.items.map(i => ({name: i.name, qty: i.qty || 1, amount: i.amount, ...(i.note ? {note: i.note} : {})})); });
         else r.items = sale.items.map(i => ({name: i.name, qty: i.qty || 1, amount: i.amount}));
         if (!r.lines || r.lines.every(l => l.saleId === sale.id)) { if (r.client !== client) delete r.clientId; r.client = client; }   // o id é refeito pelo nome ao salvar
       }

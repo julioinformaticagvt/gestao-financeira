@@ -1,5 +1,10 @@
 # Novidades
 
+## Versão 0.19.10 · Serviço descrito e catálogo sozinho · 30/10/2026
+
+- Venda, orçamento e OS: em cada serviço aparece a caixa opcional "O que foi feito" (ex.: "limpeza interna e troca da pasta térmica"). Ela sai embaixo do serviço no recibo, no orçamento em PDF, no extrato e nas mensagens.
+- Catálogo online atualizado sozinho: ao abrir o sistema e 1 minuto depois de cada mudança, se o site estiver diferente, o sistema manda sozinho e mostra um aviso pequeno no canto. Dá para desligar em Configurações → Catálogo online ("Atualizar o catálogo sozinho").
+
 ## Versão 0.19.9 · Escolher itens e o que foi comprado · 28/10/2026
 
 - Colar pedido: caixinha "Lançar este item" e quantidade em cada item, para não lançar de novo o que já está no estoque. A compra fica só com os itens marcados ("lançando R$ X de R$ Y").

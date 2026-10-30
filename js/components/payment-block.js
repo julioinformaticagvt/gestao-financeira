@@ -20,7 +20,7 @@
 
   // ---------- HTML ----------
   // Um item: produto + quantidade + valor de VENDA (cada) + valor de COMPRA (cada).
-  const itemBlock = (n, listId) => `<div class="item-block" data-item="${n}" ${n > 1 ? 'hidden' : ''}><div class="field item-name"><label>${n === 1 ? 'Produto ou serviço' : `Item ${n}`}</label><input name="${productField(n)}" list="${listId}" placeholder="Buscar produto..." autocomplete="off"><small class="stock-hint" data-stock-hint="${n}"></small></div><div class="field"><label>Quantidade</label><input name="itemQty${n}" type="number" min="1" step="1" value="1"></div><div class="field"><label>VENDA (R$) <small>cada · o cliente paga</small></label><input name="itemAmount${n}" type="number" min="0" step="0.01" ${n === 1 ? 'required' : ''}></div><div class="field"><label>COMPRA (R$) <small>cada · eu pago</small></label><input name="itemCost${n}" type="number" min="0" step="0.01" ${n === 1 ? 'required' : ''}></div><input type="hidden" name="itemLot${n}" value=""><div class="lot-chips" data-lots="${n}" hidden></div>${n > 1 ? `<button type="button" class="secondary item-remove" data-remove-item="${n}">Remover item ${n}</button>` : ''}</div>`;
+  const itemBlock = (n, listId) => `<div class="item-block" data-item="${n}" ${n > 1 ? 'hidden' : ''}><div class="field item-name"><label>${n === 1 ? 'Produto ou serviço' : `Item ${n}`}</label><input name="${productField(n)}" list="${listId}" placeholder="Buscar produto..." autocomplete="off"><small class="stock-hint" data-stock-hint="${n}"></small></div><div class="field"><label>Quantidade</label><input name="itemQty${n}" type="number" min="1" step="1" value="1"></div><div class="field"><label>VENDA (R$) <small>cada · o cliente paga</small></label><input name="itemAmount${n}" type="number" min="0" step="0.01" ${n === 1 ? 'required' : ''}></div><div class="field"><label>COMPRA (R$) <small>cada · eu pago</small></label><input name="itemCost${n}" type="number" min="0" step="0.01" ${n === 1 ? 'required' : ''}></div><input type="hidden" name="itemLot${n}" value=""><div class="lot-chips" data-lots="${n}" hidden></div><div class="field full item-note" data-note="${n}" hidden><label>O que foi feito <small>opcional · aparece para o cliente</small></label><input name="itemNote${n}" maxlength="200" autocomplete="off" placeholder="Ex.: limpeza interna e troca da pasta térmica"></div>${n > 1 ? `<button type="button" class="secondary item-remove" data-remove-item="${n}">Remover item ${n}</button>` : ''}</div>`;
 
   const markup = {
     // listId = id do <datalist> de produtos que já existe no formulário.
@@ -48,6 +48,14 @@
     }
   };
 
+  // "O que foi feito" (SPECS 58): a caixa só aparece embaixo de item que é serviço.
+  function syncNotes(form) {
+    form.querySelectorAll('[data-note]').forEach(box => {
+      const name = String(form.elements[productField(Number(box.dataset.note))].value || '').trim();
+      box.hidden = !name || itemType(name) !== 'Serviço';
+    });
+  }
+
   // Preenche os itens de um formulário com os de uma venda que já existe (para editar).
   function fillItems(form, items) {
     items.slice(0, MAX_ITEMS).forEach((item, i) => {
@@ -57,7 +65,9 @@
       form.elements[`itemAmount${n}`].value = item.unit ?? P.round2(Number(item.amount) / qty);
       form.elements[`itemCost${n}`].value = item.unitCost ?? (item.cost === undefined ? '' : P.round2(Number(item.cost) / qty));
       form.elements[`itemLot${n}`].value = item.lotId || '';   // compra escolhida (SPECS 44)
+      form.elements[`itemNote${n}`].value = item.note || '';
     });
+    syncNotes(form);
   }
 
   // ---------- comportamento ----------
@@ -90,7 +100,9 @@
         const unit = num(f.get(`itemAmount${n}`)), unitCost = num(f.get(`itemCost${n}`));
         const line = {name, type: itemType(name), qty, unit, unitCost, amount: P.round2(qty * unit), cost: P.round2(qty * unitCost)};
         const lotId = String(f.get(`itemLot${n}`) || '');
-        if (lotId) line.lotId = lotId;   // compra de onde a peça sai (escolhida nos botões de custo)
+        if (lotId) line.lotId = lotId;
+        const note = line.type === 'Serviço' ? String(f.get(`itemNote${n}`) || '').trim().slice(0, 200) : '';
+        if (note) line.note = note;   // o que foi feito neste serviço, só desta venda (SPECS 58)   // compra de onde a peça sai (escolhida nos botões de custo)
         const product = known;
         if (product && product.activityId) line.activityId = product.activityId;   // atividade do produto no momento da venda (cópia gravada)
         if (n === 1 ? (name || unit > 0) : (name && unit > 0)) items.push(line);
@@ -310,6 +322,7 @@
       }
       const match = /^product(\d*)$/.exec(name);
       if (match && event.target.value) fillFromProduct(match[1] ? Number(match[1]) : 1);
+      if (match) syncNotes(form);
       renderStock();
       renderCompare();
     });
@@ -329,7 +342,7 @@
       if (remove) {
         const n = Number(remove.dataset.removeItem);
         el(`itemLot${n}`).value = ''; renderLots(n);
-        for (const name of [productField(n), `itemQty${n}`, `itemAmount${n}`, `itemCost${n}`]) { el(name).value = name.startsWith('itemQty') ? 1 : ''; el(name).classList.remove('auto'); touched[name] = false; }
+        for (const name of [productField(n), `itemQty${n}`, `itemAmount${n}`, `itemCost${n}`, `itemNote${n}`]) { el(name).value = name.startsWith('itemQty') ? 1 : ''; el(name).classList.remove('auto'); touched[name] = false; }
         showItems(n - 1);
         renderStock(); renderCompare();
       }
@@ -347,6 +360,7 @@
     let shown = 1;
     blocks().forEach((block, i) => { const n = i + 1; if (el(productField(n)).value || el(`itemAmount${n}`).value) shown = n; });
     showItems(shown);
+    syncNotes(form);   // ficha reaberta: serviço com descrição já mostra a caixa
     blocks().forEach((block, i) => renderLots(i + 1));
     renderStock();
     renderCompare();
@@ -355,5 +369,5 @@
     return {read, showItems, refresh: () => { renderStock(); renderCompare(); }};
   }
 
-  App.components = Object.assign(App.components || {}, {paymentBlock: {markup, bind, num, fillItems, MAX_ITEMS}});
+  App.components = Object.assign(App.components || {}, {paymentBlock: {markup, bind, num, fillItems, syncNotes, MAX_ITEMS}});
 })();

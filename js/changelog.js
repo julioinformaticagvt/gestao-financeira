@@ -1,6 +1,10 @@
 // "O que há de novo": lista de versões em linguagem simples, da mais nova para a mais antiga.
 // A cada versão aprovada, acrescente uma entrada AQUI (e em version.js, na tabela do CLAUDE.md e na etiqueta do Git).
 window.CHANGELOG = [
+  {version: '0.19.10', name: 'Serviço descrito e catálogo sozinho', date: '30/10/2026', items: [
+    'Venda, orçamento e OS: em cada serviço aparece a caixa opcional "O que foi feito" (ex.: "limpeza interna e troca da pasta térmica"). Ela sai embaixo do serviço no recibo, no orçamento em PDF, no extrato e nas mensagens.',
+    'Catálogo online atualizado sozinho: ao abrir o sistema e 1 minuto depois de cada mudança, se o site estiver diferente, o sistema manda sozinho e mostra um aviso pequeno no canto. Dá para desligar em Configurações → Catálogo online ("Atualizar o catálogo sozinho").'
+  ]},
   {version: '0.19.9', name: 'Escolher itens e o que foi comprado', date: '28/10/2026', items: [
     'Colar pedido: caixinha "Lançar este item" e quantidade em cada item, para não lançar de novo o que já está no estoque. A compra fica só com os itens marcados ("lançando R$ X de R$ Y").',
     'Tela "Conferir o pedido" mais simples: janela mais larga e cada item em 2 linhas.',

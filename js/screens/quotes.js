@@ -91,6 +91,7 @@
       set(`itemQty${n}`, item.qty || 1);
       set(`itemAmount${n}`, item.unit ?? item.amount);
       set(`itemCost${n}`, item.unitCost ?? item.cost);   // orçamentos antigos não têm custo: fica vazio e precisa ser preenchido
+      set(`itemNote${n}`, item.note || '');   // o que foi feito no serviço (SPECS 58)
     };
     set('product', first.name ?? quote.product ?? '');
     if (items.length) fill(1, first); else set('itemAmount1', quote.total);

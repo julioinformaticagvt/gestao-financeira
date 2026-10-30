@@ -27,9 +27,12 @@
   const COLORS = [['#2a5db0', '#e8eefa'], ['#7b3fa0', '#f1e9f7'], ['#a85a00', '#faf0e1'], ['#00798c', '#e1f3f6'], ['#b03a78', '#f8e8f0']];
   const pill = (n, date) => { const [fg, bg] = COLORS[(n - 1) % COLORS.length]; return `<span class="pill" style="color:${fg};background:${bg}"><i style="background:${fg}"></i>Compra ${n} · ${dm(date)}</span>`; };
 
-  // Itens da compra resumidos: "A e B", "A, B e +2 itens", "2× Mouse".
+  // Itens da compra resumidos: "A e B", "A, B e +2 itens", "2× Mouse". Serviço com "o que foi feito" (SPECS 58):
+  // "Mão de obra (limpeza interna e troca...)", cortado em cerca de 60 letras.
+  const shortNote = note => (note.length > 60 ? `${note.slice(0, 58).trim()}…` : note);
+  const itemNote = i => (i.note ? `<small class="doc-what">${esc(i.note)}</small>` : '');
   function itemsText(sale) {
-    const names = (sale.items || []).filter(i => i.name).map(i => `${(i.qty || 1) > 1 ? `${i.qty}× ` : ''}${i.name}`);
+    const names = (sale.items || []).filter(i => i.name).map(i => `${(i.qty || 1) > 1 ? `${i.qty}× ` : ''}${i.name}${i.note ? ` (${shortNote(i.note)})` : ''}`);
     if (!names.length) return sale.product || 'Venda';
     return names.length <= 2 ? names.join(' e ') : `${names.slice(0, 2).join(', ')} e +${names.length - 2} ${names.length - 2 === 1 ? 'item' : 'itens'}`;
   }
@@ -176,7 +179,7 @@
     const warranty = r.warranty || '';   // sem garantia cadastrada: a linha de garantia não aparece
 
     if (!installmentSale) {   // venda à vista: recibo simples
-      const items = (lines[0].items || r.items || []).map(i => `<tr><td>${esc(i.name || 'Item')}</td><td class="num">${i.qty || 1}</td><td class="num">${money(i.amount)}</td></tr>`).join('');
+      const items = (lines[0].items || r.items || []).map(i => `<tr><td>${esc(i.name || 'Item')}${itemNote(i)}</td><td class="num">${i.qty || 1}</td><td class="num">${money(i.amount)}</td></tr>`).join('');
       const first = lines[0];
       const note = first.kind === 'entrada' ? '<p class="doc-note">Este recibo é da entrada da venda.</p>' : '';
       const body = section('Itens', `<table class="doc-table"><thead><tr><th>Item</th><th class="num">Qtd.</th><th class="num">Valor</th></tr></thead><tbody>${items}</tbody></table>${note}`)
@@ -386,7 +389,7 @@
   function quoteDocument(quote, eco) {
     const items = quote.items || [], {sold, discount, total, extra} = quoteTotals(quote);
     const warranty = String(data.settings.business.warranty || '').trim();
-    const rows = items.map(i => `<tr><td>${esc(i.name || 'Item')}</td><td class="num">${Number(i.qty) || 1}</td><td class="num">${money(i.amount)}</td></tr>`).join('');
+    const rows = items.map(i => `<tr><td>${esc(i.name || 'Item')}${itemNote(i)}</td><td class="num">${Number(i.qty) || 1}</td><td class="num">${money(i.amount)}</td></tr>`).join('');
     const main = `<p class="doc-label">ORÇAMENTO</p><p class="doc-lead-2">Valor total</p><p class="doc-value">${money(total)}</p><p class="doc-who">Para <b>${esc(quote.client || 'Cliente')}</b></p>${quote.validUntil ? `<p class="doc-muted">Válido até ${dateLabel(quote.validUntil)}</p>` : ''}`;
     const details = (rows ? section('Itens', `<table class="doc-table"><thead><tr><th>Item</th><th class="num">Qtd.</th><th class="num">Valor</th></tr></thead><tbody>${rows}</tbody></table>`) : '')
       + section('Valores', `${docRow('Soma dos itens', money(sold))}${discount > 0 ? `<div class="doc-row"><span>Desconto</span><span class="doc-amount doc-ok">− ${money(discount)}</span></div>` : ''}${extra > 0.005 ? docRow('Acréscimo do parcelamento', money(extra)) : ''}<div class="doc-row"><strong>Total</strong><span class="doc-amount"><b>${money(total)}</b></span></div>`)

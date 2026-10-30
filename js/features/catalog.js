@@ -17,7 +17,7 @@
   // As categorias do js/config.js do catálogo, na mesma ordem (dá para mudar em Configurações).
   // PC = computador montado; Periféricos = mouse, teclado, headset; Acessórios = itens não essenciais (suportes, teclas diferentes).
   const DEFAULT_CATEGORIES = ['PC', 'Placas de vídeo', 'Processadores', 'Placas-mãe', 'Memória RAM', 'SSD e HD', 'Fontes', 'Gabinetes', 'Monitores', 'Periféricos', 'Console', 'Acessórios'];
-  const DEFAULTS = {enabled: false, repo: '', branch: 'main', siteUrl: '', categories: DEFAULT_CATEGORIES, lastSentAt: ''};
+  const DEFAULTS = {enabled: false, repo: '', branch: 'main', siteUrl: '', categories: DEFAULT_CATEGORIES, lastSentAt: '', auto: true};
 
   // Configuração: só é gravada nos dados quando o dono salva o painel (até lá valem os padrões).
   const cfg = () => ({...DEFAULTS, ...(data.settings.catalog || {})});
@@ -265,6 +265,52 @@
     };
   }
 
+  // ---------- atualizar sozinho (SPECS 59) ----------
+  // Ao abrir o sistema (10 s depois) e 1 minuto depois da última mudança, confere o site e, se estiver diferente, manda sem
+  // abrir janela: só um aviso pequeno no canto. Analogia: o funcionário que arruma a vitrine sozinho quando o estoque muda.
+  // Só neste aparelho com a chave; nunca no modo demonstração; se algo faltar (produto sem categoria...), fica quieto e o
+  // botão "Mandar para o catálogo" mostra o motivo.
+  const auto = {OPEN_MS: 10000, IDLE_MS: 60000, off: false, timer: null, selfSave: false};
+  const autoOn = () => cfg().auto !== false;
+  const canAuto = () => !auto.off && !App.store.isDemo && !App.store.blocked && enabled() && autoOn() && App.catalogGithub.hasToken() && !blocker();
+  function toast(text, bad) {
+    let box = byId('catalog-toast');
+    if (!box) { box = document.createElement('div'); box.id = 'catalog-toast'; box.setAttribute('role', 'status'); document.body.appendChild(box); }
+    box.textContent = text; box.className = `toast${bad ? ' bad' : ''}`; box.hidden = false;
+    clearTimeout(box.hideTimer);
+    box.hideTimer = setTimeout(() => { box.hidden = true; }, bad ? 8000 : 5000);
+  }
+  function schedule(ms) {
+    clearTimeout(auto.timer);
+    auto.timer = setTimeout(autoRun, ms);
+  }
+  // Devolve o que aconteceu ('off', 'busy', 'same', 'sent' ou 'error'), para os testes conferirem.
+  async function autoRun() {
+    if (!canAuto()) return 'off';
+    if (busy) { schedule(auto.IDLE_MS); return 'busy'; }   // o envio pelo botão está no meio: tenta de novo depois
+    busy = true;
+    try {
+      const plan = await prepare();
+      if (!plan.changed) return 'same';
+      await commitPlan(plan);
+      auto.selfSave = true;
+      data.settings.catalog = {...cfg(), lastSentAt: today()};
+      save();
+      auto.selfSave = false;
+      toast('Catálogo atualizado. O site mostra em 1 a 2 minutos.');
+      return 'sent';
+    } catch (error) {
+      toast(error && error.code === 'offline' ? 'Catálogo não atualizado: sem internet. Tento de novo depois.' : 'Catálogo não atualizado. Clique em "Mandar para o catálogo" (Produtos) para ver o motivo.', true);
+      return 'error';
+    } finally { busy = false; auto.selfSave = false; }
+  }
+  function startAuto() {
+    if (App.store.isDemo || App.store.blocked) return;
+    App.store.afterSave.push(() => { if (!auto.selfSave && canAuto()) schedule(auto.IDLE_MS); });
+    window.addEventListener('online', () => { if (canAuto()) schedule(auto.OPEN_MS); });
+    schedule(auto.OPEN_MS);
+  }
+
   // Mostra numa janela do sistema (sem enviar e sem baixar) o arquivo que iria para o site.
   // (Antes era um download, mas o Windows barra abrir arquivos .js baixados: ele os trata como programas.)
   function view() {
@@ -409,7 +455,7 @@
   function settingsPanel() {
     const c = cfg(), gh = App.catalogGithub, repoName = esc(String(c.repo || '').split('/')[1] || 'catalogo');
     const keyStatus = gh.hasToken() ? `Chave guardada neste aparelho: <code>${esc(gh.masked())}</code>` : 'Nenhuma chave guardada neste aparelho.';
-    const more = `<div class="field"><label>Repositório no GitHub <small>dono/nome</small></label><input name="repo" value="${esc(c.repo)}" placeholder="usuario/catalogo" autocomplete="off" spellcheck="false"></div><div class="field"><label>Ramo</label><input name="branch" value="${esc(c.branch)}" placeholder="main" autocomplete="off" spellcheck="false"></div><div class="field full"><label>Endereço do site <small>para o link "Abrir o catálogo"</small></label><input name="siteUrl" type="url" value="${esc(c.siteUrl)}" placeholder="https://usuario.github.io/catalogo/"></div><div class="field full"><label>Categorias <small>uma por linha; iguais às do catálogo (js/config.js)</small></label><textarea name="categories" rows="6">${esc(categories().join('\n'))}</textarea></div><div class="actions field full"><button class="primary">Salvar catálogo online</button></div>`;
+    const more = `<div class="field"><label>Repositório no GitHub <small>dono/nome</small></label><input name="repo" value="${esc(c.repo)}" placeholder="usuario/catalogo" autocomplete="off" spellcheck="false"></div><div class="field"><label>Ramo</label><input name="branch" value="${esc(c.branch)}" placeholder="main" autocomplete="off" spellcheck="false"></div><div class="field full"><label>Endereço do site <small>para o link "Abrir o catálogo"</small></label><input name="siteUrl" type="url" value="${esc(c.siteUrl)}" placeholder="https://usuario.github.io/catalogo/"></div><div class="field full"><label>Categorias <small>uma por linha; iguais às do catálogo (js/config.js)</small></label><textarea name="categories" rows="6">${esc(categories().join('\n'))}</textarea></div><div class="field full"><label class="inline-check"><input type="checkbox" name="auto" ${c.auto !== false ? 'checked' : ''}> <b>Atualizar o catálogo sozinho</b></label><small class="muted">Ao abrir o sistema e 1 minuto depois de cada mudança, se o site estiver diferente (só neste aparelho com a chave).</small></div><div class="actions field full"><button class="primary">Salvar catálogo online</button></div>`;
     const key = `<h3>Chave de acesso do GitHub</h3><p class="muted">Fica <b>só neste aparelho</b> (não vai para o backup, para a sincronização nem para o catálogo). ${keyStatus}</p><div class="form-grid"><div class="field full"><label>Colar a chave nova</label><input id="catalog-token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_..."></div></div><div class="actions"><button type="button" class="secondary" data-action="catalog-token-save">Guardar a chave</button><button type="button" class="secondary" data-action="catalog-test">Testar conexão</button>${gh.hasToken() ? '<button type="button" class="danger" data-action="catalog-token-forget">Esquecer a chave</button>' : ''}</div><p id="catalog-key-msg" role="status" hidden></p>`
       + `<details><summary>Como criar a chave no GitHub (passo a passo)</summary><ol class="catalog-howto"><li>Entre no GitHub com a conta dona do catálogo.</li><li>Clique na sua foto (canto de cima) → <b>Settings</b>.</li><li>No fim do menu da esquerda: <b>Developer settings</b> → <b>Personal access tokens</b> → <b>Fine-grained tokens</b> → <b>Generate new token</b>.</li><li><b>Token name:</b> "Sistema - catálogo". <b>Expiration:</b> 1 ano (quando vencer, o sistema avisa e você cria outra).</li><li><b>Repository access:</b> <b>Only select repositories</b> → escolha <b>${repoName}</b> (só ele).</li><li><b>Permissions → Repository permissions → Contents:</b> <b>Read and write</b>. Não marque mais nada.</li><li><b>Generate token</b>, copie a chave (começa com <code>github_pat_</code>), cole aqui em cima e clique <b>Guardar a chave</b> e depois <b>Testar conexão</b>.</li><li>Não mande a chave para ninguém (nem por WhatsApp). Se ela vazar, apague no GitHub e crie outra.</li></ol></details>`
       + `<div class="actions"><button type="button" class="secondary" data-action="catalog-view">Ver o arquivo para conferir</button></div>${c.lastSentAt ? `<p class="muted">Último envio para o catálogo: ${dateLabel(c.lastSentAt)}.</p>` : ''}`;
@@ -445,6 +491,7 @@
     const form = byId('catalog-form');
     if (!form) return;
     form.elements.enabled.onchange = () => { data.settings.catalog = {...cfg(), enabled: form.elements.enabled.checked}; save(); App.ui.go('settings'); };
+    if (form.elements.auto) form.elements.auto.onchange = () => { data.settings.catalog = {...cfg(), auto: form.elements.auto.checked}; save(); };
     form.onsubmit = event => {
       event.preventDefault();
       const {problem, values} = readSettings(form);
@@ -489,7 +536,7 @@
   App.ui.registerAction('catalog-send', send);
 
   App.catalog = {
-    DATA_PATH, PHOTO_DIR, DEFAULT_CATEGORIES, addNewCategories, cfg, enabled, isShown, entries, entryOf, problems, buildFile, gitSha, prepare, send, view,
+    DATA_PATH, PHOTO_DIR, DEFAULT_CATEGORIES, addNewCategories, cfg, enabled, isShown, entries, entryOf, problems, buildFile, gitSha, prepare, send, view, auto, autoRun, startAuto,
     formFields, bindForm, parseSpecs, forgetProduct, settingsPanel, bindSettings, errorText,
     setPhotoStore(store) { photos = store || idbStore; }   // só para os testes automáticos (gaveta de fotos na memória)
   };

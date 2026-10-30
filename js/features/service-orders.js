@@ -154,7 +154,7 @@
   // 2) Orçamento da OS
   function quoteDocument(quote, eco) {
     const D_ = D(), o = quote.os, items = quote.items || [];
-    const rows = items.map(i => `<tr><td>${esc(i.name || 'Item')}</td><td class="num">${i.qty || 1}</td><td class="num">${money(i.amount)}</td></tr>`).join('');
+    const rows = items.map(i => `<tr><td>${esc(i.name || 'Item')}${i.note ? `<small class="doc-what">${esc(i.note)}</small>` : ''}</td><td class="num">${i.qty || 1}</td><td class="num">${money(i.amount)}</td></tr>`).join('');
     const sold = sum(items, i => Number(i.amount) || 0), discount = Number(quote.discount) || 0, total = valueOf(quote);
     const pay = quote.pricing ? `${quote.pricing.label}${quote.pricing.installments > 1 ? ` em ${quote.pricing.installments}x` : ''}` : (quote.method || '');
     const main = `<p class="doc-label">ORÇAMENTO</p><p class="doc-lead-2">Valor do serviço</p><p class="doc-value">${money(total)}</p><p class="doc-who">Para <b>${esc(quote.client)}</b> · ${esc(equipmentText(quote))}</p>${quote.validUntil ? `<p class="doc-muted">Válido até ${dateLabel(quote.validUntil)}</p>` : ''}`;
