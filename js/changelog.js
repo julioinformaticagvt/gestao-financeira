@@ -1,6 +1,11 @@
 // "O que há de novo": lista de versões em linguagem simples, da mais nova para a mais antiga.
 // A cada versão aprovada, acrescente uma entrada AQUI (e em version.js, na tabela do CLAUDE.md e na etiqueta do Git).
 window.CHANGELOG = [
+  {version: '0.19.12', name: 'Grupos de produtos', date: '04/11/2026', items: [
+    'Produtos: campo "Grupo" para juntar produtos que se substituem, de qualquer marca (ex.: "Suporte articulado preto" = o da marca A + o da marca B).',
+    'Com um grupo escolhido, o produto pede só o "Mínimo do grupo" (padrão 2). O estoque baixo passa a olhar a soma do grupo: se ainda tem um de outra marca, não avisa.',
+    'Filtro "Grupos" na tela de Produtos: cada grupo com o total em estoque, o mínimo e os produtos.'
+  ]},
   {version: '0.19.11', name: 'Venda antiga no mês certo', date: '04/11/2026', items: [
     'Venda avulsa: numa venda com data de antes de hoje, aparece o campo "Data do pagamento" (já vem com a data da venda). O dinheiro da entrada conta no mês dessa data (caixa, relatórios e limite do MEI), e o recibo sai com ela.',
     'O campo "Entrada paga agora" passou a se chamar "Entrada / valor pago".'

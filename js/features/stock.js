@@ -15,7 +15,40 @@
   const hasStock = product => !!product && product.type !== 'Serviço';
   // Estoque mínimo que vale para o produto: o dele, ou o padrão se ele não tiver um (campo em branco).
   const hasOwnMin = product => product.minStock !== undefined && product.minStock !== null && product.minStock !== '';
-  const minOf = product => hasStock(product) ? (hasOwnMin(product) ? Number(product.minStock) : defaultMin()) : null;
+  // ---------- grupos de produtos que se substituem (SPECS 61) ----------
+  // Ex.: "Suporte articulado preto" = o da marca A + o da marca B. O mínimo vale para o GRUPO (soma do estoque de todos), não para
+  // cada produto: vendeu o da marca A, mas ainda tem o da marca B? Não está baixo. O nome do grupo fica no produto (product.group);
+  // o mínimo fica em settings.stockGroups [{name, min}] (padrão 2). Analogia: a gaveta "suportes pretos", não a caixa de cada marca.
+  const GROUP_MIN = 2;
+  const groupKey = product => (hasStock(product) && typeof product.group === 'string' && product.group.trim() ? App.format.normalize(product.group.trim()) : '');
+  const groupEntry = key => (data.settings.stockGroups || []).find(g => App.format.normalize(g.name) === key);
+  const groupMin = key => { const entry = groupEntry(key), n = Number(entry && entry.min); return entry && entry.min !== '' && Number.isFinite(n) ? n : GROUP_MIN; };
+  // Guarda o mínimo do grupo. Devolve o nome que vale: se o grupo já existe (mesmo escrito com outras maiúsculas ou sem acento),
+  // fica o nome que ele já tinha; senão, o nome do jeito que foi digitado.
+  function setGroupMin(name, min) {
+    const key = App.format.normalize(name.trim()), entry = groupEntry(key), other = data.products.find(p => groupKey(p) === key);
+    const keep = entry ? entry.name : other ? other.group.trim() : name.trim();
+    const list = (data.settings.stockGroups = (data.settings.stockGroups || []).filter(g => App.format.normalize(g.name) !== key));
+    list.push({name: keep, min: Math.max(0, Math.round(Number(min) || 0))});
+    return keep;
+  }
+  // Todos os grupos que têm pelo menos 1 produto: nome, mínimo, total em estoque e produtos.
+  function groups() {
+    const map = new Map();
+    data.products.forEach(product => {
+      const key = groupKey(product);
+      if (!key) return;
+      if (!map.has(key)) { const entry = groupEntry(key); map.set(key, {key, name: entry ? entry.name : product.group.trim(), min: groupMin(key), total: 0, members: []}); }
+      const group = map.get(key);
+      group.total += Number(product.stock) || 0;
+      group.members.push(product);
+    });
+    return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  }
+  const groupOf = product => { const key = groupKey(product); return key ? groups().find(g => g.key === key) : null; };
+  const lowGroups = () => groups().filter(g => g.total < g.min);
+
+  const minOf = product => hasStock(product) ? (groupKey(product) ? groupMin(groupKey(product)) : hasOwnMin(product) ? Number(product.minStock) : defaultMin()) : null;
 
   // ---------- lotes (compras) ----------
   const livePurchases = () => data.purchases.filter(p => p.status !== 'Estornada').slice().sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
@@ -99,7 +132,13 @@
   }
 
   // Produtos com estoque ABAIXO do mínimo (inclui zerado e negativo). Mínimo 1 = "quero ter sempre pelo menos 1": com 1 está bom, com 0 avisa (SPECS 39.3).
-  const lowStock = () => data.products.filter(product => hasStock(product) && (Number(product.stock) || 0) < minOf(product));
+  // Produto de um grupo: só está "baixo" quando o GRUPO inteiro está abaixo do mínimo do grupo (SPECS 61).
+  const lowStock = () => {
+    const lowKeys = new Set(lowGroups().map(g => g.key));
+    return data.products.filter(product => hasStock(product) && (groupKey(product) ? lowKeys.has(groupKey(product)) : (Number(product.stock) || 0) < minOf(product)));
+  };
+  // Só os produtos SEM grupo que estão baixos (o aviso dos grupos é feito por grupo).
+  const lowSingles = () => data.products.filter(product => hasStock(product) && !groupKey(product) && (Number(product.stock) || 0) < minOf(product));
 
   // ---------- origem (para mostrar) ----------
   const describeLot = lot => {
@@ -142,5 +181,6 @@
   }
   const usedQty = (purchaseId, name) => usageOf(purchaseId).filter(r => r.name === name).reduce((total, r) => total + r.qty, 0);
 
-  App.stock = {DEFAULT_MIN, defaultMin, productByName, hasStock, availableLots, hasOwnMin, minOf, consume, restore, lowStock, originLines, originHtml, usageOf, usedQty};
+  App.stock = {DEFAULT_MIN, GROUP_MIN, defaultMin, productByName, hasStock, availableLots, hasOwnMin, minOf, consume, restore, lowStock, lowSingles,
+    groupKey, groupMin, setGroupMin, groups, groupOf, lowGroups, originLines, originHtml, usageOf, usedQty};
 })();

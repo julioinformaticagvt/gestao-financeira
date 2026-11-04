@@ -25,22 +25,30 @@
   // ---------- lista ----------
   function render() {
     if (view === 'todo' && !toComplete().length) view = 'all';
+    if (view === 'groups' && !App.stock.groups().length) view = 'all';
     const catalogButton = App.catalog.enabled() ? '<button class="secondary" data-action="catalog-send">Mandar para o catálogo</button>' : '';
-    byId('app').innerHTML = `<section class="panel"><div class="panel-head"><h2>Produtos e serviços</h2>${catalogButton ? `<div class="head-buttons">${catalogButton}<button class="primary" data-action="new-product">+ Novo item</button></div>` : '<button class="primary" data-action="new-product">+ Novo item</button>'}</div><div class="toolbar"><input id="item-search" placeholder="Buscar produto ou serviço..."></div>${toComplete().length ? `<div class="pill-filters" id="item-views" role="group" aria-label="Mostrar">${[['all', 'Todos'], ['todo', `A completar, ${toComplete().length}`]].map(([key, label]) => `<button type="button" class="filter-pill${view === key ? ' active' : ''}" data-item-view="${key}" aria-pressed="${view === key}">${label}</button>`).join('')}</div>` : ''}<div id="item-table"></div></section>`;
+    const pills = [['all', 'Todos'], toComplete().length && ['todo', `A completar, ${toComplete().length}`], App.stock.groups().length && ['groups', `Grupos, ${App.stock.groups().length}`]].filter(Boolean);
+    byId('app').innerHTML = `<section class="panel"><div class="panel-head"><h2>Produtos e serviços</h2>${catalogButton ? `<div class="head-buttons">${catalogButton}<button class="primary" data-action="new-product">+ Novo item</button></div>` : '<button class="primary" data-action="new-product">+ Novo item</button>'}</div><div class="toolbar"><input id="item-search" placeholder="Buscar produto ou serviço..."></div>${pills.length > 1 ? `<div class="pill-filters" id="item-views" role="group" aria-label="Mostrar">${pills.map(([key, label]) => `<button type="button" class="filter-pill${view === key ? ' active' : ''}" data-item-view="${key}" aria-pressed="${view === key}">${label}</button>`).join('')}</div>` : ''}<div id="item-table"></div></section>`;
     if (byId('item-views')) byId('item-views').onclick = event => { const pill = event.target.closest('[data-item-view]'); if (pill) { view = pill.dataset.itemView; render(); } };
 
     const draw = () => {
       const query = normalize(byId('item-search').value);
+      if (view === 'groups') {   // um grupo por linha (SPECS 61): total, mínimo e os produtos dele
+        const list = App.stock.groups().filter(g => normalize(g.name).includes(query) || g.members.some(p => normalize(p.name).includes(query)));
+        byId('item-table').innerHTML = list.length ? `<div class="table-wrap"><table><thead><tr><th>Grupo</th><th>Total</th><th>Mínimo</th><th>Produtos</th></tr></thead><tbody>${list.map(g => `<tr><td>${esc(g.name)}${g.total < g.min ? ' <span class="badge warn">baixo</span>' : ''}</td><td>${g.total}</td><td>${g.min}</td><td>${g.members.map(p => `<button type="button" class="link-button" data-action="edit-item" data-name="${esc(p.name)}">${esc(p.name)}</button> (${Number(p.stock) || 0})`).join(', ')}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">Nenhum grupo encontrado.</div>';
+        return;
+      }
       const items = data.products.filter(p => normalize(p.name).includes(query) && (view === 'all' || p.toComplete));
       if (view === 'todo') {   // a completar: o que falta em cada um
         byId('item-table').innerHTML = items.length ? `<div class="table-wrap"><table><thead><tr><th>Nome</th><th>Custo</th><th>Falta</th><th></th></tr></thead><tbody>${items.map(p => `<tr><td>${esc(p.name)}</td><td>${money(p.cost)}</td><td><span class="todo-missing">${esc(missingOf(p).join(', ') || 'nada: marque como completo')}</span></td><td><button class="secondary" data-action="edit-item" data-name="${esc(p.name)}">Completar</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">Nenhum item encontrado.</div>';
         return;
       }
       const rows = items.map(p => {
-        const low = App.stock.lowStock().includes(p);
-        const stockCell = p.type === 'Serviço' ? 'Não se aplica' : `${p.stock}${low ? ' <span class="badge warn">baixo</span>' : ''}`;
+        const low = App.stock.lowStock().includes(p), group = App.stock.groupOf(p);
+        const stockCell = p.type === 'Serviço' ? 'Não se aplica' : `${p.stock}${group ? ` <span class="badge info" title="${esc(group.name)}">grupo: ${group.total} no total</span>` : ''}${low ? ' <span class="badge warn">baixo</span>' : ''}`;
+        const minCell = p.type === 'Serviço' ? '-' : App.stock.minOf(p) + (group ? ' <small class="muted">grupo</small>' : App.stock.hasOwnMin(p) ? '' : ' <small class="muted">padrão</small>');
         const inCatalog = p.toComplete ? ' <span class="badge warn">a completar</span>' : App.catalog.enabled() && App.catalog.isShown(p) ? ' <span class="badge info">no catálogo</span>' : '';
-        return `<tr><td>${esc(p.name)}${inCatalog}</td><td>${typeBadge(p.type)}</td><td>${money(p.cost)}</td><td>${money(p.price)}</td><td>${stockCell}</td><td>${p.type === 'Serviço' ? '-' : App.stock.minOf(p) + (App.stock.hasOwnMin(p) ? '' : ' <small class="muted">padrão</small>')}</td><td><button class="secondary" data-action="edit-item" data-name="${esc(p.name)}">Editar</button></td></tr>`;
+        return `<tr><td>${esc(p.name)}${inCatalog}</td><td>${typeBadge(p.type)}</td><td>${money(p.cost)}</td><td>${money(p.price)}</td><td>${stockCell}</td><td>${minCell}</td><td><button class="secondary" data-action="edit-item" data-name="${esc(p.name)}">Editar</button></td></tr>`;
       }).join('');
       byId('item-table').innerHTML = items.length
         ? `<div class="table-wrap"><table><thead><tr><th>Nome</th><th>Tipo</th><th>Custo</th><th>Preço</th><th>Estoque</th><th>Mínimo</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`
@@ -65,7 +73,7 @@
   function baseFormMarkup(product) {
     const v = product || {type: 'Produto', stock: 0};
     const margin = v.margin ?? (Number(v.cost) > 0 && Number(v.price) > 0 ? round2((v.price / v.cost - 1) * 100) : defaultMargin());
-    return `<div class="field full"><label>Nome *</label><input name="name" value="${esc(v.name || '')}" required></div><div class="field"><label>SKU</label><input name="sku" value="${esc(v.sku || '')}"></div><div class="field"><label>Tipo do item</label><select name="type"><option ${v.type === 'Produto' ? 'selected' : ''}>Produto</option><option ${v.type === 'Serviço' ? 'selected' : ''}>Serviço</option></select></div><div class="field"><label>Estoque atual</label><input name="stock" type="number" step="1" value="${v.stock ?? 0}"></div><div class="field"><label>Estoque mínimo <small>em branco = ${App.stock.defaultMin()}</small></label><input name="minStock" type="number" min="0" step="1" value="${App.stock.hasOwnMin(v) ? v.minStock : ''}" placeholder="padrão: ${App.stock.defaultMin()}"></div><div class="field"><label>Custo (R$) <small>quanto eu pago</small></label><input name="cost" type="number" min="0" step="0.01" value="${v.cost ?? ''}"></div><div class="field"><label>Margem de ganho (%) <small>em cima do custo</small></label><input name="margin" type="number" min="0" step="0.01" value="${margin}"></div><div class="field"><label>Preço de venda (R$)</label><input name="price" type="number" min="0" step="0.01" value="${v.price ?? ''}"></div><div class="field"><label>Preço sugerido</label><output id="price-suggest" class="price-suggest"></output></div><p class="muted field full">Serviço não tem estoque. Preço sugerido = custo + margem.</p>`;
+    return `<div class="field full"><label>Nome *</label><input name="name" value="${esc(v.name || '')}" required></div><div class="field"><label>SKU</label><input name="sku" value="${esc(v.sku || '')}"></div><div class="field"><label>Tipo do item</label><select name="type"><option ${v.type === 'Produto' ? 'selected' : ''}>Produto</option><option ${v.type === 'Serviço' ? 'selected' : ''}>Serviço</option></select></div><div class="field"><label>Estoque atual</label><input name="stock" type="number" step="1" value="${v.stock ?? 0}"></div><div class="field" data-stock-only><label>Grupo <small>opcional · produtos que se substituem, de qualquer marca</small></label><input name="group" list="group-options" maxlength="60" autocomplete="off" value="${esc(v.group || '')}" placeholder="Ex.: Suporte articulado preto"><datalist id="group-options">${App.stock.groups().map(g => `<option value="${esc(g.name)}">`).join('')}</datalist></div><div class="field" data-own-min><label>Estoque mínimo <small>em branco = ${App.stock.defaultMin()}</small></label><input name="minStock" type="number" min="0" step="1" value="${App.stock.hasOwnMin(v) ? v.minStock : ''}" placeholder="padrão: ${App.stock.defaultMin()}"></div><div class="field" data-group-min hidden><label>Mínimo do grupo <small>vale para todos do grupo</small></label><input name="groupMin" type="number" min="0" step="1" value=""></div><div class="field"><label>Custo (R$) <small>quanto eu pago</small></label><input name="cost" type="number" min="0" step="0.01" value="${v.cost ?? ''}"></div><div class="field"><label>Margem de ganho (%) <small>em cima do custo</small></label><input name="margin" type="number" min="0" step="0.01" value="${margin}"></div><div class="field"><label>Preço de venda (R$)</label><input name="price" type="number" min="0" step="0.01" value="${v.price ?? ''}"></div><div class="field"><label>Preço sugerido</label><output id="price-suggest" class="price-suggest"></output></div><p class="muted field full">Serviço não tem estoque. Preço sugerido = custo + margem.</p>`;
   }
 
   // Liga custo + margem = preço sugerido. O preço vem preenchido (em azul) até o usuário digitar nele.
@@ -93,14 +101,37 @@
     refresh();
   }
 
+  // Grupo (SPECS 61): com um grupo escolhido, some o "Estoque mínimo" do produto e aparece o "Mínimo do grupo" (já com o mínimo
+  // daquele grupo, ou 2 se o grupo é novo). Serviço não tem estoque, então também não tem grupo.
+  function bindGroup(form) {
+    const f = form.elements;
+    let lastKey = null;
+    const refresh = () => {
+      const service = f.type.value === 'Serviço', name = service ? '' : f.group.value.trim(), key = name ? normalize(name) : '';
+      form.querySelector('[data-stock-only]').hidden = service;
+      form.querySelector('[data-own-min]').hidden = !!key;
+      form.querySelector('[data-group-min]').hidden = !key;
+      if (key !== lastKey) { if (key) f.groupMin.value = App.stock.groupMin(key); lastKey = key; }   // trocou de grupo: mostra o mínimo dele
+    };
+    form.addEventListener('input', refresh);
+    form.addEventListener('change', refresh);
+    refresh();
+  }
+
   function readForm(form) {
     const f = Object.fromEntries(new FormData(form));
-    const isService = f.type === 'Serviço';
-    return {name: f.name.trim(), sku: f.sku.trim(), type: f.type, cost: Number(f.cost) || 0, price: Number(f.price) || 0, margin: Number(f.margin) || 0, stock: isService ? 0 : Math.round(Number(f.stock) || 0), ...(isService || f.minStock === '' ? {} : {minStock: Math.max(0, Math.round(Number(f.minStock) || 0))}), ...(f.activityId ? {activityId: f.activityId} : {})};
+    const isService = f.type === 'Serviço', group = isService ? '' : String(f.group || '').trim().slice(0, 60);
+    return {name: f.name.trim(), sku: f.sku.trim(), type: f.type, cost: Number(f.cost) || 0, price: Number(f.price) || 0, margin: Number(f.margin) || 0, stock: isService ? 0 : Math.round(Number(f.stock) || 0), ...(isService || group || f.minStock === '' ? {} : {minStock: Math.max(0, Math.round(Number(f.minStock) || 0))}), ...(group ? {group} : {}), ...(f.activityId ? {activityId: f.activityId} : {})};
+  }
+  // Grava o mínimo do grupo (se o produto tem grupo) e tira o mínimo próprio, que deixou de valer.
+  function applyGroup(form, product) {
+    if (!product.group) { delete product.group; return; }
+    product.group = App.stock.setGroupMin(product.group, form.elements.groupMin.value === '' ? App.stock.GROUP_MIN : form.elements.groupMin.value);
+    delete product.minStock;
   }
 
   const groupProduct = form => App.ui.groupFields(form, [
-    {kind: 'product', title: 'Produto ou serviço', items: ['name', 'sku', 'type', 'stock', 'minStock', 'activityId']},
+    {kind: 'product', title: 'Produto ou serviço', items: ['name', 'sku', 'type', 'stock', 'group', 'minStock', 'groupMin', 'activityId']},
     {kind: 'pay', title: 'Custo, margem e preço', items: ['cost', 'margin', 'price', '#price-suggest']}
   ]);
 
@@ -115,12 +146,13 @@
 
   function productForm() {
     openModal(`<h2>Novo produto</h2><form id="product-form" class="form-grid">${formMarkup(null)}<p class="negative field full" id="product-error" hidden></p><div class="actions field full"><button type="button" class="secondary" data-action="close-modal">Cancelar</button><button class="primary">Salvar produto</button></div></form>`);
-    groupProduct(byId('product-form')); bindMargin(byId('product-form'), false);
+    groupProduct(byId('product-form')); bindMargin(byId('product-form'), false); bindGroup(byId('product-form'));
     const catalog = App.catalog.bindForm(byId('product-form'), null);
     byId('product-form').onsubmit = async event => {
       event.preventDefault();
       const values = readForm(event.target);
       if (data.products.some(p => normalize(p.name) === normalize(values.name))) { const box = byId('product-error'); box.textContent = 'Já existe um item com esse nome.'; box.hidden = false; return; }
+      applyGroup(event.target, values);
       data.products.push(values);
       save();   // aqui o produto ganha o id interno (as fotos do catálogo usam esse id no nome)
       await catalog.apply(values);
@@ -151,7 +183,7 @@
     let markDone = false;
     openModal(`<h2>Editar item</h2><form id="edit-item-form" class="form-grid">${todo}${formMarkup(product)}${lotsHtml(product)}<p class="negative field full" id="product-error" hidden></p><p class="muted field full">${canDelete ? '' : 'Já usado em vendas: não pode ser excluído.'}</p><div class="actions field full">${canDelete ? `<button type="button" class="danger" data-action="product-delete" data-name="${esc(name)}">Excluir</button>` : ''}${buyLink(product) ? `<button type="button" class="secondary" data-action="buy-again" data-name="${esc(name)}" title="Abre a página da loja da última compra">Comprar de novo</button>` : ''}<button type="button" class="secondary" data-action="close-modal">Cancelar</button>${product.toComplete ? '<button type="button" class="secondary" id="mark-complete">Marcar como completo</button>' : ''}<button class="primary">Salvar</button></div></form>`);
     if (byId('mark-complete')) byId('mark-complete').onclick = () => { markDone = true; byId('edit-item-form').requestSubmit(); };
-    groupProduct(byId('edit-item-form')); bindMargin(byId('edit-item-form'), Number(product.price) > 0);
+    groupProduct(byId('edit-item-form')); bindMargin(byId('edit-item-form'), Number(product.price) > 0); bindGroup(byId('edit-item-form'));
     const catalog = App.catalog.bindForm(byId('edit-item-form'), product);
     byId('edit-item-form').onsubmit = async event => {
       event.preventDefault();
@@ -161,7 +193,9 @@
       if (values.name !== product.name) renameEverywhere(product, values.name);
       if (values.type === 'Serviço' || values.minStock === undefined) delete product.minStock;   // em branco = segue o padrão
       if (event.target.elements.activityId && !values.activityId) delete product.activityId;   // escolheu "Sem atividade"
+      if (!values.group) delete product.group;   // tirou do grupo
       Object.assign(product, values);
+      applyGroup(event.target, product);
       await catalog.apply(product);
       if (product.toComplete && (done || (Number(product.price) > 0 && (!App.catalog.enabled() || ((product.catalog || {}).photos || []).length)))) delete product.toComplete;
       save();

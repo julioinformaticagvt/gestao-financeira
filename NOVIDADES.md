@@ -1,5 +1,11 @@
 # Novidades
 
+## Versão 0.19.12 · Grupos de produtos · 04/11/2026
+
+- Produtos: campo "Grupo" para juntar produtos que se substituem, de qualquer marca (ex.: "Suporte articulado preto" = o da marca A + o da marca B).
+- Com um grupo escolhido, o produto pede só o "Mínimo do grupo" (padrão 2). O estoque baixo passa a olhar a soma do grupo: se ainda tem um de outra marca, não avisa.
+- Filtro "Grupos" na tela de Produtos: cada grupo com o total em estoque, o mínimo e os produtos.
+
 ## Versão 0.19.11 · Venda antiga no mês certo · 04/11/2026
 
 - Venda avulsa: numa venda com data de antes de hoje, aparece o campo "Data do pagamento" (já vem com a data da venda). O dinheiro da entrada conta no mês dessa data (caixa, relatórios e limite do MEI), e o recibo sai com ela.

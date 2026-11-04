@@ -524,3 +524,4 @@ th.sortable[aria-sort="ascending"], th.sortable[aria-sort="descending"] { color:
 /* "A completar" (SPECS 48): o que falta em cada produto vindo do "Colar pedido" */
 .todo-missing { color: var(--accent); font-size: 13px; }
 .todo-note { margin: 0; padding: 10px 14px; border-radius: var(--r-field); background: var(--sync-warn-bg); color: var(--text); font-size: 14px; }
+.link-button { padding: 0; min-height: 0; border: 0; background: none; color: var(--blue); font: inherit; text-decoration: underline; cursor: pointer; }

@@ -32,8 +32,10 @@
     // 1º lembretes de clientes, 2º estoque baixo, e só depois os pagamentos
     const due = data.reminders.filter(x => !x.done && x.date <= now);
     due.forEach(x => result.push({urgent: true, kind: 'lembrete', view: 'clients', text: `Lembrete — ${App.format.esc(x.client)}: ${App.format.esc(x.text)}${x.date < now ? ` (era para ${App.format.dateLabel(x.date)})` : ''}`}));
-    const low = App.stock.lowStock();
-    if (low.length) result.push({urgent: true, kind: 'estoque', view: 'products', text: `Estoque baixo: ${low.map(p => `${App.format.esc(p.name)} (${Number(p.stock) || 0})`).join(', ')}`});
+    // produto sozinho: "Mouse (1)"; grupo (SPECS 61): "Suporte preto (0 de 2: Marca A 0, Marca B 0)"
+    const low = App.stock.lowSingles().map(p => `${App.format.esc(p.name)} (${Number(p.stock) || 0})`)
+      .concat(App.stock.lowGroups().map(g => `${App.format.esc(g.name)} (${g.total} de ${g.min}: ${g.members.map(p => `${App.format.esc(p.name)} ${Number(p.stock) || 0}`).join(', ')})`));
+    if (low.length) result.push({urgent: true, kind: 'estoque', view: 'products', text: `Estoque baixo: ${low.join(', ')}`});
     // 3º ordem de serviço: aguardando aprovação há muito tempo e equipamentos prontos sem retirar
     App.serviceOrders.alerts().forEach(a => result.push(a));
     const lowMargin = App.revenue.belowMargin();
