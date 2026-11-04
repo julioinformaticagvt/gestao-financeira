@@ -105,7 +105,7 @@
 
   // Valores iniciais do bloco de pagamento: do orçamento novo, ou uma conversão razoável de um orçamento antigo.
   function initialPayment(quote) {
-    if (quote.pricing) return {modality: quote.pricing.modality, installments: quote.pricing.installments, account: quote.pricing.account, entry: quote.entry || 0, firstDue: quote.firstDue || '', feeRate: quote.pricing.feeRate, baseRate: quote.pricing.baseRate, extraRate: quote.pricing.extraRate, noInterest: !!quote.pricing.noInterest};
+    if (quote.pricing) return {modality: quote.pricing.modality, installments: quote.pricing.installments, account: quote.pricing.account, entry: quote.entry || 0, firstDue: quote.firstDue || '', feeRate: quote.pricing.feeRate, baseRate: quote.pricing.baseRate, extraRate: quote.pricing.extraRate, noInterest: !!quote.pricing.noInterest, combo: !!quote.combo, comboPrice: quote.comboPrice, parcelTarget: quote.pricing.parcelTarget};
     if (quote.installments > 1) return {modality: 'carne', installments: quote.installments, entry: quote.entry || 0};
     return {modality: 'pix'};
   }
@@ -133,8 +133,8 @@
         {kind: 'other', title: 'Defeito e diagnóstico', items: N.defect},
         {kind: 'pay', title: 'Datas, garantia e diagnóstico', items: N.dates}
       ] : []),
-      {kind: 'product', title: 'Produto ou serviço', items: ['.item-block', '#add-item', '.items-help']},
-      {kind: 'pay', title: 'Pagamento e datas', items: ['date', 'validUntil', 'discount', 'modality', 'installments', 'account', 'entry', 'firstDue', 'feeRate', 'baseRate', 'extraRate', '#pay-compare', '#pay-schedule', '.late-note', 'invoiceIssued', 'invoiceNumber']},
+      {kind: 'product', title: 'Produto ou serviço', items: ['combo', 'comboPrice', '.item-block', '#add-item', '.items-help']},
+      {kind: 'pay', title: 'Pagamento e datas', items: ['date', 'validUntil', 'discount', 'modality', 'installments', 'parcelTarget', 'account', 'entry', 'firstDue', 'feeRate', 'baseRate', 'extraRate', '#pay-compare', '#pay-schedule', '.late-note', 'invoiceIssued', 'invoiceNumber']},
       {kind: 'other', title: 'Situação e observações', items: ['status', 'notes', ...(os ? N.notes : [])]}
     ]);
     block.refresh();
@@ -151,8 +151,9 @@
         notes: f.notes.value, invoice: pay.invoiceIssued ? {issued: true, number: pay.invoiceNumber} : undefined, discount: pay.discount, discountType: pay.discountType, discountValue: pay.discountValue, items: pay.items, total: pay.sold, cost: pay.cost,
         productType: pay.items[0]?.type || 'Produto', installments: pay.modality === 'carne' ? pay.installments : 1, entry: pay.entry, firstDue: pay.firstDue,
         method: P.paymentLabel(pay.modality, pay.account), monthlyInterest: 0, updatedAt: today(),
-        pricing: {modality: pay.modality, label: P.paymentLabel(pay.modality, pay.account), installments: pay.installments, plan: data.settings.machine.plan, account: pay.account, baseRate: pay.base, extraRate: pay.extra, feeRate: pay.feeRate, totalRate: pay.withExtra.totalRate, price: pay.price, total: pay.withExtra.total, fee: pay.withExtra.fee, net: pay.withExtra.net, profit: pay.withExtra.profit, ...(pay.noInterest ? {noInterest: true} : {})}
+        pricing: {modality: pay.modality, label: P.paymentLabel(pay.modality, pay.account), installments: pay.installments, plan: data.settings.machine.plan, account: pay.account, baseRate: pay.base, extraRate: pay.extra, feeRate: pay.feeRate, totalRate: pay.withExtra.totalRate, price: pay.price, total: pay.withExtra.total, fee: pay.withExtra.fee, net: pay.withExtra.net, profit: pay.withExtra.profit, ...(pay.noInterest ? {noInterest: true} : {}), ...(pay.parcelTarget ? {parcelTarget: pay.parcelTarget} : {})}
       });
+      if (pay.combo) { quote.combo = true; quote.comboPrice = pay.comboPrice; } else { delete quote.combo; delete quote.comboPrice; }   // combo (SPECS 62)
       if (!os) quote.status = wanted;
       const wasNew = !data.quotes.some(x => x.id === quote.id);
       if (wasNew) {

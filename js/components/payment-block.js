@@ -25,7 +25,9 @@
   const markup = {
     // listId = id do <datalist> de produtos que já existe no formulário.
     items(listId) {
-      return `${Array.from({length: MAX_ITEMS}, (_, i) => itemBlock(i + 1, listId)).join('')}<div class="field full"><button type="button" class="secondary" id="add-item">+ Adicionar outro item</button></div><p class="muted help items-help"><b>Venda</b> = o preço que eu cobro do cliente por unidade. <b>Compra</b> = quanto eu pago para ter cada unidade (ou o custo do serviço). Se não tiver custo, digite 0. <span class="auto-key">Azul</span> = preenchido automaticamente (digite por cima para mudar).</p>`;
+      // Combo (SPECS 62): a pessoa diz o preço do conjunto e o sistema divide entre os itens.
+      const combo = '<div class="field full combo-check"><label class="inline-check"><input type="checkbox" name="combo"> <b>Combo (preço fechado)</b></label><small class="muted">Você diz o preço do conjunto e o sistema divide entre os itens.</small></div><div class="field" data-combo hidden><label>Preço do combo (R$) <small>sem juros</small></label><input name="comboPrice" type="number" min="0" step="0.01"></div>';
+      return `${combo}${Array.from({length: MAX_ITEMS}, (_, i) => itemBlock(i + 1, listId)).join('')}<div class="field full"><button type="button" class="secondary" id="add-item">+ Adicionar outro item</button></div><p class="muted help items-help"><b>Venda</b> = o preço que eu cobro do cliente por unidade. <b>Compra</b> = quanto eu pago para ter cada unidade (ou o custo do serviço). Se não tiver custo, digite 0. <span class="auto-key">Azul</span> = preenchido automaticamente (digite por cima para mudar).</p>`;
     },
     discount() {
       return '<div class="field"><label>Desconto da venda inteira <small>em R$ ou em %</small></label><div class="discount-row"><input name="discount" type="number" min="0" step="0.01" value="0"><select name="discountType"><option value="money">R$</option><option value="percent">%</option></select></div></div>';
@@ -33,6 +35,7 @@
     payment(options = {}) {
       return `<div class="field"><label>Forma de pagamento</label><select name="modality">${P.MODALITIES.map(m => `<option value="${m.key}">${m.label}</option>`).join('')}</select></div>
         <div class="field" data-show="credit,carne"><label>Parcelas</label><input name="installments" type="number" min="1" max="12" value="1"></div>
+        <div class="field" data-show="credit,carne"><label>Parcela combinada (R$) <small>opcional · o sistema calcula os juros</small></label><input name="parcelTarget" type="number" min="0" step="0.01"></div>
         <div class="field" data-show="pix"><label>Conta que recebeu</label><select name="account"><option value="PJ">Conta PJ (da empresa)</option><option value="PF">Conta PF (pessoal)</option></select></div>
         <div class="field" data-show="carne"><label>Entrada (R$)</label><input name="entry" type="number" min="0" step="0.01" value="0"></div>
         <div class="field" data-show="carne"><label>Vence a 1ª parcela <small>vazio = dia ${Number(data.settings.dueDay) || 12}</small></label><input name="firstDue" type="date"></div>
@@ -70,6 +73,22 @@
     syncNotes(form);
   }
 
+  // Combo (SPECS 62): divide o preço do combo entre os itens, em centavos, na proporção do preço de cadastro de cada um
+  // (se algum não tiver preço, pela proporção do custo; se algum não tiver custo, pela quantidade). Os centavos que sobram
+  // vão para o item de maior peso, para a soma dar exatamente o preço do combo.
+  // Analogia: repartir a conta do restaurante pelo que cada um pediu, e quem pediu mais fica com o troco.
+  function splitCombo(items, comboPrice) {
+    if (!items.length) return [];
+    const priceOf = item => { const product = App.store.findByName('products', item.name); return product ? Number(product.price) || 0 : 0; };
+    const by = items.every(item => priceOf(item) > 0) ? item => priceOf(item) * item.qty
+      : items.every(item => item.unitCost > 0) ? item => item.unitCost * item.qty : item => item.qty;
+    const weights = items.map(by), sum = weights.reduce((a, b) => a + b, 0), cents = Math.round(comboPrice * 100);
+    const parts = weights.map(w => Math.floor(cents * w / sum));
+    const top = weights.indexOf(Math.max(...weights));
+    parts[top] += cents - parts.reduce((a, b) => a + b, 0);
+    return parts.map(c => c / 100);
+  }
+
   // ---------- comportamento ----------
   // "extraDues" fica num campo escondido como texto "data,data,,data" (assim volta junto quando o formulário é reaberto).
   const parseDues = text => String(text || '').split(',').map(part => (/^\d{4}-\d{2}-\d{2}$/.test(part) ? part : ''));
@@ -92,7 +111,8 @@
 
     // Lê tudo que está no formulário e faz as contas.
     function read() {
-      const f = new FormData(form), items = [];
+      const f = new FormData(form), items = [], slots = [];   // slots[i] = número do item no formulário (Item 1, 2...)
+      const combo = f.get('combo') === 'on', comboPrice = combo ? Math.max(0, num(f.get('comboPrice'))) : 0;
       visible().forEach(block => {
         const n = Number(block.dataset.item);
         const typed = String(f.get(productField(n)) || '').trim(), known = App.store.findByName('products', typed);
@@ -105,11 +125,13 @@
         if (note) line.note = note;   // o que foi feito neste serviço, só desta venda (SPECS 58)   // compra de onde a peça sai (escolhida nos botões de custo)
         const product = known;
         if (product && product.activityId) line.activityId = product.activityId;   // atividade do produto no momento da venda (cópia gravada)
-        if (n === 1 ? (name || unit > 0) : (name && unit > 0)) items.push(line);
+        if (combo ? !!name : n === 1 ? (name || unit > 0) : (name && unit > 0)) { items.push(line); slots.push(n); }
       });
-      const sold = items.reduce((total, item) => total + item.amount, 0);
-      // O desconto pode ser digitado em R$ ou em % (da venda inteira); o sistema guarda sempre o valor em R$ (discount).
-      const discountType = f.get('discountType') === 'percent' ? 'percent' : 'money', discountValue = num(f.get('discount'));
+      // Combo: o VENDA de cada item vem da divisão do preço do combo (o que estiver digitado no campo é ignorado).
+      if (combo) splitCombo(items, comboPrice).forEach((amount, i) => { const item = items[i]; item.amount = amount; item.unit = P.round2(amount / item.qty); });
+      const sold = P.round2(items.reduce((total, item) => total + item.amount, 0));
+      // O desconto pode ser digitado em R$ ou em % (da venda inteira); o sistema guarda sempre o valor em R$ (discount). No combo não há desconto.
+      const discountType = !combo && f.get('discountType') === 'percent' ? 'percent' : 'money', discountValue = combo ? 0 : num(f.get('discount'));
       const discount = discountType === 'percent' ? P.round2(sold * Math.min(100, discountValue) / 100) : discountValue;
       const price = Math.max(0, P.round2(sold - discount));
       const cost = P.round2(items.reduce((total, item) => total + item.cost, 0));
@@ -119,17 +141,48 @@
       const needsFee = modality === 'debit' || modality === 'credit';
       const feeRate = needsFee ? num(f.get('feeRate')) : modality === 'pix' ? (P.machineRate('pix', 1) ?? 0) : 0;
       // SPECS 47: por padrão EU pago a taxa (o cliente paga o preço; a taxa sai do meu lucro). Marcando "Repassar", o cliente paga os juros.
-      const noInterest = modality !== 'cash' && f.get('passFee') !== 'on';
-      const base = noInterest ? 0 : num(f.get('baseRate')), extra = noInterest ? 0 : num(f.get('extraRate'));
+      // "Parcela combinada" (SPECS 62): no crédito e no carnê em 2x ou mais, o total vira parcela × N (+ a entrada do carnê) e o
+      // "extra" é o que falta para chegar nele. Ex.: preço 4.000, 10x de 450 = 4.500 → 12,5% de juros no total.
+      const parcelTarget = (modality === 'credit' || modality === 'carne') && installments > 1 ? Math.max(0, num(f.get('parcelTarget'))) : 0;
+      const targetOn = parcelTarget > 0 && price > 0;
+      const noInterest = !targetOn && modality !== 'cash' && f.get('passFee') !== 'on';
+      const typedEntry = modality === 'carne' ? Math.max(0, num(f.get('entry'))) : 0;
+      const base = noInterest ? 0 : num(f.get('baseRate'));
+      const extra = noInterest ? 0 : targetOn ? ((parcelTarget * installments + typedEntry) / price - 1) * 100 - base : num(f.get('extraRate'));
       const result = P.compare({price, cost, base, extra, feeRate, installments});
-      const entry = modality === 'carne' ? Math.min(Math.max(0, num(f.get('entry'))), result.withExtra.total) : 0;
+      const entry = modality === 'carne' ? Math.min(typedEntry, result.withExtra.total) : 0;
       const firstDue = modality === 'carne' ? (f.get('firstDue') || '') : '';
       const extraDues = firstDue ? parseDues(f.get('extraDues')).slice(0, Math.max(0, installments - 1)) : [];   // datas escolhidas da 2ª parcela em diante ('' = dia padrão)
       const invoiceIssued = f.get('invoiceIssued') === 'on', invoiceNumber = String(f.get('invoiceNumber') || '').trim();
-      return {items, invoiceIssued, invoiceNumber, discount, discountType, discountValue, sold, price, cost, modality, account: f.get('account') || 'PJ', installments, base, extra, noInterest, feeRate, entry, firstDue, extraDues, ...result};
+      return {items, invoiceIssued, invoiceNumber, discount, discountType, discountValue, sold, price, cost, modality, account: f.get('account') || 'PJ', installments, base, extra, noInterest, feeRate, entry, firstDue, extraDues, combo, comboPrice, parcelTarget: targetOn ? parcelTarget : 0, slots, ...result};
+    }
+
+    // Combo e parcela combinada (SPECS 62): mostra os valores calculados em azul e trava os campos que o sistema preenche.
+    let targetWasOn = false;
+    function syncCombo(r) {
+      const combo = !!(el('combo') && el('combo').checked);
+      form.querySelectorAll('[data-combo]').forEach(box => { box.hidden = !combo; });
+      if (el('comboPrice')) el('comboPrice').required = combo;
+      const discount = el('discount') && el('discount').closest('.field');
+      if (discount) discount.hidden = combo;
+      visible().forEach(block => {
+        const n = Number(block.dataset.item), field = el(`itemAmount${n}`);
+        field.readOnly = combo;
+        if (!combo) return;
+        const item = r.items[r.slots.indexOf(n)];
+        set(`itemAmount${n}`, item ? item.unit : '', true);
+      });
+      const targetOn = r.parcelTarget > 0;
+      if (targetOn) {
+        el('passFee').checked = true;
+        set('extraRate', P.round2(r.extra), true);
+        ['baseRate', 'extraRate'].forEach(name => { el(name).readOnly = true; el(name).closest('.field').classList.add('is-locked'); });
+      } else if (targetWasOn) applyRates();   // apagou a parcela combinada: volta aos juros de antes
+      targetWasOn = targetOn;
     }
 
     function renderCompare() {
+      syncCombo(read());
       const r = read(), a = r.onlyFee, b = r.withExtra, n = r.installments;
       const needsFee = r.modality === 'debit' || r.modality === 'credit';
       const missingFee = needsFee && el('feeRate').value === '';
@@ -353,6 +406,8 @@
     applyVisibility();
     applyDefaults();
     for (const key of ['installments', 'account', 'entry', 'firstDue']) if (initial[key] !== undefined) set(key, initial[key]);
+    if (initial.combo && el('combo')) { el('combo').checked = true; set('comboPrice', initial.comboPrice); }   // venda/orçamento em combo (SPECS 62)
+    if (initial.parcelTarget) set('parcelTarget', initial.parcelTarget);
     if (initial.noInterest !== undefined) { el('passFee').checked = !initial.noInterest; touched.passFee = true; }   // venda/orçamento já salvo: a escolha dele
     if (initial.modality) applyDefaults();               // recalcula padrões com as parcelas iniciais
     if (duesBox) loadDues(initial.extraDues ? initial.extraDues : parseDues(el('extraDues').value));

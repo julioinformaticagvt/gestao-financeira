@@ -24,9 +24,11 @@
         modality: pay.modality, label, installments: pay.installments, plan: data.settings.machine.plan, account: pay.account,
         baseRate: pay.base, extraRate: pay.extra, feeRate: pay.feeRate, totalRate: calc.totalRate,
         price: pay.price, total: calc.total, fee: calc.fee, net: calc.net, profit: calc.profit,
-        ...(pay.noInterest ? {noInterest: true} : {})   // "sem juros para o cliente": eu paguei a taxa (SPECS 47)
+        ...(pay.noInterest ? {noInterest: true} : {}),   // "sem juros para o cliente": eu paguei a taxa (SPECS 47)
+        ...(pay.parcelTarget ? {parcelTarget: pay.parcelTarget} : {})   // parcela combinada com o cliente (SPECS 62)
       }
     };
+    if (pay.combo) { sale.combo = true; sale.comboPrice = pay.comboPrice; }   // combo: preço fechado, dividido entre os itens (SPECS 62)
     if (quoteId) sale.quoteId = quoteId;
     if (pay.invoiceIssued) sale.invoice = {issued: true, number: pay.invoiceNumber || ''};   // nota fiscal emitida (relatórios com e sem nota)
     if (osId) sale.osId = osId;                          // veio de uma ordem de serviço ("Origem: OS0007")

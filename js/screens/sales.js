@@ -39,7 +39,7 @@
       form.elements.invoiceIssued.checked = !!(editing.invoice && editing.invoice.issued);
       form.elements.invoiceNumber.value = (editing.invoice && editing.invoice.number) || "";
       paymentBlock.fillItems(form, editing.items || []);
-      initial = {modality: p.modality, installments: p.installments, account: p.account, entry: editing.entry || 0, firstDue: editing.firstDue || '', extraDues: editing.extraDues || [], feeRate: p.feeRate, baseRate: p.baseRate, extraRate: p.extraRate, noInterest: !!p.noInterest};
+      initial = {modality: p.modality, installments: p.installments, account: p.account, entry: editing.entry || 0, firstDue: editing.firstDue || '', extraDues: editing.extraDues || [], feeRate: p.feeRate, baseRate: p.baseRate, extraRate: p.extraRate, noInterest: !!p.noInterest, combo: !!editing.combo, comboPrice: editing.comboPrice, parcelTarget: p.parcelTarget};
     }
     if (prefill) {   // volta do cadastro rápido: devolve o que já estava digitado
       App.ui.applyForm(form, prefill);
@@ -48,8 +48,8 @@
     const block = paymentBlock.bind(form, initial);
     App.ui.groupFields(form, [
       {kind: 'client', title: 'Cliente', items: ['client', '[data-action="new-product-quick"]']},
-      {kind: 'product', title: 'Produto ou serviço', items: ['.item-block', '#add-item', '.items-help']},
-      {kind: 'pay', title: 'Pagamento e datas', items: ['date', 'discount', 'modality', 'installments', 'account', 'entry', 'firstDue', '#extra-dues-box', 'feeRate', 'baseRate', 'extraRate', '#pay-compare', '#pay-schedule', 'p[data-show="carne"]', 'invoiceIssued', 'invoiceNumber']}
+      {kind: 'product', title: 'Produto ou serviço', items: ['combo', 'comboPrice', '.item-block', '#add-item', '.items-help']},
+      {kind: 'pay', title: 'Pagamento e datas', items: ['date', 'discount', 'modality', 'installments', 'parcelTarget', 'account', 'entry', 'firstDue', '#extra-dues-box', 'feeRate', 'baseRate', 'extraRate', '#pay-compare', '#pay-schedule', 'p[data-show="carne"]', 'invoiceIssued', 'invoiceNumber']}
     ]);
     form.elements.installments.max = Math.min(12, Math.max(1, Math.round(Number(data.settings.maxInstallments)) || 12));
     if (editing) form.querySelectorAll('[data-action="new-client-quick"], [data-action="new-product-quick"]').forEach(button => button.remove());   // o cadastro rápido reabriria uma venda nova
@@ -186,14 +186,21 @@
   //    (vem com a data da venda), para o dinheiro contar no mês certo (SPECS 60);
   //  - "Já recebido antes do sistema" (priorPaid): abate o saldo, mas não é pagamento (sem recibo, fora do caixa); só para venda de antes de hoje.
   const isOldAccount = sale => sale.launchedAt ? sale.date < sale.launchedAt : sale.method === 'Conta antiga';   // lançada depois da data da venda = conta antiga
+  // Combo da venda avulsa: o total dividido pela quantidade de cada item (em centavos; o que sobra vai para o 1º item).
+  function splitLegacy(lines, type, total) {
+    const units = lines.reduce((sum, l) => sum + l.qty, 0), cents = Math.round(total * 100);
+    const parts = lines.map(l => Math.floor(cents * l.qty / units));
+    parts[0] += cents - parts.reduce((a, b) => a + b, 0);
+    return lines.map((l, i) => ({name: l.name, type, qty: l.qty, unit: round2(parts[i] / 100 / l.qty), amount: parts[i] / 100}));
+  }
   function legacyForm(clientName) {
     const clientOptions = data.clients.map(c => `<option value="${esc(c.name)}">`).join('');
     const thisMonth = App.finance.monthDay(today().slice(0, 7), Number(data.settings.dueDay) || 12);
     const next = thisMonth > today() ? thisMonth : App.finance.monthDay(App.format.shiftMonth(today().slice(0, 7), 1), Number(data.settings.dueDay) || 12);   // próximo dia de vencimento padrão
     const methods = App.finance.PAY_METHODS.map(m => `<option>${m}</option>`).join('');
-    openModal(`<h2>Venda avulsa</h2><p class="muted">Venda sem cadastrar produto: item usado, peça única ou conta antiga. Não mexe no estoque.</p><form id="legacy-form" class="form-grid"><div class="field full"><label>Cliente *</label><input name="client" list="legacy-clients" value="${esc(clientName || '')}" autocomplete="off" required><datalist id="legacy-clients">${clientOptions}</datalist></div><div class="field full"><label>O que foi vendido *</label><input name="what" required autocomplete="off" placeholder="Ex.: Monitor 24 polegadas usado"></div><div class="field"><label>Tipo</label><select name="type"><option>Produto</option><option>Serviço</option></select></div><div class="field"><label>Data da venda *</label><input name="date" type="date" value="${today()}" max="${today()}" required></div><div class="field"><label>Valor total da venda *</label><input name="price" type="number" min="0" step="0.01" required></div><div class="field"><label>Entrada / valor pago <small>gera recibo</small></label><input name="entry" type="number" min="0" step="0.01" value="0"></div><div class="field" data-entry-method><label>Forma da entrada</label><select name="method">${methods}</select></div><div class="field" data-pay-date hidden><label>Data do pagamento <small>mês em que o dinheiro conta</small></label><input name="payDate" type="date" max="${today()}"></div><div class="field" data-prior hidden><label>Já recebido antes do sistema <small>sem recibo</small></label><input name="priorPaid" type="number" min="0" step="0.01" value="0"></div><div class="field" data-rest><label>Parcelas que faltam</label><input name="count" type="number" min="1" max="24" step="1" value="1"></div><div class="field" data-rest><label>Vence a próxima *</label><input name="firstDue" type="date" value="${next}"></div><p class="muted field full" id="legacy-preview"></p><p class="negative field full" id="legacy-error" hidden></p><div class="actions field full"><button type="button" class="secondary" data-action="close-modal">Cancelar</button><button class="primary">Salvar venda</button></div></form>`);
+    openModal(`<h2>Venda avulsa</h2><p class="muted">Venda sem cadastrar produto: item usado, peça única ou conta antiga. Não mexe no estoque.</p><form id="legacy-form" class="form-grid"><div class="field full"><label>Cliente *</label><input name="client" list="legacy-clients" value="${esc(clientName || '')}" autocomplete="off" required><datalist id="legacy-clients">${clientOptions}</datalist></div><div class="field full"><label class="inline-check"><input type="checkbox" name="combo"> <b>Combo (vários itens, preço fechado)</b></label></div><div class="field full" data-single><label>O que foi vendido *</label><input name="what" required autocomplete="off" placeholder="Ex.: Monitor 24 polegadas usado"></div><div class="field full" data-combo-list hidden><label>Itens do combo * <small>um por linha; "2x" na frente para quantidade</small></label><textarea name="comboItems" rows="4" maxlength="1000" placeholder="2x Memória RAM 8 GB&#10;Gabinete gamer&#10;Placa de vídeo"></textarea></div><div class="field"><label>Tipo</label><select name="type"><option>Produto</option><option>Serviço</option></select></div><div class="field"><label>Data da venda *</label><input name="date" type="date" value="${today()}" max="${today()}" required></div><div class="field"><label>Valor total da venda *</label><input name="price" type="number" min="0" step="0.01" required></div><div class="field"><label>Entrada / valor pago <small>gera recibo</small></label><input name="entry" type="number" min="0" step="0.01" value="0"></div><div class="field" data-entry-method><label>Forma da entrada</label><select name="method">${methods}</select></div><div class="field" data-pay-date hidden><label>Data do pagamento <small>mês em que o dinheiro conta</small></label><input name="payDate" type="date" max="${today()}"></div><div class="field" data-prior hidden><label>Já recebido antes do sistema <small>sem recibo</small></label><input name="priorPaid" type="number" min="0" step="0.01" value="0"></div><div class="field" data-rest><label>Parcelas que faltam</label><input name="count" type="number" min="1" max="24" step="1" value="1"></div><div class="field" data-rest><label>Vence a próxima *</label><input name="firstDue" type="date" value="${next}"></div><p class="muted field full" id="legacy-preview"></p><p class="negative field full" id="legacy-error" hidden></p><div class="actions field full"><button type="button" class="secondary" data-action="close-modal">Cancelar</button><button class="primary">Salvar venda</button></div></form>`);
     const form = byId('legacy-form'), f = form.elements;
-    App.ui.groupFields(form, [{kind: 'client', title: 'Cliente', items: ['client']}, {kind: 'product', title: 'O que foi vendido', items: ['what', 'type']}, {kind: 'pay', title: 'Valores e parcelas', items: ['date', 'price', 'entry', 'method', 'payDate', 'priorPaid', 'count', 'firstDue', '#legacy-preview']}]);
+    App.ui.groupFields(form, [{kind: 'client', title: 'Cliente', items: ['client']}, {kind: 'product', title: 'O que foi vendido', items: ['combo', 'what', 'comboItems', 'type']}, {kind: 'pay', title: 'Valores e parcelas', items: ['date', 'price', 'entry', 'method', 'payDate', 'priorPaid', 'count', 'firstDue', '#legacy-preview']}]);
     const values = () => {
       const date = f.date.value || today(), old = date < today();
       const total = round2(Number(f.price.value) || 0), entry = round2(Number(f.entry.value) || 0), prior = old ? round2(Number(f.priorPaid.value) || 0) : 0;
@@ -216,6 +223,18 @@
       const plan = App.finance.scheduleFor({date: v.date, total: v.remaining, installments: v.count, firstDue: v.firstDue});
       box.innerHTML = `<b>Falta receber ${money(v.remaining)}:</b> ${plan.map(p => `${dateLabel(p.due)} · ${money(p.value)}`).join(' &nbsp;|&nbsp; ')}`;
     };
+    // Combo (SPECS 62): vários itens (só texto) com um preço total. "2x Memória" = 2 unidades.
+    const comboLines = () => f.comboItems.value.split('\n').map(line => line.trim()).filter(Boolean).slice(0, 20).map(line => {
+      const m = /^(\d{1,3})\s*[x×]\s+(.+)$/i.exec(line);
+      return m ? {name: m[2].trim().slice(0, 120), qty: Math.max(1, Number(m[1]))} : {name: line.slice(0, 120), qty: 1};
+    });
+    const syncCombo = () => {
+      const on = f.combo.checked;
+      form.querySelector('[data-single]').hidden = on; f.what.required = !on;
+      form.querySelector('[data-combo-list]').hidden = !on; f.comboItems.required = on;
+    };
+    f.combo.addEventListener('change', syncCombo);
+    syncCombo();
     let payDateTyped = false;
     f.payDate.addEventListener('input', () => { payDateTyped = true; });
     form.addEventListener('input', refresh);
@@ -224,7 +243,8 @@
     form.onsubmit = event => {
       event.preventDefault();
       const v = values(), fail = message => { const box = byId('legacy-error'); box.textContent = message; box.hidden = false; };
-      const what = f.what.value.trim();
+      const combo = f.combo.checked, lines = combo ? comboLines() : [], what = combo ? (lines[0] || {}).name || '' : f.what.value.trim();
+      if (combo && !lines.length) return fail('Escreva os itens do combo, um por linha (ex.: 2x Memória RAM).');
       if (!what) return fail('Diga o que foi vendido (ex.: Monitor 24 polegadas usado).');
       if (!(v.total > 0)) return fail('Informe o valor total da venda.');
       if (!f.date.value || f.date.value > today()) return fail('A data da venda não pode ficar em branco nem ser no futuro.');
@@ -240,8 +260,9 @@
       const type = f.type.value === 'Serviço' ? 'Serviço' : 'Produto', count = paidNow ? 1 : v.count;
       const sale = {id: App.store.nextCode('sale'), client, product: what, date: f.date.value, cost: 0, total: v.total, paid: 0, balance: v.total, installments: count, entry: v.entry,
         quantity: 1, unitPrice: v.total, discount: 0, method: v.old ? 'Conta antiga' : 'Venda avulsa', monthlyInterest: 0, productType: type,
-        items: [{name: what, type, qty: 1, unit: v.total, amount: v.total}], productTotal: type === 'Produto' ? v.total : 0, serviceTotal: type === 'Serviço' ? v.total : 0,
+        items: combo ? splitLegacy(lines, type, v.total) : [{name: what, type, qty: 1, unit: v.total, amount: v.total}], productTotal: type === 'Produto' ? v.total : 0, serviceTotal: type === 'Serviço' ? v.total : 0,
         payments: [], stockOut: [], legacy: true, priorPaid: v.prior, launchedAt: today()};
+      if (combo) { sale.combo = true; sale.comboPrice = v.total; }   // o cliente vê os itens e só o total
       if (paidNow) { sale.paidAtSale = true; sale.due = sale.date; }
       else if (count > 1) { sale.firstDue = v.firstDue; sale.dueDates = App.finance.dueDates({date: sale.date, count, firstDue: v.firstDue}); }   // datas congeladas, como no carnê
       else { sale.firstDue = v.firstDue; sale.due = v.firstDue; }

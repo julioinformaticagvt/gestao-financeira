@@ -1,6 +1,12 @@
 // "O que há de novo": lista de versões em linguagem simples, da mais nova para a mais antiga.
 // A cada versão aprovada, acrescente uma entrada AQUI (e em version.js, na tabela do CLAUDE.md e na etiqueta do Git).
 window.CHANGELOG = [
+  {version: '0.20.0', name: 'Combo de vendas', date: '04/11/2026', items: [
+    'Venda e orçamento: caixinha "Combo (preço fechado)". Você escolhe os itens, diz o preço do combo (ex.: R$ 4.000) e o sistema divide entre os itens, na proporção do preço de cadastro de cada um.',
+    '"Parcela combinada" no crédito e no carnê: digite o valor da parcela (ex.: 10x de R$ 450) e o sistema calcula o total e os juros sozinho.',
+    'Venda avulsa também em combo: vários itens, um por linha, com um preço total.',
+    'Para o cliente (recibo, orçamento em PDF e mensagens), o combo aparece com a lista dos itens e só o valor total.'
+  ]},
   {version: '0.19.12', name: 'Grupos de produtos', date: '04/11/2026', items: [
     'Produtos: campo "Grupo" para juntar produtos que se substituem, de qualquer marca (ex.: "Suporte articulado preto" = o da marca A + o da marca B).',
     'Com um grupo escolhido, o produto pede só o "Mínimo do grupo" (padrão 2). O estoque baixo passa a olhar a soma do grupo: se ainda tem um de outra marca, não avisa.',

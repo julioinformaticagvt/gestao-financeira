@@ -31,10 +31,20 @@
   // "Mão de obra (limpeza interna e troca...)", cortado em cerca de 60 letras.
   const shortNote = note => (note.length > 60 ? `${note.slice(0, 58).trim()}…` : note);
   const itemNote = i => (i.note ? `<small class="doc-what">${esc(i.note)}</small>` : '');
+  // Combo (SPECS 62): "Combo: 2× Memória RAM, Gabinete e +1 item".
   function itemsText(sale) {
     const names = (sale.items || []).filter(i => i.name).map(i => `${(i.qty || 1) > 1 ? `${i.qty}× ` : ''}${i.name}${i.note ? ` (${shortNote(i.note)})` : ''}`);
     if (!names.length) return sale.product || 'Venda';
-    return names.length <= 2 ? names.join(' e ') : `${names.slice(0, 2).join(', ')} e +${names.length - 2} ${names.length - 2 === 1 ? 'item' : 'itens'}`;
+    const text = names.length <= 2 ? names.join(' e ') : `${names.slice(0, 2).join(', ')} e +${names.length - 2} ${names.length - 2 === 1 ? 'item' : 'itens'}`;
+    return sale.combo ? `Combo: ${text}` : text;
+  }
+  // Linhas da tabela "Itens" dos documentos. No combo (SPECS 62) o cliente vê os itens sem o valor de cada um e uma linha
+  // "Combo" com o total (o preço fechado que foi combinado).
+  function itemRows(items, combo) {
+    const rows = items.map(i => `<tr><td>${esc(i.name || 'Item')}${itemNote(i)}</td><td class="num">${Number(i.qty) || 1}</td><td class="num">${combo ? '' : money(i.amount)}</td></tr>`).join('');
+    if (!combo || !items.length) return rows;
+    const total = round2(items.reduce((sum, i) => sum + (Number(i.amount) || 0), 0));
+    return `${rows}<tr class="doc-combo"><td><b>Combo</b> <small class="doc-what">preço fechado dos itens acima</small></td><td class="num"></td><td class="num"><b>${money(total)}</b></td></tr>`;
   }
 
   // ---------- situação do cliente numa data ----------
@@ -179,7 +189,7 @@
     const warranty = r.warranty || '';   // sem garantia cadastrada: a linha de garantia não aparece
 
     if (!installmentSale) {   // venda à vista: recibo simples
-      const items = (lines[0].items || r.items || []).map(i => `<tr><td>${esc(i.name || 'Item')}${itemNote(i)}</td><td class="num">${i.qty || 1}</td><td class="num">${money(i.amount)}</td></tr>`).join('');
+      const items = itemRows(lines[0].items || r.items || [], !!lines[0].combo);
       const first = lines[0];
       const note = first.kind === 'entrada' ? '<p class="doc-note">Este recibo é da entrada da venda.</p>' : '';
       const body = section('Itens', `<table class="doc-table"><thead><tr><th>Item</th><th class="num">Qtd.</th><th class="num">Valor</th></tr></thead><tbody>${items}</tbody></table>${note}`)
@@ -389,7 +399,7 @@
   function quoteDocument(quote, eco) {
     const items = quote.items || [], {sold, discount, total, extra} = quoteTotals(quote);
     const warranty = String(data.settings.business.warranty || '').trim();
-    const rows = items.map(i => `<tr><td>${esc(i.name || 'Item')}${itemNote(i)}</td><td class="num">${Number(i.qty) || 1}</td><td class="num">${money(i.amount)}</td></tr>`).join('');
+    const rows = itemRows(items, !!quote.combo);
     const main = `<p class="doc-label">ORÇAMENTO</p><p class="doc-lead-2">Valor total</p><p class="doc-value">${money(total)}</p><p class="doc-who">Para <b>${esc(quote.client || 'Cliente')}</b></p>${quote.validUntil ? `<p class="doc-muted">Válido até ${dateLabel(quote.validUntil)}</p>` : ''}`;
     const details = (rows ? section('Itens', `<table class="doc-table"><thead><tr><th>Item</th><th class="num">Qtd.</th><th class="num">Valor</th></tr></thead><tbody>${rows}</tbody></table>`) : '')
       + section('Valores', `${docRow('Soma dos itens', money(sold))}${discount > 0 ? `<div class="doc-row"><span>Desconto</span><span class="doc-amount doc-ok">− ${money(discount)}</span></div>` : ''}${extra > 0.005 ? docRow('Acréscimo do parcelamento', money(extra)) : ''}<div class="doc-row"><strong>Total</strong><span class="doc-amount"><b>${money(total)}</b></span></div>`)
@@ -406,5 +416,5 @@
     openDocument({title: `Extrato da conta · ${esc(client)}`, fileName: `Extrato-${client.replace(/\s+/g, '-')}-${asOf}`, client, modes: true, build: (eco, mode) => extractDocument(client, asOf, eco, mode), message: () => extractMessage(client, asOf)});
   }
 
-  App.documents = {ICONS, header, frame, section, customerMethod, quoteDocument, quotePayment, quoteMessage, showQuote, settlement, LIMITS, COLORS, pill, itemsText, situation, receiptDocument, extractDocument, receiptMessage, extractMessage, collectionMessage, openDocument, showExtract, printDocument, linesOf, pad, dm};
+  App.documents = {ICONS, header, frame, section, customerMethod, quoteDocument, quotePayment, quoteMessage, showQuote, settlement, LIMITS, COLORS, pill, itemsText, itemRows, situation, receiptDocument, extractDocument, receiptMessage, extractMessage, collectionMessage, openDocument, showExtract, printDocument, linesOf, pad, dm};
 })();
