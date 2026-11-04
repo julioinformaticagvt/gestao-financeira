@@ -1,5 +1,10 @@
 # Novidades
 
+## Versão 0.19.11 · Venda antiga no mês certo · 04/11/2026
+
+- Venda avulsa: numa venda com data de antes de hoje, aparece o campo "Data do pagamento" (já vem com a data da venda). O dinheiro da entrada conta no mês dessa data (caixa, relatórios e limite do MEI), e o recibo sai com ela.
+- O campo "Entrada paga agora" passou a se chamar "Entrada / valor pago".
+
 ## Versão 0.19.10 · Serviço descrito e catálogo sozinho · 30/10/2026
 
 - Venda, orçamento e OS: em cada serviço aparece a caixa opcional "O que foi feito" (ex.: "limpeza interna e troca da pasta térmica"). Ela sai embaixo do serviço no recibo, no orçamento em PDF, no extrato e nas mensagens.

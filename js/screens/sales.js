@@ -182,7 +182,8 @@
   // ---------- venda avulsa / conta antiga (SPECS 53 e 54) ----------
   // Venda sem cadastrar produto (item usado, peça única) ou feita ANTES do sistema: só o texto do que foi vendido (não cadastra produto
   // nem mexe no estoque), a data, o valor total e as parcelas que faltam, que vão para Contas a receber como as de um carnê.
-  //  - "Entrada paga agora": um pagamento de verdade (entra no caixa e no MEI hoje) e com recibo na hora;
+  //  - "Entrada / valor pago": um pagamento de verdade, com recibo na hora; na venda de antes de hoje ele vale na "Data do pagamento"
+  //    (vem com a data da venda), para o dinheiro contar no mês certo (SPECS 60);
   //  - "Já recebido antes do sistema" (priorPaid): abate o saldo, mas não é pagamento (sem recibo, fora do caixa); só para venda de antes de hoje.
   const isOldAccount = sale => sale.launchedAt ? sale.date < sale.launchedAt : sale.method === 'Conta antiga';   // lançada depois da data da venda = conta antiga
   function legacyForm(clientName) {
@@ -190,9 +191,9 @@
     const thisMonth = App.finance.monthDay(today().slice(0, 7), Number(data.settings.dueDay) || 12);
     const next = thisMonth > today() ? thisMonth : App.finance.monthDay(App.format.shiftMonth(today().slice(0, 7), 1), Number(data.settings.dueDay) || 12);   // próximo dia de vencimento padrão
     const methods = App.finance.PAY_METHODS.map(m => `<option>${m}</option>`).join('');
-    openModal(`<h2>Venda avulsa</h2><p class="muted">Venda sem cadastrar produto: item usado, peça única ou conta antiga. Não mexe no estoque.</p><form id="legacy-form" class="form-grid"><div class="field full"><label>Cliente *</label><input name="client" list="legacy-clients" value="${esc(clientName || '')}" autocomplete="off" required><datalist id="legacy-clients">${clientOptions}</datalist></div><div class="field full"><label>O que foi vendido *</label><input name="what" required autocomplete="off" placeholder="Ex.: Monitor 24 polegadas usado"></div><div class="field"><label>Tipo</label><select name="type"><option>Produto</option><option>Serviço</option></select></div><div class="field"><label>Data da venda *</label><input name="date" type="date" value="${today()}" max="${today()}" required></div><div class="field"><label>Valor total da venda *</label><input name="price" type="number" min="0" step="0.01" required></div><div class="field"><label>Entrada paga agora <small>gera recibo</small></label><input name="entry" type="number" min="0" step="0.01" value="0"></div><div class="field" data-entry-method><label>Forma da entrada</label><select name="method">${methods}</select></div><div class="field" data-prior hidden><label>Já recebido antes do sistema <small>sem recibo</small></label><input name="priorPaid" type="number" min="0" step="0.01" value="0"></div><div class="field" data-rest><label>Parcelas que faltam</label><input name="count" type="number" min="1" max="24" step="1" value="1"></div><div class="field" data-rest><label>Vence a próxima *</label><input name="firstDue" type="date" value="${next}"></div><p class="muted field full" id="legacy-preview"></p><p class="negative field full" id="legacy-error" hidden></p><div class="actions field full"><button type="button" class="secondary" data-action="close-modal">Cancelar</button><button class="primary">Salvar venda</button></div></form>`);
+    openModal(`<h2>Venda avulsa</h2><p class="muted">Venda sem cadastrar produto: item usado, peça única ou conta antiga. Não mexe no estoque.</p><form id="legacy-form" class="form-grid"><div class="field full"><label>Cliente *</label><input name="client" list="legacy-clients" value="${esc(clientName || '')}" autocomplete="off" required><datalist id="legacy-clients">${clientOptions}</datalist></div><div class="field full"><label>O que foi vendido *</label><input name="what" required autocomplete="off" placeholder="Ex.: Monitor 24 polegadas usado"></div><div class="field"><label>Tipo</label><select name="type"><option>Produto</option><option>Serviço</option></select></div><div class="field"><label>Data da venda *</label><input name="date" type="date" value="${today()}" max="${today()}" required></div><div class="field"><label>Valor total da venda *</label><input name="price" type="number" min="0" step="0.01" required></div><div class="field"><label>Entrada / valor pago <small>gera recibo</small></label><input name="entry" type="number" min="0" step="0.01" value="0"></div><div class="field" data-entry-method><label>Forma da entrada</label><select name="method">${methods}</select></div><div class="field" data-pay-date hidden><label>Data do pagamento <small>mês em que o dinheiro conta</small></label><input name="payDate" type="date" max="${today()}"></div><div class="field" data-prior hidden><label>Já recebido antes do sistema <small>sem recibo</small></label><input name="priorPaid" type="number" min="0" step="0.01" value="0"></div><div class="field" data-rest><label>Parcelas que faltam</label><input name="count" type="number" min="1" max="24" step="1" value="1"></div><div class="field" data-rest><label>Vence a próxima *</label><input name="firstDue" type="date" value="${next}"></div><p class="muted field full" id="legacy-preview"></p><p class="negative field full" id="legacy-error" hidden></p><div class="actions field full"><button type="button" class="secondary" data-action="close-modal">Cancelar</button><button class="primary">Salvar venda</button></div></form>`);
     const form = byId('legacy-form'), f = form.elements;
-    App.ui.groupFields(form, [{kind: 'client', title: 'Cliente', items: ['client']}, {kind: 'product', title: 'O que foi vendido', items: ['what', 'type']}, {kind: 'pay', title: 'Valores e parcelas', items: ['date', 'price', 'entry', 'method', 'priorPaid', 'count', 'firstDue', '#legacy-preview']}]);
+    App.ui.groupFields(form, [{kind: 'client', title: 'Cliente', items: ['client']}, {kind: 'product', title: 'O que foi vendido', items: ['what', 'type']}, {kind: 'pay', title: 'Valores e parcelas', items: ['date', 'price', 'entry', 'method', 'payDate', 'priorPaid', 'count', 'firstDue', '#legacy-preview']}]);
     const values = () => {
       const date = f.date.value || today(), old = date < today();
       const total = round2(Number(f.price.value) || 0), entry = round2(Number(f.entry.value) || 0), prior = old ? round2(Number(f.priorPaid.value) || 0) : 0;
@@ -203,6 +204,9 @@
       const v = values();
       form.querySelector('[data-prior]').hidden = !v.old;
       form.querySelector('[data-entry-method]').hidden = !(v.entry > 0);
+      form.querySelector('[data-pay-date]').hidden = !(v.old && v.entry > 0);
+      f.payDate.min = v.date;
+      if (!payDateTyped) f.payDate.value = v.date;   // acompanha a data da venda até a pessoa mexer nele
       form.querySelectorAll('[data-rest]').forEach(el => { el.hidden = !(v.remaining > 0.004); });
       const box = byId('legacy-preview');
       if (!(v.total > 0)) { box.textContent = ''; return; }
@@ -212,6 +216,8 @@
       const plan = App.finance.scheduleFor({date: v.date, total: v.remaining, installments: v.count, firstDue: v.firstDue});
       box.innerHTML = `<b>Falta receber ${money(v.remaining)}:</b> ${plan.map(p => `${dateLabel(p.due)} · ${money(p.value)}`).join(' &nbsp;|&nbsp; ')}`;
     };
+    let payDateTyped = false;
+    f.payDate.addEventListener('input', () => { payDateTyped = true; });
     form.addEventListener('input', refresh);
     form.addEventListener('change', refresh);
     refresh();
@@ -225,6 +231,8 @@
       if (v.entry < 0 || v.prior < 0) return fail('Os valores recebidos não podem ser negativos.');
       if (v.remaining < -0.004) return fail('A entrada e o que já foi recebido não podem passar do valor total.');
       if (v.prior > 0 && v.remaining <= 0.004 && !(v.entry > 0)) return fail('Se já pagou tudo antes do sistema, não há venda para lançar.');
+      const payDate = v.old ? f.payDate.value : today();
+      if (v.entry > 0 && (!payDate || payDate < v.date || payDate > today())) return fail('A data do pagamento tem que ser entre a data da venda e hoje.');
       const paidNow = v.remaining <= 0.004;
       if (!paidNow && !v.firstDue) return fail('Escolha a data da próxima parcela.');
       const client = App.clientApi.resolve(f.client.value);
@@ -237,8 +245,8 @@
       if (paidNow) { sale.paidAtSale = true; sale.due = sale.date; }
       else if (count > 1) { sale.firstDue = v.firstDue; sale.dueDates = App.finance.dueDates({date: sale.date, count, firstDue: v.firstDue}); }   // datas congeladas, como no carnê
       else { sale.firstDue = v.firstDue; sale.due = v.firstDue; }
-      // entrada paga agora: pagamento de verdade (caixa e MEI de hoje) e recibo na hora
-      if (v.entry > 0) sale.payments.push({amount: v.entry, date: today(), method: f.method.value, installment: 0, note: paidNow ? 'Pagamento na venda' : 'Entrada'});
+      // entrada: pagamento de verdade (caixa e MEI do mês da data do pagamento) e recibo na hora
+      if (v.entry > 0) sale.payments.push({amount: v.entry, date: payDate, method: f.method.value, installment: 0, note: paidNow ? 'Pagamento na venda' : 'Entrada'});
       recalcSale(sale);
       data.sales.push(sale);
       const receipts = sale.payments.map(payment => App.receipts.issue(sale, payment));

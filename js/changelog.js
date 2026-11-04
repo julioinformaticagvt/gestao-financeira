@@ -1,6 +1,10 @@
 // "O que há de novo": lista de versões em linguagem simples, da mais nova para a mais antiga.
 // A cada versão aprovada, acrescente uma entrada AQUI (e em version.js, na tabela do CLAUDE.md e na etiqueta do Git).
 window.CHANGELOG = [
+  {version: '0.19.11', name: 'Venda antiga no mês certo', date: '04/11/2026', items: [
+    'Venda avulsa: numa venda com data de antes de hoje, aparece o campo "Data do pagamento" (já vem com a data da venda). O dinheiro da entrada conta no mês dessa data (caixa, relatórios e limite do MEI), e o recibo sai com ela.',
+    'O campo "Entrada paga agora" passou a se chamar "Entrada / valor pago".'
+  ]},
   {version: '0.19.10', name: 'Serviço descrito e catálogo sozinho', date: '30/10/2026', items: [
     'Venda, orçamento e OS: em cada serviço aparece a caixa opcional "O que foi feito" (ex.: "limpeza interna e troca da pasta térmica"). Ela sai embaixo do serviço no recibo, no orçamento em PDF, no extrato e nas mensagens.',
     'Catálogo online atualizado sozinho: ao abrir o sistema e 1 minuto depois de cada mudança, se o site estiver diferente, o sistema manda sozinho e mostra um aviso pequeno no canto. Dá para desligar em Configurações → Catálogo online ("Atualizar o catálogo sozinho").'
