@@ -1,5 +1,11 @@
 # Novidades
 
+## Versão 0.21.0 · Recebimentos · 04/11/2026
+
+- Financeiro → Recebimentos: todos os pagamentos recebidos, de todos os clientes, numa lista só. Filtre por mês (com "Todos os meses"), cliente, venda ou forma; veja o total do mês e de cada forma; abra o recibo, a venda ou desfaça um pagamento ali mesmo.
+- Venda avulsa de antes de hoje: bloco "Recebido depois da entrada". Digite quanto o cliente pagou depois e clique em "Distribuir por mês": o sistema divide do mês seguinte à venda até este mês, e cada pagamento conta no mês dele (caixa, relatórios e MEI). Dá para mudar as datas e os valores à mão.
+- O campo "Já recebido antes do sistema" saiu da janela (não contava em mês nenhum). Para as vendas avulsas antigas já lançadas, use o botão "Ajustar recebimentos" em Vendas: ele redistribui o que foi recebido pelos meses, sem mudar o total nem o que falta (pede um backup antes).
+
 ## Versão 0.20.0 · Combo de vendas · 04/11/2026
 
 - Venda e orçamento: caixinha "Combo (preço fechado)". Você escolhe os itens, diz o preço do combo (ex.: R$ 4.000) e o sistema divide entre os itens, na proporção do preço de cadastro de cada um.

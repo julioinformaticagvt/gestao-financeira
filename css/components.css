@@ -47,7 +47,7 @@ td { font-size: 13px; }
 .field.full { grid-column: 1 / -1; }
 .field label { font-size: 12px; color: var(--text-2); font-weight: 500; }
 .field input, .field select, .field textarea, .toolbar input, .message-box,
-#dashboard-period, #dashboard-custom, #report-month { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; background: var(--panel-2); color: var(--text); }
+#dashboard-period, #dashboard-custom, #report-month, #received-method { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; background: var(--panel-2); color: var(--text); }
 input:focus, select:focus, textarea:focus { outline: 1px solid var(--text-2); }
 input::placeholder, textarea::placeholder { color: var(--text-2); opacity: .7; }
 .field textarea { min-height: 70px; resize: vertical; }
@@ -420,7 +420,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 
 /* Campos */
 .field input, .field select, .field textarea, .toolbar input, .message-box, .month-nav select,
-#dashboard-period, #dashboard-custom, #report-month { border-radius: var(--r-field); padding: 11px 14px; }
+#dashboard-period, #dashboard-custom, #report-month, #received-method { border-radius: var(--r-field); padding: 11px 14px; }
 .field input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), .field select, .toolbar input, #dashboard-period, #dashboard-custom, #report-month { min-height: 46px; }
 
 /* Tabelas (fora dos documentos): mais espaço, títulos em cinza; no computador ficam num quadro com cantos 20 px */
@@ -525,3 +525,19 @@ th.sortable[aria-sort="ascending"], th.sortable[aria-sort="descending"] { color:
 .todo-missing { color: var(--accent); font-size: 13px; }
 .todo-note { margin: 0; padding: 10px 14px; border-radius: var(--r-field); background: var(--sync-warn-bg); color: var(--text); font-size: 14px; }
 .link-button { padding: 0; min-height: 0; border: 0; background: none; color: var(--blue); font: inherit; text-decoration: underline; cursor: pointer; }
+
+/* Venda avulsa: "Recebido depois da entrada" e "Ajustar recebimentos" (SPECS 63) */
+.later-head, .later-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.later-head > input, .later-head > select { flex: 1 1 160px; min-width: 0; }
+.later-rows { display: grid; gap: 6px; margin: 8px 0 4px; }
+.later-row > input { flex: 1 1 140px; min-width: 0; }
+.later-row > span { flex: 0 0 auto; font-size: 12px; }
+.later-foot { margin: 4px 0 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* Financeiro > Recebimentos (SPECS 64) */
+.received-toolbar { flex-wrap: wrap; align-items: center; gap: 8px; }
+#received-search { min-width: 200px; }
+.received-toolbar .inline-check input { flex: none; width: auto; min-width: 0; padding: 0; }
+.month-step { display: inline-flex; align-items: center; gap: 6px; }
+.month-step b { min-width: 130px; text-align: center; }
+.received-methods { margin: 4px 0 10px; }

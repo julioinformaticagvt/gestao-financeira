@@ -15,7 +15,7 @@
       const status = (canceled ? '<span class="badge neutral">Cancelada</span>' : `<span class="badge ${sale.balance ? 'warn' : ''}">${sale.balance ? 'Em aberto' : 'Pago'}</span>`)
         + (sale.editedAt ? ` <span class="badge neutral" title="Editada em ${dateLabel(sale.editedAt)}">editada</span>` : '')
         + (sale.legacy ? (isOldAccount(sale) ? ' <span class="badge info" title="Venda feita antes do sistema">conta antiga</span>' : ' <span class="badge info" title="Venda sem produto cadastrado">avulsa</span>') : '');
-      const actions = canceled ? '' : `${sale.legacy && Number(sale.priorPaid) > 0 ? `<button class="secondary" data-action="prior-to-entry" data-sale="${esc(sale.id)}">Gerar recibo da entrada</button> ` : ''}<button class="secondary" data-action="edit-sale" data-sale="${esc(sale.id)}">Editar</button> <button class="secondary" data-action="cancel-sale" data-sale="${esc(sale.id)}">Cancelar</button>`;
+      const actions = canceled ? '' : `${sale.legacy && Number(sale.priorPaid) > 0 ? `<button class="secondary" data-action="prior-to-entry" data-sale="${esc(sale.id)}">Gerar recibo da entrada</button> ` : ''}${sale.legacy && (isOldAccount(sale) || Number(sale.priorPaid) > 0) ? `<button class="secondary" data-action="adjust-payments" data-sale="${esc(sale.id)}" title="Distribuir pelos meses o que foi recebido">Ajustar recebimentos</button> ` : ''}<button class="secondary" data-action="edit-sale" data-sale="${esc(sale.id)}">Editar</button> <button class="secondary" data-action="cancel-sale" data-sale="${esc(sale.id)}">Cancelar</button>`;
       return `<tr class="${canceled ? 'voided' : ''}"><td>${esc(sale.id)}${sale.osId ? `<br><small class="muted">Origem: ${esc(sale.osId)}</small>` : ""}</td><td>${esc(sale.client)}</td><td>${dateLabel(sale.date)}</td><td>${esc(sale.method || '-')}${sale.pricing && sale.pricing.noInterest && sale.pricing.installments > 1 ? '<br><small class="muted">sem juros</small>' : ''}</td><td>${money(sale.total)}</td><td class="positive">${money(sale.paid)}</td><td class="negative">${money(sale.balance)}</td><td>${status}</td><td>${actions}</td></tr>`;
     }).join('');
     byId('app').innerHTML = `<section class="panel"><div class="panel-head"><h2>Vendas realizadas</h2><div class="head-buttons"><button class="secondary" data-action="new-legacy">+ Venda avulsa</button><button class="primary" data-action="new-sale">+ Nova venda</button></div></div>${data.sales.length ? `<div class="table-wrap"><table><thead><tr><th>ID</th><th>Cliente</th><th>Data</th><th>Forma</th><th>Total</th><th>Pago</th><th>Saldo</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>` : App.firstRun.emptyState({title: 'Você ainda não registrou vendas.', hint: 'Registre sua primeira venda.', action: 'new-sale', label: '+ Nova venda'})}</section>`;
@@ -184,7 +184,44 @@
   // nem mexe no estoque), a data, o valor total e as parcelas que faltam, que vão para Contas a receber como as de um carnê.
   //  - "Entrada / valor pago": um pagamento de verdade, com recibo na hora; na venda de antes de hoje ele vale na "Data do pagamento"
   //    (vem com a data da venda), para o dinheiro contar no mês certo (SPECS 60);
-  //  - "Já recebido antes do sistema" (priorPaid): abate o saldo, mas não é pagamento (sem recibo, fora do caixa); só para venda de antes de hoje.
+  //  - "Recebido depois da entrada" (SPECS 63): só para venda de antes de hoje; uma lista de pagamentos antigos (data e valor), cada
+  //    um contando no mês dele, sem recibo. "Distribuir por mês" divide um valor do mês seguinte à venda até este mês.
+  //    (O antigo "Já recebido antes do sistema" / priorPaid saiu da janela; as vendas que já têm esse valor continuam valendo.)
+  // Divide um valor em um pagamento por mês, do mês seguinte à venda até o mês de hoje, no mesmo dia do mês da venda
+  // (se o dia ainda não chegou neste mês, fica hoje). Os centavos que sobram vão para o último. Ex.: venda 15/08, R$ 1.000 em 04/11
+  // = 15/09 R$ 333,33 · 15/10 R$ 333,33 · 04/11 R$ 333,34.
+  function spreadMonths(saleDate, amount, end = today()) {
+    const day = Number(saleDate.slice(8, 10)), months = [];
+    for (let m = App.format.shiftMonth(saleDate.slice(0, 7), 1); m <= end.slice(0, 7); m = App.format.shiftMonth(m, 1)) months.push(m);
+    if (!months.length) months.push(end.slice(0, 7));   // venda deste mês: um pagamento só, hoje
+    const cents = Math.round(amount * 100), each = Math.floor(cents / months.length);
+    return months.map((m, i) => {
+      let date = App.finance.monthDay(m, day);
+      if (date > end) date = end;
+      if (date < saleDate) date = saleDate;
+      return {date, amount: (i === months.length - 1 ? cents - each * (months.length - 1) : each) / 100};
+    });
+  }
+  // Lista editável de pagamentos (data + valor + apagar). rows: [{date, amount, ref?, receipt?}]; ref = índice do pagamento que já existe.
+  function paymentRows(box, {min, onChange}) {
+    let seq = 0;
+    const rowHtml = r => `<div class="later-row" data-ref="${r.ref ?? ''}"><input type="date" name="laterDate${seq}" value="${esc(r.date || '')}" min="${esc(min())}" max="${today()}" aria-label="Data do pagamento"><input type="number" name="laterAmount${seq++}" min="0" step="0.01" value="${r.amount ? round2(r.amount) : ''}" aria-label="Valor"><span class="muted">${r.receipt ? `recibo ${App.receipts.pad(r.receipt)}` : ''}</span><button type="button" class="secondary" data-remove title="Tirar este pagamento">Tirar</button></div>`;
+    box.addEventListener('click', event => { const b = event.target.closest('[data-remove]'); if (b) { b.closest('.later-row').remove(); onChange(); } });
+    const api = {
+      set(rows) { box.innerHTML = rows.map(rowHtml).join(''); onChange(); },
+      add(row = {date: today(), amount: 0}) { box.insertAdjacentHTML('beforeend', rowHtml(row)); onChange(); },
+      get: () => [...box.querySelectorAll('.later-row')].map(el => {
+        const [date, amount] = el.querySelectorAll('input[type="date"], input[type="number"]');
+        return {date: date.value, amount: round2(Number(amount.value) || 0), ref: el.dataset.ref === '' ? null : Number(el.dataset.ref)};
+      }),
+      setMin(value) { box.querySelectorAll('input[type="date"]').forEach(i => { i.min = value; }); }
+    };
+    return api;
+  }
+  const OLD_NOTE = 'Pagamento antigo';   // nota dos pagamentos do "Recebido depois da entrada" (sem recibo)
+  const rowsTotal = rows => round2(rows.reduce((t, r) => t + r.amount, 0));
+  const rowsProblem = (rows, saleDate) => rows.some(r => !(r.amount > 0)) ? 'Cada pagamento da lista precisa ter um valor (ou tire a linha).'
+    : rows.some(r => !r.date || r.date < saleDate || r.date > today()) ? 'A data de cada pagamento da lista tem que ser entre a data da venda e hoje.' : '';
   const isOldAccount = sale => sale.launchedAt ? sale.date < sale.launchedAt : sale.method === 'Conta antiga';   // lançada depois da data da venda = conta antiga
   // Combo da venda avulsa: o total dividido pela quantidade de cada item (em centavos; o que sobra vai para o 1º item).
   function splitLegacy(lines, type, total) {
@@ -198,18 +235,22 @@
     const thisMonth = App.finance.monthDay(today().slice(0, 7), Number(data.settings.dueDay) || 12);
     const next = thisMonth > today() ? thisMonth : App.finance.monthDay(App.format.shiftMonth(today().slice(0, 7), 1), Number(data.settings.dueDay) || 12);   // próximo dia de vencimento padrão
     const methods = App.finance.PAY_METHODS.map(m => `<option>${m}</option>`).join('');
-    openModal(`<h2>Venda avulsa</h2><p class="muted">Venda sem cadastrar produto: item usado, peça única ou conta antiga. Não mexe no estoque.</p><form id="legacy-form" class="form-grid"><div class="field full"><label>Cliente *</label><input name="client" list="legacy-clients" value="${esc(clientName || '')}" autocomplete="off" required><datalist id="legacy-clients">${clientOptions}</datalist></div><div class="field full"><label class="inline-check"><input type="checkbox" name="combo"> <b>Combo (vários itens, preço fechado)</b></label></div><div class="field full" data-single><label>O que foi vendido *</label><input name="what" required autocomplete="off" placeholder="Ex.: Monitor 24 polegadas usado"></div><div class="field full" data-combo-list hidden><label>Itens do combo * <small>um por linha; "2x" na frente para quantidade</small></label><textarea name="comboItems" rows="4" maxlength="1000" placeholder="2x Memória RAM 8 GB&#10;Gabinete gamer&#10;Placa de vídeo"></textarea></div><div class="field"><label>Tipo</label><select name="type"><option>Produto</option><option>Serviço</option></select></div><div class="field"><label>Data da venda *</label><input name="date" type="date" value="${today()}" max="${today()}" required></div><div class="field"><label>Valor total da venda *</label><input name="price" type="number" min="0" step="0.01" required></div><div class="field"><label>Entrada / valor pago <small>gera recibo</small></label><input name="entry" type="number" min="0" step="0.01" value="0"></div><div class="field" data-entry-method><label>Forma da entrada</label><select name="method">${methods}</select></div><div class="field" data-pay-date hidden><label>Data do pagamento <small>mês em que o dinheiro conta</small></label><input name="payDate" type="date" max="${today()}"></div><div class="field" data-prior hidden><label>Já recebido antes do sistema <small>sem recibo</small></label><input name="priorPaid" type="number" min="0" step="0.01" value="0"></div><div class="field" data-rest><label>Parcelas que faltam</label><input name="count" type="number" min="1" max="24" step="1" value="1"></div><div class="field" data-rest><label>Vence a próxima *</label><input name="firstDue" type="date" value="${next}"></div><p class="muted field full" id="legacy-preview"></p><p class="negative field full" id="legacy-error" hidden></p><div class="actions field full"><button type="button" class="secondary" data-action="close-modal">Cancelar</button><button class="primary">Salvar venda</button></div></form>`);
+    openModal(`<h2>Venda avulsa</h2><p class="muted">Venda sem cadastrar produto: item usado, peça única ou conta antiga. Não mexe no estoque.</p><form id="legacy-form" class="form-grid"><div class="field full"><label>Cliente *</label><input name="client" list="legacy-clients" value="${esc(clientName || '')}" autocomplete="off" required><datalist id="legacy-clients">${clientOptions}</datalist></div><div class="field full"><label class="inline-check"><input type="checkbox" name="combo"> <b>Combo (vários itens, preço fechado)</b></label></div><div class="field full" data-single><label>O que foi vendido *</label><input name="what" required autocomplete="off" placeholder="Ex.: Monitor 24 polegadas usado"></div><div class="field full" data-combo-list hidden><label>Itens do combo * <small>um por linha; "2x" na frente para quantidade</small></label><textarea name="comboItems" rows="4" maxlength="1000" placeholder="2x Memória RAM 8 GB&#10;Gabinete gamer&#10;Placa de vídeo"></textarea></div><div class="field"><label>Tipo</label><select name="type"><option>Produto</option><option>Serviço</option></select></div><div class="field"><label>Data da venda *</label><input name="date" type="date" value="${today()}" max="${today()}" required></div><div class="field"><label>Valor total da venda *</label><input name="price" type="number" min="0" step="0.01" required></div><div class="field"><label>Entrada / valor pago <small>gera recibo</small></label><input name="entry" type="number" min="0" step="0.01" value="0"></div><div class="field" data-entry-method><label>Forma da entrada</label><select name="method">${methods}</select></div><div class="field" data-pay-date hidden><label>Data do pagamento <small>mês em que o dinheiro conta</small></label><input name="payDate" type="date" max="${today()}"></div><div class="field full" data-later hidden><label>Recebido depois da entrada <small>pagamentos antigos, sem recibo; cada um conta no mês dele</small></label><div class="later-head"><input name="laterTotal" type="number" min="0" step="0.01" placeholder="Valor recebido depois" aria-label="Valor recebido depois"><select name="laterMethod" aria-label="Forma">${methods}</select><button type="button" class="secondary" id="later-spread">Distribuir por mês</button></div><div id="later-rows" class="later-rows"></div><p class="later-foot"><button type="button" class="secondary" id="later-add">+ Adicionar pagamento</button> <span class="muted" id="later-sum"></span></p></div><div class="field" data-rest><label>Parcelas que faltam</label><input name="count" type="number" min="1" max="24" step="1" value="1"></div><div class="field" data-rest><label>Vence a próxima *</label><input name="firstDue" type="date" value="${next}"></div><p class="muted field full" id="legacy-preview"></p><p class="negative field full" id="legacy-error" hidden></p><div class="actions field full"><button type="button" class="secondary" data-action="close-modal">Cancelar</button><button class="primary">Salvar venda</button></div></form>`);
     const form = byId('legacy-form'), f = form.elements;
-    App.ui.groupFields(form, [{kind: 'client', title: 'Cliente', items: ['client']}, {kind: 'product', title: 'O que foi vendido', items: ['combo', 'what', 'comboItems', 'type']}, {kind: 'pay', title: 'Valores e parcelas', items: ['date', 'price', 'entry', 'method', 'payDate', 'priorPaid', 'count', 'firstDue', '#legacy-preview']}]);
+    App.ui.groupFields(form, [{kind: 'client', title: 'Cliente', items: ['client']}, {kind: 'product', title: 'O que foi vendido', items: ['combo', 'what', 'comboItems', 'type']}, {kind: 'pay', title: 'Valores e parcelas', items: ['date', 'price', 'entry', 'method', 'payDate', '[data-later]', 'count', 'firstDue', '#legacy-preview']}]);
+    const later = paymentRows(byId('later-rows'), {min: () => f.date.value || today(), onChange: () => refresh()});
     const values = () => {
       const date = f.date.value || today(), old = date < today();
-      const total = round2(Number(f.price.value) || 0), entry = round2(Number(f.entry.value) || 0), prior = old ? round2(Number(f.priorPaid.value) || 0) : 0;
+      const total = round2(Number(f.price.value) || 0), entry = round2(Number(f.entry.value) || 0);
+      const rows = old ? later.get() : [], prior = rowsTotal(rows);   // "prior" = o que foi recebido depois da entrada (lista)
       const count = Math.min(24, Math.max(1, Math.round(Number(f.count.value) || 1)));
-      return {total, entry, prior, count, remaining: round2(total - entry - prior), firstDue: f.firstDue.value, date, old};
+      return {total, entry, prior, rows, count, remaining: round2(total - entry - prior), firstDue: f.firstDue.value, date, old};
     };
     const refresh = () => {
       const v = values();
-      form.querySelector('[data-prior]').hidden = !v.old;
+      form.querySelector('[data-later]').hidden = !v.old;
+      later.setMin(v.date);
+      byId('later-sum').textContent = v.rows.length ? `${v.rows.length} pagamento(s) · soma ${money(v.prior)}` : '';
       form.querySelector('[data-entry-method]').hidden = !(v.entry > 0);
       form.querySelector('[data-pay-date]').hidden = !(v.old && v.entry > 0);
       f.payDate.min = v.date;
@@ -237,6 +278,12 @@
     syncCombo();
     let payDateTyped = false;
     f.payDate.addEventListener('input', () => { payDateTyped = true; });
+    byId('later-spread').onclick = () => {
+      const amount = round2(Number(f.laterTotal.value) || 0);
+      if (!(amount > 0)) { f.laterTotal.focus(); return; }
+      later.set(spreadMonths(f.date.value || today(), amount));
+    };
+    byId('later-add').onclick = () => later.add();
     form.addEventListener('input', refresh);
     form.addEventListener('change', refresh);
     refresh();
@@ -250,7 +297,8 @@
       if (!f.date.value || f.date.value > today()) return fail('A data da venda não pode ficar em branco nem ser no futuro.');
       if (v.entry < 0 || v.prior < 0) return fail('Os valores recebidos não podem ser negativos.');
       if (v.remaining < -0.004) return fail('A entrada e o que já foi recebido não podem passar do valor total.');
-      if (v.prior > 0 && v.remaining <= 0.004 && !(v.entry > 0)) return fail('Se já pagou tudo antes do sistema, não há venda para lançar.');
+      const rowsFail = rowsProblem(v.rows, v.date);
+      if (rowsFail) return fail(rowsFail);
       const payDate = v.old ? f.payDate.value : today();
       if (v.entry > 0 && (!payDate || payDate < v.date || payDate > today())) return fail('A data do pagamento tem que ser entre a data da venda e hoje.');
       const paidNow = v.remaining <= 0.004;
@@ -258,23 +306,82 @@
       const client = App.clientApi.resolve(f.client.value);
       if (!client) return fail('Escolha um cliente da lista ou digite o nome do cliente novo.');
       const type = f.type.value === 'Serviço' ? 'Serviço' : 'Produto', count = paidNow ? 1 : v.count;
-      const sale = {id: App.store.nextCode('sale'), client, product: what, date: f.date.value, cost: 0, total: v.total, paid: 0, balance: v.total, installments: count, entry: v.entry,
+      const sale = {id: App.store.nextCode('sale'), client, product: what, date: f.date.value, cost: 0, total: v.total, paid: 0, balance: v.total, installments: count, entry: round2(v.entry + v.prior),
         quantity: 1, unitPrice: v.total, discount: 0, method: v.old ? 'Conta antiga' : 'Venda avulsa', monthlyInterest: 0, productType: type,
         items: combo ? splitLegacy(lines, type, v.total) : [{name: what, type, qty: 1, unit: v.total, amount: v.total}], productTotal: type === 'Produto' ? v.total : 0, serviceTotal: type === 'Serviço' ? v.total : 0,
-        payments: [], stockOut: [], legacy: true, priorPaid: v.prior, launchedAt: today()};
+        payments: [], stockOut: [], legacy: true, launchedAt: today()};
       if (combo) { sale.combo = true; sale.comboPrice = v.total; }   // o cliente vê os itens e só o total
-      if (paidNow) { sale.paidAtSale = true; sale.due = sale.date; }
+      if (paidNow) { if (!v.rows.length) sale.paidAtSale = true; sale.due = sale.date; }   // com pagamentos antigos não foi "paga toda na venda"
       else if (count > 1) { sale.firstDue = v.firstDue; sale.dueDates = App.finance.dueDates({date: sale.date, count, firstDue: v.firstDue}); }   // datas congeladas, como no carnê
       else { sale.firstDue = v.firstDue; sale.due = v.firstDue; }
       // entrada: pagamento de verdade (caixa e MEI do mês da data do pagamento) e recibo na hora
-      if (v.entry > 0) sale.payments.push({amount: v.entry, date: payDate, method: f.method.value, installment: 0, note: paidNow ? 'Pagamento na venda' : 'Entrada'});
+      if (v.entry > 0) sale.payments.push({amount: v.entry, date: payDate, method: f.method.value, installment: 0, note: paidNow && !v.rows.length ? 'Pagamento na venda' : 'Entrada'});
+      const withReceipt = sale.payments.slice();
+      // recebido depois da entrada (SPECS 63): pagamentos antigos de verdade (contam no mês de cada um), sem recibo
+      v.rows.forEach(r => sale.payments.push({amount: r.amount, date: r.date, method: f.laterMethod.value, installment: 0, note: OLD_NOTE}));
       recalcSale(sale);
       data.sales.push(sale);
-      const receipts = sale.payments.map(payment => App.receipts.issue(sale, payment));
+      const receipts = withReceipt.map(payment => App.receipts.issue(sale, payment));
       save();
       closeModal();
       go('sales');
       if (receipts.length) App.receipts.show(receipts[0].number);
+    };
+  }
+
+  // "Ajustar recebimentos" (SPECS 63): numa venda avulsa de antes do sistema já lançada, redivide pelos meses o que foi recebido
+  // fora das parcelas (a entrada, os pagamentos antigos e o antigo "já recebido antes do sistema"). O total da venda e o que falta
+  // não mudam: a soma da lista tem que dar o mesmo valor. Pagamentos que continuam são mudados no lugar (o recibo acompanha);
+  // os tirados ficam como desfeitos; os novos entram sem recibo. Pede um backup antes de salvar (dados reais).
+  const adjustable = sale => (sale.payments || []).map((payment, index) => ({payment, index})).filter(({payment}) => !payment.voided && !payment.installment);
+  function adjustPayments(saleId) {
+    const sale = data.sales.find(s => s.id === saleId);
+    if (!sale || !sale.legacy || sale.status === 'Cancelada') return;
+    const current = adjustable(sale), prior = round2(Number(sale.priorPaid) || 0);
+    const target = round2(prior + current.reduce((t, {payment}) => t + Number(payment.amount), 0));
+    const methods = App.finance.PAY_METHODS.map(m => `<option>${m}</option>`).join('');
+    let backedUp = false;
+    openModal(`<h2>Ajustar recebimentos · ${esc(sale.id)}</h2><p>${esc(sale.client)} · venda de ${dateLabel(sale.date)} · total ${money(sale.total)}. O que foi recebido fora das parcelas soma <b>${money(target)}</b>. Mude as datas e a divisão para cada valor contar no mês em que você recebeu; a soma tem que continuar ${money(target)}. O total da venda e o que falta não mudam.</p><form id="adjust-form" class="form-grid"><div class="field full"><div class="later-head"><select name="laterMethod" aria-label="Forma dos pagamentos novos">${methods}</select><button type="button" class="secondary" id="adjust-spread">Distribuir por mês</button></div><small class="muted">"Distribuir por mês" mantém o primeiro pagamento (a entrada) e divide o resto do mês seguinte à venda até este mês. A forma vale para os pagamentos novos.</small></div><div class="field full"><div id="adjust-rows" class="later-rows"></div><p class="later-foot"><button type="button" class="secondary" id="adjust-add">+ Adicionar pagamento</button> <span id="adjust-sum"></span></p></div><p class="field full"><b>Antes de salvar,</b> baixe um backup: <button type="button" class="secondary" id="adjust-backup">Baixar backup</button> <span id="adjust-backup-status" class="muted"></span></p><p class="negative field full" id="adjust-error" hidden></p><div class="actions field full"><button type="button" class="secondary" data-action="close-modal">Cancelar</button><button class="primary" id="adjust-save" disabled>Salvar recebimentos</button></div></form>`);
+    const form = byId('adjust-form');
+    const sync = () => {
+      const rows = list.get(), total = rowsTotal(rows), ok = Math.abs(total - target) < 0.005;
+      byId('adjust-sum').innerHTML = `Soma: <b class="${ok ? 'positive' : 'negative'}">${money(total)}</b>${ok ? '' : ` (tem que ser ${money(target)}; ${total > target ? 'sobram' : 'faltam'} ${money(Math.abs(total - target))})`}`;
+      byId('adjust-save').disabled = !(backedUp && ok);
+    };
+    const list = paymentRows(byId('adjust-rows'), {min: () => sale.date, onChange: () => sync()});
+    const start = current.map(({payment, index}) => ({date: payment.date, amount: Number(payment.amount), ref: index, receipt: payment.receipt}));
+    if (prior > 0) start.push({date: sale.date, amount: prior});   // o antigo "já recebido antes do sistema" vira um pagamento (dá para dividir)
+    list.set(start);
+    form.addEventListener('input', sync);
+    byId('adjust-add').onclick = () => list.add();
+    byId('adjust-spread').onclick = () => {
+      const rows = list.get(), keep = rows.length > 1 ? [rows[0]] : [], rest = round2(target - rowsTotal(keep));
+      list.set([...keep.map(r => ({...r, receipt: (sale.payments[r.ref] || {}).receipt})), ...(rest > 0 ? spreadMonths(sale.date, rest) : [])]);
+    };
+    byId('adjust-backup').onclick = () => { App.backup.exportBackup(); backedUp = true; byId('adjust-backup-status').textContent = 'Backup baixado ✓'; sync(); };
+    form.onsubmit = event => {
+      event.preventDefault();
+      const rows = list.get(), fail = message => { const box = byId('adjust-error'); box.textContent = message; box.hidden = false; };
+      const problem = rowsProblem(rows, sale.date);
+      if (problem) return fail(problem);
+      if (Math.abs(rowsTotal(rows) - target) >= 0.005) return fail(`A soma tem que continuar ${money(target)}.`);
+      const kept = new Set();
+      rows.forEach(r => {
+        const payment = r.ref !== null && sale.payments[r.ref];
+        if (payment && !payment.voided && !payment.installment && !kept.has(r.ref)) {
+          kept.add(r.ref);
+          if (payment.date !== r.date || Number(payment.amount) !== r.amount) { payment.date = r.date; payment.amount = r.amount; App.receipts.sync(payment); }
+        } else sale.payments.push({amount: r.amount, date: r.date, method: form.elements.laterMethod.value, installment: 0, note: OLD_NOTE});
+      });
+      current.filter(({index}) => !kept.has(index)).forEach(({payment}) => { payment.voided = true; payment.voidedAt = today(); App.receipts.cancelFor(payment); });
+      sale.priorPaid = 0;
+      sale.entry = round2(target);
+      if (sale.paidAtSale && rows.length > 1) delete sale.paidAtSale;
+      sale.adjustedAt = today();
+      recalcSale(sale);
+      save();
+      closeModal();
+      go('sales');
     };
   }
 
@@ -376,6 +483,7 @@
   App.ui.registerAction('new-legacy', () => legacyForm());
   App.ui.registerAction('new-legacy-for', element => legacyForm(element.dataset.client));
   App.ui.registerAction('prior-to-entry', element => priorToEntry(element.dataset.sale));
+  App.ui.registerAction('adjust-payments', element => adjustPayments(element.dataset.sale));
   App.ui.registerAction('new-sale-for', element => saleForm(element.dataset.client));
   App.ui.registerAction('edit-sale', element => editSale(element.dataset.sale));
   App.ui.registerAction('new-client-quick', quickClient);

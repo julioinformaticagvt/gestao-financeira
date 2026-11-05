@@ -3,7 +3,7 @@
 (() => {
   const App = (window.App = window.App || {});
 
-  const titles = {dashboard: 'Visão geral', finance: 'Financeiro', clients: 'Clientes', client: 'Cliente', products: 'Produtos', purchases: 'Compras', suppliers: 'Fornecedores', sales: 'Vendas', quotes: 'Orçamentos', receivables: 'Contas a receber', payables: 'Contas a pagar', fixed: 'Despesas fixas', collection: 'Regras de cobrança', reports: 'Relatórios', settings: 'Configurações'};
+  const titles = {dashboard: 'Visão geral', finance: 'Financeiro', clients: 'Clientes', client: 'Cliente', products: 'Produtos', purchases: 'Compras', suppliers: 'Fornecedores', sales: 'Vendas', quotes: 'Orçamentos', receivables: 'Contas a receber', received: 'Recebimentos', payables: 'Contas a pagar', fixed: 'Despesas fixas', collection: 'Regras de cobrança', reports: 'Relatórios', settings: 'Configurações'};
   const NAV_OF = {client: 'clients'};   // telas que não têm aba própria e acendem outra aba do menu
   const screens = {};   // nome da tela -> função que desenha a tela
   const showHooks = {}; // nome da tela -> funções extras que rodam depois de desenhar
@@ -33,8 +33,8 @@
       labels: {products: 'Produtos e serviços', purchases: 'Compras', suppliers: 'Fornecedores'}
     },
     financial: {
-      views: ['finance', 'receivables', 'payables', 'fixed', 'collection', 'reports'],
-      labels: {finance: 'Resumo', receivables: 'Contas a receber', payables: 'Contas a pagar', fixed: 'Despesas fixas', collection: 'Regras de cobrança', reports: 'Relatórios'}
+      views: ['finance', 'receivables', 'received', 'payables', 'fixed', 'collection', 'reports'],
+      labels: {finance: 'Resumo', receivables: 'Contas a receber', received: 'Recebimentos', payables: 'Contas a pagar', fixed: 'Despesas fixas', collection: 'Regras de cobrança', reports: 'Relatórios'}
     }
   };
   const groupOf = view => Object.keys(groups).find(key => groups[key].views.includes(view));
@@ -49,7 +49,7 @@
 
   let current = '';   // nome da tela que está aberta
   // Volta para a tela de onde a ação partiu: se foi do Resumo do Financeiro, volta para ele; senão, para a tela indicada.
-  const back = fallback => go(current === 'finance' ? 'finance' : fallback);
+  const back = fallback => go(current === 'finance' || current === 'received' ? current : fallback);   // partiu do Resumo ou dos Recebimentos: volta para lá
 
   // Mostra uma tela: marca a aba do menu, troca o título, mostra as sub-abas (se houver) e desenha.
   function go(name) {

@@ -7,7 +7,7 @@
   const App = (window.App = window.App || {});
 
   // Quais campos são dinheiro (pelo nome). Porcentagens (taxas, juros, margem), quantidades e dias NÃO entram.
-  const MONEY = /^(itemAmount\d+|itemCost\d+|cost\d*|price|amount|entry|discount|meiLimit|dasValue|os_diagnosisFee|alloc\d+|priorPaid|comboPrice|parcelTarget)$/;
+  const MONEY = /^(itemAmount\d+|itemCost\d+|cost\d*|price|amount|entry|discount|meiLimit|dasValue|os_diagnosisFee|alloc\d+|priorPaid|comboPrice|parcelTarget|laterTotal|laterAmount\d+)$/;
   const nativeValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
   const MAX_DIGITS = 12;
 

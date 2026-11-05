@@ -131,6 +131,7 @@
       openModal(`<h2>Recibo nº ${App.receipts.pad(receipt.number)} cancelado</h2><p>Esse recibo também cobria ${others.length === 1 ? 'outro pagamento, que continua valendo' : `outros ${others.length} pagamentos, que continuam valendo`}. Quer emitir um <b>recibo novo</b> (com número novo) só com ${others.length === 1 ? 'ele' : 'eles'}?</p><div class="actions"><button type="button" class="secondary" data-action="installment-history" data-sale="${saleId}" data-installment="${number}">Agora não</button><button type="button" class="primary" data-action="reissue-receipt" data-number="${receipt.number}">Emitir recibo novo</button></div>`);
       return;
     }
+    if (App.ui.current === 'received') { closeModal(); return; }   // desfeito pela lista "Recebimentos": fica na lista (SPECS 64)
     installmentHistory(saleId, number);
   }
 

@@ -27,7 +27,7 @@
 
   // Qual ícone vai em cada tela (nome da tela -> chave do ícone).
   const OF_VIEW = {dashboard: 'dashboard', sales: 'sales', quotes: 'quotes', clients: 'clients', client: 'clients', products: 'products', purchases: 'purchases', suppliers: 'suppliers',
-    finance: 'financial', receivables: 'receivables', payables: 'payables', fixed: 'fixed', collection: 'collection', reports: 'reports', settings: 'settings'};
+    finance: 'financial', receivables: 'receivables', received: 'receivables', payables: 'payables', fixed: 'fixed', collection: 'collection', reports: 'reports', settings: 'settings'};
 
   const svg = (key, size = 22) => ICONS[key] ? `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[key]}</svg>` : '';
 
