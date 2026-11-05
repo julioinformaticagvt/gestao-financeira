@@ -222,6 +222,35 @@
   const rowsTotal = rows => round2(rows.reduce((t, r) => t + r.amount, 0));
   const rowsProblem = (rows, saleDate) => rows.some(r => !(r.amount > 0)) ? 'Cada pagamento da lista precisa ter um valor (ou tire a linha).'
     : rows.some(r => !r.date || r.date < saleDate || r.date > today()) ? 'A data de cada pagamento da lista tem que ser entre a data da venda e hoje.' : '';
+  // Prazo sem juros (SPECS 65): numa venda avulsa de 1 parcela, os pagamentos antigos (sem recibo) valem contra o prazo.
+  // Até o prazo abatem sem juros; depois dele, cada pagamento paga primeiro a multa e os juros acumulados até o seu dia
+  // (regras de Financeiro > Regras de cobrança) e o resto abate a dívida, igual ao "Receber". Analogia: o taxímetro só liga no prazo.
+  function chargeOldPayments(sale, list) {
+    list.forEach(p => { delete p.charges; });
+    const item = App.finance.installmentsFor(sale)[0];
+    list.slice().sort((a, b) => a.date.localeCompare(b.date)).forEach(p => {
+      const owed = App.finance.chargesFor(sale, item, p.date).owed, part = round2(Math.min(Number(p.amount), owed));
+      if (part > 0) p.charges = part;
+    });
+    recalcSale(sale);
+  }
+  // "Como a conta foi feita": texto da prévia (venda avulsa e "Ajustar recebimentos").
+  function deadlineReport(sale) {
+    const item = App.finance.installmentsFor(sale)[0], due = item.due, rules = App.finance.chargeRules(sale, 1);
+    const pays = App.finance.activePayments(sale).filter(p => p.installment === 1).sort((a, b) => a.date.localeCompare(b.date));
+    const before = pays.filter(p => p.date <= due), after = pays.filter(p => p.date > due);
+    const principalBefore = round2(before.reduce((t, p) => t + App.finance.principalOf(p), 0));
+    const now = App.finance.chargesFor(sale, item, today()), left = round2(item.value - pays.reduce((t, p) => t + App.finance.principalOf(p), 0));
+    const lines = [`<b>Como a conta foi feita</b> (multa ${rules.fine}% · juros ${rules.interest}% ao mês, de Regras de cobrança):`];
+    lines.push(`Até ${dateLabel(due)} (sem juros): ${before.length ? `pagou ${money(principalBefore)}` : 'nenhum pagamento'}.`);
+    if (due < today()) {
+      lines.push(`Em ${dateLabel(due)} faltavam ${money(round2(item.value - principalBefore))}${now.fine ? `; multa = ${money(now.fine)}` : ''}.`);
+      after.forEach(p => lines.push(`${dateLabel(p.date)}: pagou ${money(p.amount)}${p.charges ? ` → ${money(p.charges)} de multa e juros, abateu ${money(App.finance.principalOf(p))}` : ''}.`));
+    }
+    lines.push(`<b>Hoje falta ${money(Math.max(0, left))}${now.owed > 0.004 ? ` + ${money(now.owed)} de multa e juros = ${money(round2(Math.max(0, left) + now.owed))}` : ''}.</b>`);
+    if (!(Number(rules.fine) || Number(rules.interest))) lines.push('<small>A multa e os juros estão em 0% em Financeiro → Regras de cobrança.</small>');
+    return lines.join('<br>');
+  }
   const isOldAccount = sale => sale.launchedAt ? sale.date < sale.launchedAt : sale.method === 'Conta antiga';   // lançada depois da data da venda = conta antiga
   // Combo da venda avulsa: o total dividido pela quantidade de cada item (em centavos; o que sobra vai para o 1º item).
   function splitLegacy(lines, type, total) {
@@ -235,7 +264,7 @@
     const thisMonth = App.finance.monthDay(today().slice(0, 7), Number(data.settings.dueDay) || 12);
     const next = thisMonth > today() ? thisMonth : App.finance.monthDay(App.format.shiftMonth(today().slice(0, 7), 1), Number(data.settings.dueDay) || 12);   // próximo dia de vencimento padrão
     const methods = App.finance.PAY_METHODS.map(m => `<option>${m}</option>`).join('');
-    openModal(`<h2>Venda avulsa</h2><p class="muted">Venda sem cadastrar produto: item usado, peça única ou conta antiga. Não mexe no estoque.</p><form id="legacy-form" class="form-grid"><div class="field full"><label>Cliente *</label><input name="client" list="legacy-clients" value="${esc(clientName || '')}" autocomplete="off" required><datalist id="legacy-clients">${clientOptions}</datalist></div><div class="field full"><label class="inline-check"><input type="checkbox" name="combo"> <b>Combo (vários itens, preço fechado)</b></label></div><div class="field full" data-single><label>O que foi vendido *</label><input name="what" required autocomplete="off" placeholder="Ex.: Monitor 24 polegadas usado"></div><div class="field full" data-combo-list hidden><label>Itens do combo * <small>um por linha; "2x" na frente para quantidade</small></label><textarea name="comboItems" rows="4" maxlength="1000" placeholder="2x Memória RAM 8 GB&#10;Gabinete gamer&#10;Placa de vídeo"></textarea></div><div class="field"><label>Tipo</label><select name="type"><option>Produto</option><option>Serviço</option></select></div><div class="field"><label>Data da venda *</label><input name="date" type="date" value="${today()}" max="${today()}" required></div><div class="field"><label>Valor total da venda *</label><input name="price" type="number" min="0" step="0.01" required></div><div class="field"><label>Entrada / valor pago <small>gera recibo</small></label><input name="entry" type="number" min="0" step="0.01" value="0"></div><div class="field" data-entry-method><label>Forma da entrada</label><select name="method">${methods}</select></div><div class="field" data-pay-date hidden><label>Data do pagamento <small>mês em que o dinheiro conta</small></label><input name="payDate" type="date" max="${today()}"></div><div class="field full" data-later hidden><label>Recebido depois da entrada <small>pagamentos antigos, sem recibo; cada um conta no mês dele</small></label><div class="later-head"><input name="laterTotal" type="number" min="0" step="0.01" placeholder="Valor recebido depois" aria-label="Valor recebido depois"><select name="laterMethod" aria-label="Forma">${methods}</select><button type="button" class="secondary" id="later-spread">Distribuir por mês</button></div><div id="later-rows" class="later-rows"></div><p class="later-foot"><button type="button" class="secondary" id="later-add">+ Adicionar pagamento</button> <span class="muted" id="later-sum"></span></p></div><div class="field" data-rest><label>Parcelas que faltam</label><input name="count" type="number" min="1" max="24" step="1" value="1"></div><div class="field" data-rest><label>Vence a próxima *</label><input name="firstDue" type="date" value="${next}"></div><p class="muted field full" id="legacy-preview"></p><p class="negative field full" id="legacy-error" hidden></p><div class="actions field full"><button type="button" class="secondary" data-action="close-modal">Cancelar</button><button class="primary">Salvar venda</button></div></form>`);
+    openModal(`<h2>Venda avulsa</h2><p class="muted">Venda sem cadastrar produto: item usado, peça única ou conta antiga. Não mexe no estoque.</p><form id="legacy-form" class="form-grid"><div class="field full"><label>Cliente *</label><input name="client" list="legacy-clients" value="${esc(clientName || '')}" autocomplete="off" required><datalist id="legacy-clients">${clientOptions}</datalist></div><div class="field full"><label class="inline-check"><input type="checkbox" name="combo"> <b>Combo (vários itens, preço fechado)</b></label></div><div class="field full" data-single><label>O que foi vendido *</label><input name="what" required autocomplete="off" placeholder="Ex.: Monitor 24 polegadas usado"></div><div class="field full" data-combo-list hidden><label>Itens do combo * <small>um por linha; "2x" na frente para quantidade</small></label><textarea name="comboItems" rows="4" maxlength="1000" placeholder="2x Memória RAM 8 GB&#10;Gabinete gamer&#10;Placa de vídeo"></textarea></div><div class="field"><label>Tipo</label><select name="type"><option>Produto</option><option>Serviço</option></select></div><div class="field"><label>Data da venda *</label><input name="date" type="date" value="${today()}" max="${today()}" required></div><div class="field"><label>Valor total da venda *</label><input name="price" type="number" min="0" step="0.01" required></div><div class="field"><label>Entrada / valor pago <small>gera recibo</small></label><input name="entry" type="number" min="0" step="0.01" value="0"></div><div class="field" data-entry-method><label>Forma da entrada</label><select name="method">${methods}</select></div><div class="field" data-pay-date hidden><label>Data do pagamento <small>mês em que o dinheiro conta</small></label><input name="payDate" type="date" max="${today()}"></div><div class="field full" data-later hidden><label>Recebido depois da entrada <small>pagamentos antigos, sem recibo; cada um conta no mês dele</small></label><div class="later-head"><input name="laterTotal" type="number" min="0" step="0.01" placeholder="Valor recebido depois" aria-label="Valor recebido depois"><select name="laterMethod" aria-label="Forma">${methods}</select><button type="button" class="secondary" id="later-spread">Distribuir por mês</button></div><div id="later-rows" class="later-rows"></div><p class="later-foot"><button type="button" class="secondary" id="later-add">+ Adicionar pagamento</button> <span class="muted" id="later-sum"></span></p></div><div class="field" data-rest><label>Parcelas que faltam</label><input name="count" type="number" min="1" max="24" step="1" value="1"></div><div class="field" data-rest><label id="legacy-due-label">Vence a próxima *</label><input name="firstDue" type="date" value="${next}"></div><p class="muted field full" id="legacy-preview"></p><p class="negative field full" id="legacy-error" hidden></p><div class="actions field full"><button type="button" class="secondary" data-action="close-modal">Cancelar</button><button class="primary">Salvar venda</button></div></form>`);
     const form = byId('legacy-form'), f = form.elements;
     App.ui.groupFields(form, [{kind: 'client', title: 'Cliente', items: ['client']}, {kind: 'product', title: 'O que foi vendido', items: ['combo', 'what', 'comboItems', 'type']}, {kind: 'pay', title: 'Valores e parcelas', items: ['date', 'price', 'entry', 'method', 'payDate', '[data-later]', 'count', 'firstDue', '#legacy-preview']}]);
     const later = paymentRows(byId('later-rows'), {min: () => f.date.value || today(), onChange: () => refresh()});
@@ -244,7 +273,18 @@
       const total = round2(Number(f.price.value) || 0), entry = round2(Number(f.entry.value) || 0);
       const rows = old ? later.get() : [], prior = rowsTotal(rows);   // "prior" = o que foi recebido depois da entrada (lista)
       const count = Math.min(24, Math.max(1, Math.round(Number(f.count.value) || 1)));
-      return {total, entry, prior, rows, count, remaining: round2(total - entry - prior), firstDue: f.firstDue.value, date, old};
+      const remaining = round2(total - entry - prior);
+      // prazo sem juros (SPECS 65): venda antiga, 1 parcela, sobrando valor -> os pagamentos da lista valem contra o prazo
+      return {total, entry, prior, rows, count, remaining, firstDue: f.firstDue.value, date, old, deadline: old && count === 1 && remaining > 0.004};
+    };
+    // Venda de mentira só para a prévia do prazo (mesma conta que o salvar faz).
+    const deadlineSale = v => {
+      const sale = {id: 'prévia', legacy: true, installments: 1, total: v.total, date: v.date, due: v.firstDue, payments: []};
+      if (v.entry > 0) sale.payments.push({amount: v.entry, date: v.date, installment: 0});
+      const list = v.rows.map(r => ({amount: r.amount, date: r.date, installment: 1}));
+      sale.payments.push(...list);
+      chargeOldPayments(sale, list);
+      return sale;
     };
     const refresh = () => {
       const v = values();
@@ -256,11 +296,18 @@
       f.payDate.min = v.date;
       if (!payDateTyped) f.payDate.value = v.date;   // acompanha a data da venda até a pessoa mexer nele
       form.querySelectorAll('[data-rest]').forEach(el => { el.hidden = !(v.remaining > 0.004); });
+      byId('legacy-due-label').innerHTML = v.count === 1 && v.old ? 'Prazo para pagar tudo * <small>sem juros até esta data</small>' : 'Vence a próxima *';
       const box = byId('legacy-preview');
       if (!(v.total > 0)) { box.textContent = ''; return; }
       if (v.remaining < -0.004) { box.textContent = 'A entrada e o que já foi recebido passam do valor total.'; return; }
       if (v.remaining <= 0.004) { box.innerHTML = '<b>Paga toda agora:</b> sem parcelas a receber.'; return; }
       if (!v.firstDue) { box.textContent = ''; return; }
+      if (v.deadline) {
+        if (v.firstDue < v.date || rowsProblem(v.rows, v.date)) { box.textContent = ''; return; }
+        const sale = deadlineSale(v);
+        box.innerHTML = sale.paid > v.total + 0.004 ? 'Os pagamentos passam do que faltava pagar.' : deadlineReport(sale);
+        return;
+      }
       const plan = App.finance.scheduleFor({date: v.date, total: v.remaining, installments: v.count, firstDue: v.firstDue});
       box.innerHTML = `<b>Falta receber ${money(v.remaining)}:</b> ${plan.map(p => `${dateLabel(p.due)} · ${money(p.value)}`).join(' &nbsp;|&nbsp; ')}`;
     };
@@ -303,10 +350,11 @@
       if (v.entry > 0 && (!payDate || payDate < v.date || payDate > today())) return fail('A data do pagamento tem que ser entre a data da venda e hoje.');
       const paidNow = v.remaining <= 0.004;
       if (!paidNow && !v.firstDue) return fail('Escolha a data da próxima parcela.');
+      if (v.deadline && v.firstDue < v.date) return fail('O prazo para pagar tudo não pode ser antes da data da venda.');
       const client = App.clientApi.resolve(f.client.value);
       if (!client) return fail('Escolha um cliente da lista ou digite o nome do cliente novo.');
       const type = f.type.value === 'Serviço' ? 'Serviço' : 'Produto', count = paidNow ? 1 : v.count;
-      const sale = {id: App.store.nextCode('sale'), client, product: what, date: f.date.value, cost: 0, total: v.total, paid: 0, balance: v.total, installments: count, entry: round2(v.entry + v.prior),
+      const sale = {id: App.store.nextCode('sale'), client, product: what, date: f.date.value, cost: 0, total: v.total, paid: 0, balance: v.total, installments: count, entry: round2(v.entry + (v.deadline ? 0 : v.prior)),
         quantity: 1, unitPrice: v.total, discount: 0, method: v.old ? 'Conta antiga' : 'Venda avulsa', monthlyInterest: 0, productType: type,
         items: combo ? splitLegacy(lines, type, v.total) : [{name: what, type, qty: 1, unit: v.total, amount: v.total}], productTotal: type === 'Produto' ? v.total : 0, serviceTotal: type === 'Serviço' ? v.total : 0,
         payments: [], stockOut: [], legacy: true, launchedAt: today()};
@@ -318,8 +366,15 @@
       if (v.entry > 0) sale.payments.push({amount: v.entry, date: payDate, method: f.method.value, installment: 0, note: paidNow && !v.rows.length ? 'Pagamento na venda' : 'Entrada'});
       const withReceipt = sale.payments.slice();
       // recebido depois da entrada (SPECS 63): pagamentos antigos de verdade (contam no mês de cada um), sem recibo
-      v.rows.forEach(r => sale.payments.push({amount: r.amount, date: r.date, method: f.laterMethod.value, installment: 0, note: OLD_NOTE}));
+      // com prazo sem juros (SPECS 65) eles valem contra o prazo (parcela 1) e o sistema separa multa e juros dos atrasados
+      const old = v.rows.map(r => ({amount: r.amount, date: r.date, method: f.laterMethod.value, installment: v.deadline ? 1 : 0, note: OLD_NOTE}));
+      sale.payments.push(...old);
       recalcSale(sale);
+      if (v.deadline) {
+        sale.deadline = true;
+        chargeOldPayments(sale, old);
+        if (sale.paid > sale.total + 0.004) return fail('Os pagamentos da lista passam do que faltava pagar.');
+      }
       data.sales.push(sale);
       const receipts = withReceipt.map(payment => App.receipts.issue(sale, payment));
       save();
@@ -329,30 +384,80 @@
     };
   }
 
+  // Com prazo sem juros (SPECS 65) entram também os pagamentos antigos que já valem contra o prazo (parcela 1, sem recibo).
+  const adjustable = sale => (sale.payments || []).map((payment, index) => ({payment, index}))
+    .filter(({payment}) => !payment.voided && (!payment.installment || (payment.installment === 1 && payment.note === OLD_NOTE)));
+  // Aplica a lista numa venda (a de verdade ou uma cópia para a prévia). real = mexe nos recibos.
+  function applyAdjust(sale, rows, {method, deadline, real}) {
+    const current = adjustable(sale), kept = new Set(), old = [];
+    let upfront = 0;
+    rows.forEach(r => {
+      const payment = r.ref !== null && sale.payments[r.ref];
+      const known = payment && current.some(c => c.index === r.ref) && !kept.has(r.ref);
+      const target = known ? payment : {amount: r.amount, date: r.date, method, installment: 0, note: OLD_NOTE};
+      if (known) {
+        kept.add(r.ref);
+        if (payment.date !== r.date || Number(payment.amount) !== r.amount) { payment.date = r.date; payment.amount = r.amount; if (real) App.receipts.sync(payment); }
+      } else sale.payments.push(target);
+      target.installment = deadline && !target.receipt ? 1 : 0;   // com prazo: o que não tem recibo vale contra o prazo; a entrada com recibo continua entrada
+      if (target.installment) old.push(target); else { delete target.charges; upfront += r.amount; }
+    });
+    current.filter(({index}) => !kept.has(index)).forEach(({payment}) => { payment.voided = true; payment.voidedAt = today(); if (real) App.receipts.cancelFor(payment); });
+    sale.priorPaid = 0;
+    sale.entry = round2(upfront);
+    if (deadline) {
+      sale.deadline = true; sale.due = deadline; sale.firstDue = deadline;
+      delete sale.paidAtSale;
+      recalcSale(sale);
+      chargeOldPayments(sale, old);
+    } else {
+      delete sale.deadline;
+      if (sale.paidAtSale && rows.length > 1) delete sale.paidAtSale;
+      recalcSale(sale);
+    }
+  }
   // "Ajustar recebimentos" (SPECS 63): numa venda avulsa de antes do sistema já lançada, redivide pelos meses o que foi recebido
-  // fora das parcelas (a entrada, os pagamentos antigos e o antigo "já recebido antes do sistema"). O total da venda e o que falta
-  // não mudam: a soma da lista tem que dar o mesmo valor. Pagamentos que continuam são mudados no lugar (o recibo acompanha);
-  // os tirados ficam como desfeitos; os novos entram sem recibo. Pede um backup antes de salvar (dados reais).
-  const adjustable = sale => (sale.payments || []).map((payment, index) => ({payment, index})).filter(({payment}) => !payment.voided && !payment.installment);
+  // fora das parcelas (a entrada, os pagamentos antigos e o antigo "já recebido antes do sistema"). A soma da lista tem que dar o
+  // mesmo valor. Pagamentos que continuam são mudados no lugar (o recibo acompanha); os tirados ficam como desfeitos; os novos entram
+  // sem recibo. Venda de 1 parcela: "Prazo sem juros até" (SPECS 65) faz os pagamentos depois do prazo pagarem multa e juros.
+  // Pede um backup antes de salvar (dados reais).
   function adjustPayments(saleId) {
     const sale = data.sales.find(s => s.id === saleId);
     if (!sale || !sale.legacy || sale.status === 'Cancelada') return;
     const current = adjustable(sale), prior = round2(Number(sale.priorPaid) || 0);
     const target = round2(prior + current.reduce((t, {payment}) => t + Number(payment.amount), 0));
     const methods = App.finance.PAY_METHODS.map(m => `<option>${m}</option>`).join('');
+    const canDeadline = sale.installments <= 1;
+    const dueNow = sale.due && sale.due !== sale.date ? sale.due : '';
+    const deadlineHtml = canDeadline ? `<div class="field full"><label class="inline-check"><input type="checkbox" name="useDeadline"${sale.deadline ? ' checked' : ''}> <b>Prazo sem juros até</b></label> <input type="date" name="deadline" value="${esc(dueNow)}" min="${esc(sale.date)}" aria-label="Prazo sem juros até"> <small class="muted">Até essa data, sem juros. Depois dela, cada pagamento paga primeiro a multa e os juros (de Regras de cobrança) e o resto abate a dívida.</small></div><p class="muted field full" id="adjust-preview"></p>` : '';
     let backedUp = false;
-    openModal(`<h2>Ajustar recebimentos · ${esc(sale.id)}</h2><p>${esc(sale.client)} · venda de ${dateLabel(sale.date)} · total ${money(sale.total)}. O que foi recebido fora das parcelas soma <b>${money(target)}</b>. Mude as datas e a divisão para cada valor contar no mês em que você recebeu; a soma tem que continuar ${money(target)}. O total da venda e o que falta não mudam.</p><form id="adjust-form" class="form-grid"><div class="field full"><div class="later-head"><select name="laterMethod" aria-label="Forma dos pagamentos novos">${methods}</select><button type="button" class="secondary" id="adjust-spread">Distribuir por mês</button></div><small class="muted">"Distribuir por mês" mantém o primeiro pagamento (a entrada) e divide o resto do mês seguinte à venda até este mês. A forma vale para os pagamentos novos.</small></div><div class="field full"><div id="adjust-rows" class="later-rows"></div><p class="later-foot"><button type="button" class="secondary" id="adjust-add">+ Adicionar pagamento</button> <span id="adjust-sum"></span></p></div><p class="field full"><b>Antes de salvar,</b> baixe um backup: <button type="button" class="secondary" id="adjust-backup">Baixar backup</button> <span id="adjust-backup-status" class="muted"></span></p><p class="negative field full" id="adjust-error" hidden></p><div class="actions field full"><button type="button" class="secondary" data-action="close-modal">Cancelar</button><button class="primary" id="adjust-save" disabled>Salvar recebimentos</button></div></form>`);
-    const form = byId('adjust-form');
+    openModal(`<h2>Ajustar recebimentos · ${esc(sale.id)}</h2><p>${esc(sale.client)} · venda de ${dateLabel(sale.date)} · total ${money(sale.total)}. O que foi recebido fora das parcelas soma <b>${money(target)}</b>. Mude as datas e a divisão para cada valor contar no mês em que você recebeu; a soma tem que continuar ${money(target)}.</p><form id="adjust-form" class="form-grid"><div class="field full"><div class="later-head"><select name="laterMethod" aria-label="Forma dos pagamentos novos">${methods}</select><button type="button" class="secondary" id="adjust-spread">Distribuir por mês</button></div><small class="muted">"Distribuir por mês" mantém o primeiro pagamento (a entrada) e divide o resto do mês seguinte à venda até este mês. A forma vale para os pagamentos novos.</small></div><div class="field full"><div id="adjust-rows" class="later-rows"></div><p class="later-foot"><button type="button" class="secondary" id="adjust-add">+ Adicionar pagamento</button> <span id="adjust-sum"></span></p></div>${deadlineHtml}<p class="field full"><b>Antes de salvar,</b> baixe um backup: <button type="button" class="secondary" id="adjust-backup">Baixar backup</button> <span id="adjust-backup-status" class="muted"></span></p><p class="negative field full" id="adjust-error" hidden></p><div class="actions field full"><button type="button" class="secondary" data-action="close-modal">Cancelar</button><button class="primary" id="adjust-save" disabled>Salvar recebimentos</button></div></form>`);
+    const form = byId('adjust-form'), f = form.elements;
+    const deadlineOf = () => (canDeadline && f.useDeadline.checked ? f.deadline.value : '');
+    // tenta numa cópia: devolve a cópia ou um texto de problema
+    const tryOn = rows => {
+      const copy = JSON.parse(JSON.stringify(sale));
+      applyAdjust(copy, rows, {method: f.laterMethod.value, deadline: deadlineOf(), real: false});
+      return copy.paid > copy.total + 0.004 ? 'Os pagamentos passam do que faltava pagar.' : copy;
+    };
     const sync = () => {
       const rows = list.get(), total = rowsTotal(rows), ok = Math.abs(total - target) < 0.005;
       byId('adjust-sum').innerHTML = `Soma: <b class="${ok ? 'positive' : 'negative'}">${money(total)}</b>${ok ? '' : ` (tem que ser ${money(target)}; ${total > target ? 'sobram' : 'faltam'} ${money(Math.abs(total - target))})`}`;
       byId('adjust-save').disabled = !(backedUp && ok);
+      const box = byId('adjust-preview');
+      if (!box) return;
+      const deadline = deadlineOf();
+      if (f.useDeadline.checked && !deadline) { box.textContent = 'Escolha a data do prazo.'; return; }
+      if (!deadline || deadline < sale.date || rowsProblem(rows, sale.date)) { box.textContent = ''; return; }
+      const copy = tryOn(rows);
+      box.innerHTML = typeof copy === 'string' ? copy : deadlineReport(copy);
     };
     const list = paymentRows(byId('adjust-rows'), {min: () => sale.date, onChange: () => sync()});
     const start = current.map(({payment, index}) => ({date: payment.date, amount: Number(payment.amount), ref: index, receipt: payment.receipt}));
     if (prior > 0) start.push({date: sale.date, amount: prior});   // o antigo "já recebido antes do sistema" vira um pagamento (dá para dividir)
     list.set(start);
     form.addEventListener('input', sync);
+    form.addEventListener('change', sync);
     byId('adjust-add').onclick = () => list.add();
     byId('adjust-spread').onclick = () => {
       const rows = list.get(), keep = rows.length > 1 ? [rows[0]] : [], rest = round2(target - rowsTotal(keep));
@@ -365,20 +470,12 @@
       const problem = rowsProblem(rows, sale.date);
       if (problem) return fail(problem);
       if (Math.abs(rowsTotal(rows) - target) >= 0.005) return fail(`A soma tem que continuar ${money(target)}.`);
-      const kept = new Set();
-      rows.forEach(r => {
-        const payment = r.ref !== null && sale.payments[r.ref];
-        if (payment && !payment.voided && !payment.installment && !kept.has(r.ref)) {
-          kept.add(r.ref);
-          if (payment.date !== r.date || Number(payment.amount) !== r.amount) { payment.date = r.date; payment.amount = r.amount; App.receipts.sync(payment); }
-        } else sale.payments.push({amount: r.amount, date: r.date, method: form.elements.laterMethod.value, installment: 0, note: OLD_NOTE});
-      });
-      current.filter(({index}) => !kept.has(index)).forEach(({payment}) => { payment.voided = true; payment.voidedAt = today(); App.receipts.cancelFor(payment); });
-      sale.priorPaid = 0;
-      sale.entry = round2(target);
-      if (sale.paidAtSale && rows.length > 1) delete sale.paidAtSale;
+      const deadline = deadlineOf();
+      if (canDeadline && f.useDeadline.checked && (!deadline || deadline < sale.date)) return fail('Escolha a data do prazo (não pode ser antes da venda).');
+      const tried = tryOn(rows);
+      if (typeof tried === 'string') return fail(tried);
+      applyAdjust(sale, rows, {method: f.laterMethod.value, deadline, real: true});
       sale.adjustedAt = today();
-      recalcSale(sale);
       save();
       closeModal();
       go('sales');

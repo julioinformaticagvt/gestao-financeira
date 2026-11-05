@@ -1,3 +1,3 @@
 // Versão do sistema, mostrada no rodapé. Atualize aqui a cada versão aprovada
 // (e na tabela "Versões" do CLAUDE.md, e na etiqueta do Git: git tag -a vX.Y.Z -m "X.Y.Z Nome").
-window.APP_VERSION = {number: '0.21.0', name: 'Recebimentos', date: '04/11/2026'};
+window.APP_VERSION = {number: '0.21.1', name: 'Prazo sem juros', date: '05/11/2026'};

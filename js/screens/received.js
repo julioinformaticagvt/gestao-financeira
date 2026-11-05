@@ -20,8 +20,8 @@
   // entrada de parcelado (carnê ou venda avulsa): não tem "Desfazer" (o valor sairia das Contas a receber), como na ficha do cliente
   const isEntry = ({sale, payment}) => payment.installment === 0 && (sale.installments > 1 || (sale.legacy && !sale.paidAtSale));
   function kindOf({sale, payment}) {
-    if (payment.installment) return `parcela ${payment.installment}${sale.installments > 1 ? ` de ${sale.installments}` : ''}`;
     if (payment.note === 'Pagamento antigo') return 'pagamento antigo';
+    if (payment.installment) return `parcela ${payment.installment}${sale.installments > 1 ? ` de ${sale.installments}` : ''}`;
     return isEntry({sale, payment}) ? 'entrada' : 'à vista';
   }
 

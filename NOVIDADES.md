@@ -1,5 +1,12 @@
 # Novidades
 
+## Versão 0.21.1 · Prazo sem juros · 05/11/2026
+
+- Venda avulsa de antes de hoje com 1 parcela: o campo da data vira "Prazo para pagar tudo (sem juros até esta data)" e aceita data antiga. Os pagamentos da lista "Recebido depois da entrada" valem contra esse prazo: até ele, sem juros; depois dele, cada pagamento paga primeiro a multa e os juros (de Financeiro → Regras de cobrança) e o resto abate a dívida.
+- Prévia "Como a conta foi feita" na janela: quanto foi pago até o prazo, a multa, o que cada pagamento atrasado pagou de multa e juros e quanto falta hoje.
+- "Ajustar recebimentos" ganhou "Prazo sem juros até", para pôr o prazo numa venda avulsa já lançada (pede backup antes).
+- Juros simples, contados por dia de atraso (sem juros sobre juros), como nas parcelas do carnê.
+
 ## Versão 0.21.0 · Recebimentos · 04/11/2026
 
 - Financeiro → Recebimentos: todos os pagamentos recebidos, de todos os clientes, numa lista só. Filtre por mês (com "Todos os meses"), cliente, venda ou forma; veja o total do mês e de cada forma; abra o recibo, a venda ou desfaça um pagamento ali mesmo.
