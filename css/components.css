@@ -541,3 +541,5 @@ th.sortable[aria-sort="ascending"], th.sortable[aria-sort="descending"] { color:
 .month-step { display: inline-flex; align-items: center; gap: 6px; }
 .month-step b { min-width: 130px; text-align: center; }
 .received-methods { margin: 4px 0 10px; }
+.received-part + .received-part { margin-top: 4px; }   /* "Para onde foi": uma parte do pagamento por linha (SPECS 66) */
+.received-part.voided-part { text-decoration: line-through; opacity: .6; }

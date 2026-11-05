@@ -1,6 +1,10 @@
 // "O que há de novo": lista de versões em linguagem simples, da mais nova para a mais antiga.
 // A cada versão aprovada, acrescente uma entrada AQUI (e em version.js, na tabela do CLAUDE.md e na etiqueta do Git).
 window.CHANGELOG = [
+  {version: '0.21.2', name: 'Recebimentos agrupados', date: '05/11/2026', items: [
+    'Financeiro → Recebimentos: um pagamento por linha. Quando o cliente paga um valor e o sistema divide entre parcelas (ex.: R$ 300 = R$ 99 numa parcela + R$ 201 em outra), aparece uma linha só com o valor pago e, na coluna "Para onde foi", quanto foi para cada parcela (e quanto disso foi multa e juros).',
+    '"Desfazer" num pagamento dividido abre a lista das partes para você escolher qual desfazer.'
+  ]},
   {version: '0.21.1', name: 'Prazo sem juros', date: '05/11/2026', items: [
     'Venda avulsa de antes de hoje com 1 parcela: o campo da data vira "Prazo para pagar tudo (sem juros até esta data)" e aceita data antiga. Os pagamentos da lista "Recebido depois da entrada" valem contra esse prazo: até ele, sem juros; depois dele, cada pagamento paga primeiro a multa e os juros (de Financeiro → Regras de cobrança) e o resto abate a dívida.',
     'Prévia "Como a conta foi feita" na janela: quanto foi pago até o prazo, a multa, o que cada pagamento atrasado pagou de multa e juros e quanto falta hoje.',

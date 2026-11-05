@@ -1,5 +1,10 @@
 # Novidades
 
+## Versão 0.21.2 · Recebimentos agrupados · 05/11/2026
+
+- Financeiro → Recebimentos: um pagamento por linha. Quando o cliente paga um valor e o sistema divide entre parcelas (ex.: R$ 300 = R$ 99 numa parcela + R$ 201 em outra), aparece uma linha só com o valor pago e, na coluna "Para onde foi", quanto foi para cada parcela (e quanto disso foi multa e juros).
+- "Desfazer" num pagamento dividido abre a lista das partes para você escolher qual desfazer.
+
 ## Versão 0.21.1 · Prazo sem juros · 05/11/2026
 
 - Venda avulsa de antes de hoje com 1 parcela: o campo da data vira "Prazo para pagar tudo (sem juros até esta data)" e aceita data antiga. Os pagamentos da lista "Recebido depois da entrada" valem contra esse prazo: até ele, sem juros; depois dele, cada pagamento paga primeiro a multa e os juros (de Financeiro → Regras de cobrança) e o resto abate a dívida.
